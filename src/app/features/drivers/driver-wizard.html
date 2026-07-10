@@ -1,0 +1,240 @@
+<header class="mb-6">
+  <a routerLink="/drivers" class="text-sm text-gray-400 hover:text-primary-700">← Afiliados</a>
+  <h1 class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">Nuevo afiliado</h1>
+</header>
+
+<!-- Stepper -->
+<ol class="mb-8 flex flex-wrap items-center gap-2 text-xs font-semibold">
+  @for (s of [[1, 'Datos'], [2, 'Documentos'], [3, 'Vehículo'], [4, 'Pagos']]; track s[0]) {
+    <li
+      [class]="step() === s[0]
+        ? 'rounded-full bg-primary-700 px-4 py-2 text-white'
+        : (step() > +s[0] || step() === 5)
+          ? 'rounded-full bg-green-100 px-4 py-2 text-green-800'
+          : 'rounded-full bg-gray-100 px-4 py-2 text-gray-500 dark:bg-gray-700 dark:text-gray-400'"
+    >
+      {{ s[0] }}. {{ s[1] }}
+    </li>
+  }
+</ol>
+
+@if (error(); as message) {
+  <p class="mb-4 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-800 dark:text-primary-300">
+    {{ message }}
+  </p>
+}
+
+<section class="max-w-2xl rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+  @switch (step()) {
+    @case (1) {
+      <h2 class="text-lg font-bold text-gray-900 dark:text-white">Datos personales</h2>
+      <p class="mt-1 text-xs text-gray-400">
+        Solo el nombre es obligatorio al registrar desde el panel. La cédula es obligatoria
+        únicamente cuando el chofer se registra desde la app.
+      </p>
+      <form class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2" (ngSubmit)="saveStep1()">
+        <div class="sm:col-span-2">
+          <label for="w-name" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Nombre completo *</label>
+          <input id="w-name" name="fullName" type="text" required minlength="3" [(ngModel)]="fullName"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+        <div>
+          <label for="w-ci" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+            Cédula <span class="font-normal text-gray-400">(opcional por panel)</span>
+          </label>
+          <input id="w-ci" name="nationalId" type="text" [(ngModel)]="nationalId" placeholder="V12345678"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+        <div>
+          <label for="w-phone" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Teléfono</label>
+          <input id="w-phone" name="phone" type="tel" [(ngModel)]="phone" placeholder="04141234567"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+        <div class="sm:col-span-2">
+          <label for="w-email" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Email</label>
+          <input id="w-email" name="email" type="email" [(ngModel)]="email"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+        <div class="sm:col-span-2 flex justify-end">
+          <button type="submit" [disabled]="saving()"
+            class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+            {{ saving() ? 'Guardando…' : 'Continuar →' }}
+          </button>
+        </div>
+      </form>
+    }
+    @case (2) {
+      <h2 class="text-lg font-bold text-gray-900 dark:text-white">Documentos del chofer</h2>
+      <p class="mt-1 text-xs text-gray-400">
+        Paso opcional: al registrar por el panel nada bloquea. Lo que falte quedará visible
+        como pendiente en el perfil. Archivos adjuntos: próximamente (se registran los datos).
+      </p>
+      @if (registeredDocs() > 0) {
+        <p class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm font-medium text-green-800">
+          {{ registeredDocs() }} documento(s) registrado(s) ✓
+        </p>
+      }
+      <form class="mt-5 flex flex-wrap items-end gap-3" (ngSubmit)="addDocument()">
+        <div class="min-w-48 flex-1">
+          <label for="w-req" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Requerimiento</label>
+          <select id="w-req" name="docRequirementId" [(ngModel)]="docRequirementId"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+            <option [ngValue]="null">Selecciona…</option>
+            @for (r of driverRequirements(); track r.id) {
+              <option [ngValue]="r.id">{{ r.name }}{{ r.isRequired ? ' *' : '' }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label for="w-expires" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Vence</label>
+          <input id="w-expires" name="docExpiresAt" type="date" [(ngModel)]="docExpiresAt"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+        <button type="submit" [disabled]="!docRequirementId || saving()"
+          class="rounded-lg border border-primary-700 px-4 py-2.5 text-sm font-semibold text-primary-700 hover:bg-primary-50 disabled:opacity-40 dark:hover:bg-gray-700">
+          Registrar
+        </button>
+      </form>
+      <div class="mt-6 flex justify-between">
+        <button type="button" (click)="skipTo(1)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
+        <button type="button" (click)="skipTo(3)"
+          class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800">
+          Continuar →
+        </button>
+      </div>
+    }
+    @case (3) {
+      <h2 class="text-lg font-bold text-gray-900 dark:text-white">Vehículo</h2>
+      <p class="mt-1 text-xs text-gray-400">
+        Registrado por el panel queda aprobado directamente. También puedes saltarlo y
+        agregarlo después desde el perfil.
+      </p>
+      <form class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3" (ngSubmit)="saveStep3()">
+        <div>
+          <label for="w-vtype" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Tipo</label>
+          <select id="w-vtype" name="vehicleTypeId" [(ngModel)]="vehicleTypeId"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 capitalize text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+            <option [ngValue]="null">Sin definir</option>
+            @for (t of vehicleTypes(); track t.id) {
+              <option [ngValue]="t.id">{{ t.name }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label for="w-brand" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Marca</label>
+          <input id="w-brand" name="brand" type="text" [(ngModel)]="brand"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+        <div>
+          <label for="w-model" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Modelo</label>
+          <input id="w-model" name="model" type="text" [(ngModel)]="model"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+        <div>
+          <label for="w-year" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Año</label>
+          <input id="w-year" name="year" type="number" min="1950" max="2100" [(ngModel)]="year"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+        <div>
+          <label for="w-color" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Color</label>
+          <input id="w-color" name="color" type="text" [(ngModel)]="color"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+        <div>
+          <label for="w-plate" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Placa</label>
+          <input id="w-plate" name="plate" type="text" [(ngModel)]="plate" placeholder="AB123CD"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 uppercase text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+        <div class="flex items-center justify-between sm:col-span-3">
+          <button type="button" (click)="skipTo(2)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
+          <div class="flex gap-3">
+            <button type="button" (click)="skipTo(4)"
+              class="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+              Saltar
+            </button>
+            <button type="submit" [disabled]="saving()"
+              class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+              {{ saving() ? 'Guardando…' : 'Registrar y continuar →' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    }
+    @case (4) {
+      <h2 class="text-lg font-bold text-gray-900 dark:text-white">Pagos: membresía + tarifa</h2>
+      @if (!membership()) {
+        <p class="mt-3 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700">
+          No existe una membresía vigente. Créala en la sección Membresía antes de completar este paso.
+        </p>
+      } @else {
+        <div class="mt-4 rounded-lg border border-gray-200 p-4 dark:border-gray-600">
+          <p class="text-sm text-gray-500 dark:text-gray-400">Membresía (pago único)</p>
+          <p class="font-bold text-gray-900 dark:text-white">
+            {{ membership()!.name }} — ${{ membership()!.priceUsd }}
+          </p>
+        </div>
+        <form class="mt-4 space-y-4" (ngSubmit)="enroll()">
+          <div>
+            <label for="w-plan" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Tarifa</label>
+            <select id="w-plan" name="planId" required [(ngModel)]="planId"
+              class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+              <option [ngValue]="null">Selecciona…</option>
+              @for (p of activePlans(); track p.id) {
+                <option [ngValue]="p.id">
+                  {{ p.name }} — {{ periodLabels[p.billingPeriod] }} ${{ p.priceUsd }}
+                </option>
+              }
+            </select>
+          </div>
+          <div>
+            <label for="w-periods" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+              Períodos a pagar <span class="font-normal text-gray-400">(1 = tarifa básica; más = adelanto ×N, no reembolsable para operativos)</span>
+            </label>
+            <input id="w-periods" name="periods" type="number" min="1" max="52" required [(ngModel)]="periods"
+              class="block w-32 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          </div>
+          @if (total(); as t) {
+            <p class="rounded-lg bg-gold-100 px-4 py-3 text-sm font-bold text-gold-800">
+              Total a cobrar: ${{ t }} USD — se emitirán {{ periods }} factura(s)
+              (la #1 agrupa membresía + primer período).
+            </p>
+          }
+          <div class="flex items-center justify-between">
+            <button type="button" (click)="skipTo(3)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
+            <button type="submit" [disabled]="!planId || saving()"
+              class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+              {{ saving() ? 'Registrando pagos…' : 'Registrar pagos y facturar' }}
+            </button>
+          </div>
+        </form>
+      }
+    }
+    @case (5) {
+      <div class="text-center">
+        <p class="text-4xl">✅</p>
+        <h2 class="mt-2 text-lg font-bold text-gray-900 dark:text-white">Registro completo</h2>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          Facturas emitidas:
+          @for (n of invoiceNumbers(); track n) {
+            <span class="mx-1 rounded-full bg-gold-100 px-2.5 py-0.5 text-xs font-bold text-gold-800">
+              N° {{ n }}
+            </span>
+          }
+        </p>
+        <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">
+          El afiliado está <strong>pendiente</strong>. Al aprobarlo, la tarifa comienza a correr.
+        </p>
+        <div class="mt-6 flex justify-center gap-3">
+          <button type="button" (click)="finishPending()"
+            class="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+            Dejar pendiente
+          </button>
+          <button type="button" (click)="approveNow()" [disabled]="saving()"
+            class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+            {{ saving() ? 'Aprobando…' : 'Aprobar ahora' }}
+          </button>
+        </div>
+      </div>
+    }
+  }
+</section>

@@ -1,0 +1,172 @@
+<header class="mb-6 flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Tarifas</h1>
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+      Planes prepago que habilitan operar. Los afiliados con una tarifa vigente conservan
+      su precio hasta que el período pagado termine.
+    </p>
+  </div>
+  <button
+    type="button"
+    (click)="openCreate()"
+    class="rounded-lg bg-primary-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300"
+  >
+    + Nueva tarifa
+  </button>
+</header>
+
+@if (error(); as message) {
+  <p class="mb-4 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-800 dark:text-primary-300">
+    {{ message }}
+  </p>
+}
+
+<div class="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+  <table class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
+    <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+      <tr>
+        <th class="px-6 py-3">Nombre</th>
+        <th class="px-6 py-3">Período</th>
+        <th class="px-6 py-3">Precio USD</th>
+        <th class="px-6 py-3">Vehículos permitidos</th>
+        <th class="px-6 py-3">Estado</th>
+        <th class="px-6 py-3 text-right">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      @if (loading()) {
+        <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Cargando…</td></tr>
+      } @else {
+        @for (item of items(); track item.id) {
+          <tr class="border-t border-gray-100 dark:border-gray-700">
+            <td class="px-6 py-4">
+              <p class="font-semibold text-gray-900 dark:text-white">{{ item.name }}</p>
+              @if (item.description) {
+                <p class="mt-0.5 text-xs text-gray-400">{{ item.description }}</p>
+              }
+            </td>
+            <td class="px-6 py-4">{{ periodLabels[item.billingPeriod] }}</td>
+            <td class="px-6 py-4 font-semibold">${{ item.priceUsd }}</td>
+            <td class="px-6 py-4">
+              @if (item.allowedVehicleTypes === null) {
+                <span class="text-gray-400">Todos</span>
+              } @else {
+                <span class="flex flex-wrap gap-1">
+                  @for (id of item.allowedVehicleTypes; track id) {
+                    <span class="rounded-full bg-gold-100 px-2 py-0.5 text-xs font-semibold capitalize text-gold-800">
+                      {{ typeName(id) }}
+                    </span>
+                  }
+                </span>
+              }
+            </td>
+            <td class="px-6 py-4">
+              @if (item.active) {
+                <span class="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-900 dark:text-green-300">Activa</span>
+              } @else {
+                <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">Archivada</span>
+              }
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex justify-end gap-2">
+                @if (item.active) {
+                  <button type="button" (click)="openEdit(item)"
+                    class="rounded-lg px-3 py-1.5 text-xs font-semibold text-primary-700 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-gray-700">
+                    Editar
+                  </button>
+                }
+                <button type="button" (click)="toggleActive(item)"
+                  class="rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+                  {{ item.active ? 'Archivar' : 'Reactivar' }}
+                </button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">No hay tarifas en el catálogo.</td></tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- Create/edit modal -->
+@if (modal(); as state) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4">
+    <div class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-2xl dark:bg-gray-800">
+      <h2 class="text-lg font-bold text-gray-900 dark:text-white">
+        {{ state.mode === 'create' ? 'Nueva tarifa' : 'Editar tarifa' }}
+      </h2>
+      @if (state.mode === 'edit') {
+        <p class="mt-1 text-xs text-gray-400">
+          Si esta tarifa ya tiene pagos, se archivará y se creará una versión nueva
+          automáticamente. Los afiliados conservan su precio hasta agotar lo pagado.
+        </p>
+      }
+
+      <form class="mt-5 space-y-4" (ngSubmit)="save()">
+        <div>
+          <label for="sp-name" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Nombre</label>
+          <input id="sp-name" name="name" type="text" required minlength="3" [(ngModel)]="name"
+            placeholder="ej. Tarifa Semanal"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+        <div>
+          <label for="sp-desc" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+            Descripción <span class="font-normal text-gray-400">(opcional)</span>
+          </label>
+          <textarea id="sp-desc" name="description" rows="2" maxlength="500" [(ngModel)]="description"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="sp-period" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Período</label>
+            <select id="sp-period" name="billingPeriod" [(ngModel)]="billingPeriod"
+              class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+              <option value="daily">Diaria</option>
+              <option value="weekly">Semanal</option>
+              <option value="monthly">Mensual</option>
+              <option value="annual">Anual</option>
+            </select>
+          </div>
+          <div>
+            <label for="sp-price" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Precio (USD)</label>
+            <input id="sp-price" name="priceUsd" type="number" required min="0" step="0.01" [(ngModel)]="priceUsd"
+              class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          </div>
+        </div>
+
+        <div>
+          <p class="mb-2 text-sm font-semibold text-gray-900 dark:text-white">
+            Tipos de vehículo permitidos
+            <span class="font-normal text-gray-400">(ninguno marcado = todos)</span>
+          </p>
+          <div class="flex flex-wrap gap-2">
+            @for (t of vehicleTypes(); track t.id) {
+              <label class="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-600">
+                <input type="checkbox" [checked]="selectedTypes.has(t.id)" (change)="toggleType(t.id)"
+                  class="h-4 w-4 rounded border-gray-300 text-primary-700 focus:ring-primary-700" />
+                <span class="text-sm capitalize text-gray-700 dark:text-gray-300">{{ t.name }}</span>
+              </label>
+            }
+          </div>
+        </div>
+
+        @if (error(); as message) {
+          <p class="text-sm font-medium text-primary-700 dark:text-primary-300">{{ message }}</p>
+        }
+
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" (click)="modal.set(null)"
+            class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+            Cancelar
+          </button>
+          <button type="submit" [disabled]="saving()"
+            class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+            {{ saving() ? 'Guardando…' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
