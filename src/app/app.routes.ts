@@ -56,6 +56,10 @@ export const routes: Routes = [
           import('./features/membership/membership').then((m) => m.MembershipPage),
       },
       {
+        path: 'audit',
+        loadComponent: () => import('./features/audit/audit-logs').then((m) => m.AuditLogs),
+      },
+      {
         path: 'subscription-plans',
         loadComponent: () =>
           import('./features/subscription-plans/subscription-plans').then(

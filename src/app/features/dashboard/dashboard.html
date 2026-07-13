@@ -1,36 +1,155 @@
 <header class="mb-6">
   <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
   <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-    Resumen operativo de la asociación — datos de ejemplo hasta conectar la API.
+    Resumen operativo de la asociación en tiempo real.
   </p>
 </header>
 
+@if (error(); as message) {
+  <p class="mb-4 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-800 dark:text-primary-300">
+    {{ message }}
+  </p>
+}
+
 <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-  @for (stat of stats; track stat.label) {
+  @if (summary(); as s) {
+    <a
+      routerLink="/drivers"
+      class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-primary-300 hover:shadow dark:border-gray-700 dark:bg-gray-800"
+    >
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Afiliados activos</p>
+      <p class="mt-2 text-3xl font-bold text-primary-700 dark:text-gold-400">{{ s.drivers.approved }}</p>
+      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Aprobados y operando</p>
+    </a>
+    <a
+      routerLink="/drivers"
+      class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-primary-300 hover:shadow dark:border-gray-700 dark:bg-gray-800"
+    >
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Solicitudes pendientes</p>
+      <p class="mt-2 text-3xl font-bold text-primary-700 dark:text-gold-400">{{ s.drivers.pending }}</p>
+      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">En cola de aprobación</p>
+    </a>
     <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ stat.label }}</p>
-      <p class="mt-2 text-3xl font-bold text-primary-700 dark:text-gold-400">{{ stat.value }}</p>
-      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ stat.hint }}</p>
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Facturado (últimos 7 días)</p>
+      <p class="mt-2 text-3xl font-bold text-primary-700 dark:text-gold-400">${{ s.invoicing.last7DaysUsd }}</p>
+      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ s.invoicing.last7DaysCount }} facturas emitidas</p>
     </article>
+    <a
+      routerLink="/drivers"
+      class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-primary-300 hover:shadow dark:border-gray-700 dark:bg-gray-800"
+    >
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Tarifas por vencer / vencidas</p>
+      <p class="mt-2 text-3xl font-bold">
+        <span class="text-gold-600">{{ s.subscriptions.dueSoon }}</span>
+        <span class="text-gray-300 dark:text-gray-600"> / </span>
+        <span class="text-primary-700 dark:text-primary-300">{{ s.subscriptions.expired }}</span>
+      </p>
+      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+        Cobertura ≤ {{ s.subscriptions.reminderDays }} días · vencidas no operan
+      </p>
+    </a>
+  } @else {
+    @for (i of [1, 2, 3, 4]; track i) {
+      <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">&nbsp;</p>
+        <p class="mt-2 text-3xl font-bold text-gray-300 dark:text-gray-600">{{ loading() ? '…' : '—' }}</p>
+        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">&nbsp;</p>
+      </article>
+    }
   }
 </section>
 
 <section class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
   <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
-    <h2 class="font-semibold text-gray-900 dark:text-white">Actividad reciente</h2>
-    <div class="mt-4 flex h-48 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
-      <p class="text-sm text-gray-400 dark:text-gray-500">
-        Aquí vivirá el feed de auditoría (registros, aprobaciones, pagos...)
-      </p>
+    <div class="flex items-center justify-between">
+      <h2 class="font-semibold text-gray-900 dark:text-white">Actividad reciente</h2>
+      <a routerLink="/audit" class="text-sm font-medium text-primary-700 hover:underline dark:text-primary-300">
+        Ver toda la auditoría →
+      </a>
     </div>
+    @if (feed().length > 0) {
+      <ul class="mt-4 divide-y divide-gray-100 dark:divide-gray-700">
+        @for (item of feed(); track item.id) {
+          <li class="flex items-center justify-between gap-3 py-2.5">
+            <div class="min-w-0">
+              <p class="truncate text-sm text-gray-700 dark:text-gray-200">
+                <span class="font-medium">{{ eventLabel(item.eventType) }}</span>
+                <span class="text-gray-400"> · </span>
+                @if (item.driverId) {
+                  <a
+                    [routerLink]="['/drivers', item.driverId]"
+                    class="text-primary-700 hover:underline dark:text-primary-300"
+                  >
+                    {{ feedSubject(item) }}
+                  </a>
+                } @else {
+                  {{ feedSubject(item) }}
+                }
+              </p>
+              <p class="text-xs text-gray-400 dark:text-gray-500">
+                {{ item.actorType === 'system' ? 'Sistema' : (item.actorName ?? '—') }}
+              </p>
+            </div>
+            <span class="shrink-0 text-xs text-gray-400 dark:text-gray-500">
+              {{ item.createdAt | date: 'dd/MM HH:mm' }}
+            </span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <div class="mt-4 flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
+        <p class="text-sm text-gray-400 dark:text-gray-500">Aún no hay actividad registrada.</p>
+      </div>
+    }
   </article>
 
   <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
     <h2 class="font-semibold text-gray-900 dark:text-white">Alertas</h2>
-    <div class="mt-4 flex h-48 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
-      <p class="px-4 text-center text-sm text-gray-400 dark:text-gray-500">
-        Vencimientos de documentos y suspensiones automáticas
-      </p>
-    </div>
+    @if (summary(); as s) {
+      @if (hasAlerts) {
+        <ul class="mt-4 space-y-3 text-sm">
+          @if (s.subscriptions.expired > 0) {
+            <li>
+              <a routerLink="/drivers" class="flex items-center gap-2 text-gray-700 hover:underline dark:text-gray-200">
+                <span class="h-2 w-2 shrink-0 rounded-full bg-red-500"></span>
+                {{ s.subscriptions.expired }} tarifa(s) vencida(s) — esos afiliados no operan
+              </a>
+            </li>
+          }
+          @if (s.subscriptions.dueSoon > 0) {
+            <li>
+              <a routerLink="/drivers" class="flex items-center gap-2 text-gray-700 hover:underline dark:text-gray-200">
+                <span class="h-2 w-2 shrink-0 rounded-full bg-gold-400"></span>
+                {{ s.subscriptions.dueSoon }} tarifa(s) por vencer en ≤ {{ s.subscriptions.reminderDays }} días
+              </a>
+            </li>
+          }
+          @if (s.drivers.pending > 0) {
+            <li>
+              <a routerLink="/drivers" class="flex items-center gap-2 text-gray-700 hover:underline dark:text-gray-200">
+                <span class="h-2 w-2 shrink-0 rounded-full bg-gold-400"></span>
+                {{ s.drivers.pending }} solicitud(es) esperando aprobación
+              </a>
+            </li>
+          }
+          @if (s.drivers.suspended > 0) {
+            <li>
+              <a routerLink="/drivers" class="flex items-center gap-2 text-gray-700 hover:underline dark:text-gray-200">
+                <span class="h-2 w-2 shrink-0 rounded-full bg-gray-400"></span>
+                {{ s.drivers.suspended }} afiliado(s) suspendido(s)
+              </a>
+            </li>
+          }
+        </ul>
+      } @else {
+        <div class="mt-4 flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
+          <p class="px-4 text-center text-sm text-gray-400 dark:text-gray-500">Sin alertas. Todo en orden.</p>
+        </div>
+      }
+    } @else {
+      <div class="mt-4 flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
+        <p class="text-sm text-gray-400 dark:text-gray-500">{{ loading() ? 'Cargando…' : 'Sin datos' }}</p>
+      </div>
+    }
   </article>
 </section>

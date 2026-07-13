@@ -51,7 +51,7 @@ export class MainLayout {
         { label: 'Documentos', route: null, icon: 'document' },
         { label: 'Beneficios', route: '/benefits', icon: 'gift' },
         { label: 'Capacitaciones', route: null, icon: 'academic' },
-        { label: 'Auditoría', route: null, icon: 'shield' },
+        { label: 'Auditoría', route: '/audit', icon: 'shield' },
       ],
     },
     {
