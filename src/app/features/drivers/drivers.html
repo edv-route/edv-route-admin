@@ -60,13 +60,14 @@
         <th class="px-6 py-3">Cédula</th>
         <th class="px-6 py-3">Contacto</th>
         <th class="px-6 py-3">Origen</th>
+        <th class="px-6 py-3">Tarifa</th>
         <th class="px-6 py-3">Estado</th>
         <th class="px-6 py-3">Registro</th>
       </tr>
     </thead>
     <tbody>
       @if (loading()) {
-        <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Cargando…</td></tr>
+        <tr><td colspan="7" class="px-6 py-8 text-center text-gray-400">Cargando…</td></tr>
       } @else {
         @for (item of items(); track item.userId) {
           <tr class="border-t border-gray-100 dark:border-gray-700">
@@ -90,6 +91,21 @@
             </td>
             <td class="px-6 py-4">{{ item.source === 'admin' ? 'Panel' : 'App' }}</td>
             <td class="px-6 py-4">
+              @if (item.subscription; as sub) {
+                @if (sub.status === 'expired') {
+                  <span class="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-900 dark:text-red-300">Vencida</span>
+                } @else if (sub.dueSoon) {
+                  <span class="rounded-full bg-gold-200 px-2.5 py-0.5 text-xs font-semibold text-gold-800">Por vencer</span>
+                } @else if (sub.status === 'active') {
+                  <span class="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-900 dark:text-green-300">Vigente</span>
+                } @else {
+                  <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">Programada</span>
+                }
+              } @else {
+                <span class="text-xs text-gray-400">—</span>
+              }
+            </td>
+            <td class="px-6 py-4">
               @switch (item.status) {
                 @case ('approved') {
                   <span class="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-900 dark:text-green-300">Aprobado</span>
@@ -108,7 +124,7 @@
             <td class="px-6 py-4">{{ item.createdAt | date: 'dd/MM/yyyy' }}</td>
           </tr>
         } @empty {
-          <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Sin resultados.</td></tr>
+          <tr><td colspan="7" class="px-6 py-8 text-center text-gray-400">Sin resultados.</td></tr>
         }
       }
     </tbody>

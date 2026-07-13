@@ -70,6 +70,16 @@ export class DriversApi {
     return this.http.post(`${this.baseUrl}/${id}/approve`, {});
   }
 
+  renewSubscription(
+    id: string,
+    periods: number,
+  ): Observable<{ invoiceNumbers: string[]; reactivated: boolean }> {
+    return this.http.post<{ invoiceNumbers: string[]; reactivated: boolean }>(
+      `${this.baseUrl}/${id}/subscription/renew`,
+      { periods },
+    );
+  }
+
   reject(id: string): Observable<unknown> {
     return this.http.post(`${this.baseUrl}/${id}/reject`, {});
   }

@@ -28,6 +28,9 @@ export class DriverDetail {
   readonly error = signal<string | null>(null);
   readonly editOpen = signal(false);
   readonly confirmAction = signal<'approve' | 'reject' | null>(null);
+  readonly renewOpen = signal(false);
+  readonly renewPeriods = signal(1);
+  readonly renewResult = signal<string | null>(null);
 
   fullName = '';
   nationalId = '';
@@ -110,6 +113,25 @@ export class DriverDetail {
       },
       error: (err: HttpErrorResponse) => {
         this.confirmAction.set(null);
+        this.fail(err);
+      },
+    });
+  }
+
+  renew(): void {
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.api.renewSubscription(this.id(), this.renewPeriods()).subscribe({
+      next: (result) => {
+        this.saving.set(false);
+        this.renewOpen.set(false);
+        this.renewResult.set(
+          `${result.reactivated ? 'Tarifa reactivada. ' : ''}Factura(s): N° ${result.invoiceNumbers.join(', N° ')}`,
+        );
+        this.load();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.renewOpen.set(false);
         this.fail(err);
       },
     });

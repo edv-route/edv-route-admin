@@ -1,5 +1,11 @@
 export type DriverStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
+export interface DriverSubscriptionSummary {
+  status: 'active' | 'scheduled' | 'pending_payment' | 'expired';
+  currentPeriodEnd: string | null;
+  dueSoon: boolean;
+}
+
 export interface DriverListItem {
   userId: string;
   fullName: string;
@@ -10,6 +16,7 @@ export interface DriverListItem {
   source: 'app' | 'admin';
   registrationStep: number | null;
   createdAt: string;
+  subscription: DriverSubscriptionSummary | null;
 }
 
 export interface DriverList {
@@ -39,7 +46,7 @@ export interface DriverDocument {
   status: 'valid' | 'expired' | 'rejected';
 }
 
-export interface DriverDetail extends DriverListItem {
+export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
   isAvailable: boolean;
   contractUrl: string | null;
   vehicles: DriverVehicle[];

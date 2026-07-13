@@ -46,8 +46,20 @@
           {{ d.status === 'suspended' ? 'Reactivar' : 'Suspender' }}
         </button>
       }
+      @if (d.status === 'approved' && d.subscription && (d.subscription.status === 'active' || d.subscription.status === 'expired')) {
+        <button type="button" (click)="renewOpen.set(true)"
+          class="rounded-lg bg-gold-400 px-4 py-2 text-sm font-semibold text-primary-950 hover:bg-gold-300">
+          {{ d.subscription.status === 'expired' ? 'Cobrar y reactivar tarifa' : 'Renovar tarifa' }}
+        </button>
+      }
     </div>
   </header>
+
+  @if (renewResult(); as message) {
+    <p class="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+      {{ message }}
+    </p>
+  }
 
   <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
     <!-- Contact + membership -->
@@ -168,6 +180,42 @@
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  }
+
+  <!-- Renew tariff modal -->
+  @if (renewOpen()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4">
+      <div class="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl dark:bg-gray-800">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white">
+          {{ d.subscription?.status === 'expired' ? 'Cobrar y reactivar tarifa' : 'Renovar tarifa' }}
+        </h2>
+        <p class="mt-1 text-xs text-gray-400">
+          Se emitirá una factura por cada período. Los períodos vencen a las 00:00.
+          @if (d.subscription?.status === 'expired') {
+            La operación del afiliado se reactiva automáticamente al registrar el pago.
+          }
+        </p>
+        <label for="renew-periods" class="mt-4 block text-sm font-semibold text-gray-900 dark:text-white">
+          Períodos a cobrar
+        </label>
+        <input
+          id="renew-periods" type="number" min="1" max="52"
+          [value]="renewPeriods()"
+          (input)="renewPeriods.set(+$any($event.target).value)"
+          class="mt-2 block w-28 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+        />
+        <div class="mt-5 flex justify-end gap-3">
+          <button type="button" (click)="renewOpen.set(false)"
+            class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+            Cancelar
+          </button>
+          <button type="button" (click)="renew()" [disabled]="saving() || renewPeriods() < 1"
+            class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+            {{ saving() ? 'Registrando…' : 'Cobrar y facturar' }}
+          </button>
+        </div>
       </div>
     </div>
   }
