@@ -248,6 +248,22 @@
               </a>
             </li>
           }
+          @if (s.drivers.penalized > 0) {
+            <li>
+              <a routerLink="/drivers" class="flex items-center gap-2 text-gray-700 hover:underline dark:text-gray-200">
+                <span class="h-2 w-2 shrink-0 rounded-full bg-red-500"></span>
+                {{ s.drivers.penalized }} afiliado(s) penalizado(s) — superaron el tope de deuda, no operan
+              </a>
+            </li>
+          }
+          @if (s.drivers.overdue > 0) {
+            <li>
+              <a routerLink="/drivers" class="flex items-center gap-2 text-gray-700 hover:underline dark:text-gray-200">
+                <span class="h-2 w-2 shrink-0 rounded-full bg-amber-500"></span>
+                {{ s.drivers.overdue }} afiliado(s) en mora — operan con deuda pendiente
+              </a>
+            </li>
+          }
         </ul>
       } @else {
         <div class="flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">

@@ -5,6 +5,10 @@ export interface DashboardSummary {
     suspended: number;
     /** Drivers on administrative leave (paused): frozen tariff, not operating. */
     paused: number;
+    /** Debt engine (v8): operating with outstanding debt within the cap. */
+    overdue: number;
+    /** Debt engine (v8): over the debt cap, not operating. */
+    penalized: number;
     /** driver.approved events in the last 7 days vs the 7 before (audit log). */
     approvedLast7: number;
     approvedPrev7: number;

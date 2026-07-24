@@ -139,7 +139,9 @@ export class Dashboard {
       s.documents.dueSoon > 0 ||
       s.drivers.pending > 0 ||
       s.drivers.suspended > 0 ||
-      s.drivers.paused > 0
+      s.drivers.paused > 0 ||
+      s.drivers.overdue > 0 ||
+      s.drivers.penalized > 0
     );
   }
 
