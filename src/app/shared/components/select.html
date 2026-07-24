@@ -1,0 +1,73 @@
+<button
+  type="button"
+  (click)="toggle()"
+  [disabled]="disabled()"
+  [attr.aria-label]="ariaLabel() || null"
+  [attr.aria-expanded]="isOpen()"
+  aria-haspopup="listbox"
+  [class]="
+    'flex w-full items-center justify-between gap-1 rounded-lg border text-left transition ' +
+    (compact() ? 'px-2.5 py-2.5 text-sm ' : 'px-3 py-2.5 text-sm ') +
+    (disabled()
+      ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-500 dark:border-gray-600 dark:bg-gray-600 dark:text-gray-300'
+      : isOpen()
+        ? 'border-primary-700 bg-white text-gray-900 ring-1 ring-primary-700 dark:bg-gray-700 dark:text-white'
+        : 'border-gray-300 bg-gray-50 text-gray-900 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-white')
+  "
+>
+  <span class="truncate">
+    @if (selected(); as option) {
+      @if (option.prefix) {
+        <span class="mr-1.5">{{ option.prefix }}</span>
+      }
+      <span class="font-medium">{{ option.label }}</span>
+    } @else {
+      <span class="text-gray-400">{{ placeholder() }}</span>
+    }
+  </span>
+
+  <svg
+    class="h-4 w-4 shrink-0 text-gray-400 transition-transform"
+    [class.rotate-180]="isOpen()"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+  >
+    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+  </svg>
+</button>
+
+@if (isOpen()) {
+  <ul
+    role="listbox"
+    [attr.aria-label]="ariaLabel() || null"
+    class="absolute z-50 mt-1 max-h-60 w-full min-w-max overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-600 dark:bg-gray-800"
+  >
+    @for (option of options(); track option.value; let i = $index) {
+      <li
+        role="option"
+        [attr.aria-selected]="option.value === value()"
+        (click)="select(option)"
+        (mouseenter)="activeIndex.set(i)"
+        [class]="
+          'flex cursor-pointer items-center gap-2 px-3 py-2 text-sm transition ' +
+          (i === activeIndex()
+            ? 'bg-primary-50 text-primary-800 dark:bg-gray-700 dark:text-white'
+            : 'text-gray-700 dark:text-gray-200')
+        "
+      >
+        @if (option.prefix) {
+          <span>{{ option.prefix }}</span>
+        }
+        <span class="flex-1 font-medium">{{ option.label }}</span>
+        @if (option.value === value()) {
+          <svg class="h-4 w-4 text-primary-700 dark:text-gold-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+        }
+      </li>
+    }
+  </ul>
+}

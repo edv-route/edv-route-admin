@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -9,13 +9,15 @@ import {
   type AuditLogFacets,
   type AuditLogItem,
 } from '../../core/models/audit-log.model';
+import { DatePicker } from '../../shared/components/date-picker';
+import { Select, type SelectOption } from '../../shared/components/select';
 import { AuditLogsApi } from './audit-logs.api';
 
 const PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-audit-logs',
-  imports: [FormsModule, DatePipe, RouterLink],
+  imports: [FormsModule, DatePipe, RouterLink, Select, DatePicker],
   templateUrl: './audit-logs.html',
 })
 export class AuditLogs {
@@ -28,6 +30,19 @@ export class AuditLogs {
   readonly error = signal<string | null>(null);
   readonly facets = signal<AuditLogFacets>({ eventTypes: [], entities: [], actors: [] });
   readonly sourceFilter = signal<'' | 'admin' | 'system'>('');
+
+  /** Filter options for app-select ('' = all), derived from the log facets. */
+  readonly eventTypeOptions = computed<SelectOption[]>(() => [
+    { value: '', label: 'Todos los eventos' },
+    ...this.facets().eventTypes.map((type) => ({ value: type, label: this.eventLabel(type) })),
+  ]);
+  readonly adminOptions = computed<SelectOption[]>(() => [
+    { value: '', label: 'Todos los admins' },
+    ...this.facets().actors.map((actor) => ({
+      value: actor.id,
+      label: `${actor.fullName} (${actor.username})`,
+    })),
+  ]);
 
   eventType = '';
   adminId = '';

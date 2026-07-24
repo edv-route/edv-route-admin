@@ -2,17 +2,23 @@ import { Component, inject, signal } from '@angular/core';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import type { Requirement, RequirementAppliesTo } from '../../core/models/requirement.model';
+import { Select, type SelectOption } from '../../shared/components/select';
 import { RequirementsApi } from './requirements.api';
 
 type ModalState = { mode: 'create' } | { mode: 'edit'; item: Requirement } | null;
 
 @Component({
   selector: 'app-requirements',
-  imports: [FormsModule],
+  imports: [FormsModule, Select],
   templateUrl: './requirements.html',
 })
 export class Requirements {
   private readonly api = inject(RequirementsApi);
+
+  readonly appliesToOptions: SelectOption[] = [
+    { value: 'driver', label: 'Chofer' },
+    { value: 'vehicle', label: 'Vehículo' },
+  ];
 
   readonly items = signal<Requirement[]>([]);
   readonly loading = signal(true);

@@ -1,3 +1,9 @@
+<!--
+  Dashboard. Card chassis and list patterns from the Flowbite Pro dashboard
+  (stat card: icon + label + value + subline; list card: header + divide-y
+  rows with avatar chips). EDV brand colors kept as established: values in
+  primary-700 (gold-400 in dark), gold/red alert dots. Logic untouched.
+-->
 <header class="mb-6">
   <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
   <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -11,107 +17,185 @@
   </p>
 }
 
+<!-- Revenue chart (Pro hero card: big total + area chart, EDV brand colors) -->
+<section class="mb-4 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-6">
+  <div class="mb-2">
+    <h2 class="mb-1 text-2xl font-bold leading-none text-primary-700 dark:text-gold-400">
+      ${{ revenueTotal() }}
+    </h2>
+    <p class="text-gray-500 dark:text-gray-400">
+      Facturación de los últimos {{ revenueDays }} días
+    </p>
+  </div>
+  @if (revenuePoints(); as points) {
+    @if (points.length === 0) {
+      <div class="flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
+        <p class="text-sm text-gray-400 dark:text-gray-500">Sin datos de facturación.</p>
+      </div>
+    }
+  } @else {
+    <div class="flex h-40 items-center justify-center">
+      <p class="text-sm text-gray-400 dark:text-gray-500">Cargando gráfico…</p>
+    </div>
+  }
+  <div #revenueChart></div>
+</section>
+
+<!-- Stat cards (Pro pattern: icon, label, value, subline) -->
 <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
   @if (summary(); as s) {
-    <a
-      routerLink="/drivers"
-      class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-primary-300 hover:shadow dark:border-gray-700 dark:bg-gray-800"
-    >
-      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Afiliados activos</p>
-      <p class="mt-2 text-3xl font-bold text-primary-700 dark:text-gold-400">{{ s.drivers.approved }}</p>
-      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Aprobados y operando</p>
+    <a routerLink="/drivers" class="rounded-lg bg-white p-4 shadow-sm transition hover:shadow dark:bg-gray-800 md:p-6">
+      <svg class="mb-2 h-6 w-6 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+      </svg>
+      <h3 class="text-sm text-gray-500 dark:text-gray-400">Afiliados activos</h3>
+      <span class="text-2xl font-bold text-primary-700 dark:text-gold-400">{{ s.drivers.approved }}</span>
+      @if (approvalsTrend(); as t) {
+        <p class="mt-2 flex items-center text-sm text-gray-500 dark:text-gray-400">
+          <span
+            class="mr-1.5 flex items-center font-medium"
+            [class]="t.direction === 'up' ? 'text-green-500' : t.direction === 'down' ? 'text-red-600 dark:text-red-500' : 'text-gray-400'"
+          >
+            @if (t.direction === 'up') {
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v13m0-13 4 4m-4-4-4 4" />
+              </svg>
+            } @else if (t.direction === 'down') {
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 14-4-4m4 4 4-4" />
+              </svg>
+            }
+          </span>
+          {{ t.label }}
+        </p>
+      } @else {
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Aprobados y operando</p>
+      }
     </a>
-    <a
-      routerLink="/drivers"
-      class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-primary-300 hover:shadow dark:border-gray-700 dark:bg-gray-800"
-    >
-      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Solicitudes pendientes</p>
-      <p class="mt-2 text-3xl font-bold text-primary-700 dark:text-gold-400">{{ s.drivers.pending }}</p>
-      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">En cola de aprobación</p>
+
+    <a routerLink="/drivers" class="rounded-lg bg-white p-4 shadow-sm transition hover:shadow dark:bg-gray-800 md:p-6">
+      <svg class="mb-2 h-6 w-6 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <h3 class="text-sm text-gray-500 dark:text-gray-400">Solicitudes pendientes</h3>
+      <span class="text-2xl font-bold text-primary-700 dark:text-gold-400">{{ s.drivers.pending }}</span>
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">En cola de aprobación</p>
     </a>
-    <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Facturado (últimos 7 días)</p>
-      <p class="mt-2 text-3xl font-bold text-primary-700 dark:text-gold-400">${{ s.invoicing.last7DaysUsd }}</p>
-      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ s.invoicing.last7DaysCount }} facturas emitidas</p>
+
+    <article class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-6">
+      <svg class="mb-2 h-6 w-6 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+      </svg>
+      <h3 class="text-sm text-gray-500 dark:text-gray-400">Facturado (últimos 7 días)</h3>
+      <span class="text-2xl font-bold text-primary-700 dark:text-gold-400">${{ s.invoicing.last7DaysUsd }}</span>
+      @if (revenueTrend(); as t) {
+        <p class="mt-2 flex items-center text-sm text-gray-500 dark:text-gray-400">
+          <span
+            class="mr-1.5 flex items-center font-medium"
+            [class]="t.direction === 'up' ? 'text-green-500' : t.direction === 'down' ? 'text-red-600 dark:text-red-500' : 'text-gray-400'"
+          >
+            @if (t.direction === 'up') {
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v13m0-13 4 4m-4-4-4 4" />
+              </svg>
+            } @else if (t.direction === 'down') {
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 14-4-4m4 4 4-4" />
+              </svg>
+            }
+          </span>
+          {{ t.label }}
+        </p>
+      } @else {
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ s.invoicing.last7DaysCount }} facturas emitidas</p>
+      }
     </article>
-    <a
-      routerLink="/drivers"
-      class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-primary-300 hover:shadow dark:border-gray-700 dark:bg-gray-800"
-    >
-      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Tarifas por vencer / vencidas</p>
-      <p class="mt-2 text-3xl font-bold">
+
+    <a routerLink="/drivers" class="rounded-lg bg-white p-4 shadow-sm transition hover:shadow dark:bg-gray-800 md:p-6">
+      <svg class="mb-2 h-6 w-6 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+      </svg>
+      <h3 class="text-sm text-gray-500 dark:text-gray-400">Tarifas por vencer / vencidas</h3>
+      <span class="text-2xl font-bold">
         <span class="text-gold-600">{{ s.subscriptions.dueSoon }}</span>
         <span class="text-gray-300 dark:text-gray-600"> / </span>
         <span class="text-primary-700 dark:text-primary-300">{{ s.subscriptions.expired }}</span>
-      </p>
-      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+      </span>
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
         Cobertura ≤ {{ s.subscriptions.reminderDays }} días · vencidas no operan
       </p>
     </a>
   } @else {
     @for (i of [1, 2, 3, 4]; track i) {
-      <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">&nbsp;</p>
-        <p class="mt-2 text-3xl font-bold text-gray-300 dark:text-gray-600">{{ loading() ? '…' : '—' }}</p>
-        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">&nbsp;</p>
+      <article class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-6">
+        <div class="mb-2 h-6 w-6 rounded bg-gray-100 dark:bg-gray-700"></div>
+        <h3 class="text-sm text-gray-500 dark:text-gray-400">&nbsp;</h3>
+        <span class="text-2xl font-bold text-gray-300 dark:text-gray-600">{{ loading() ? '…' : '—' }}</span>
+        <p class="mt-2 text-sm text-gray-400 dark:text-gray-500">&nbsp;</p>
       </article>
     }
   }
 </section>
 
-<section class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-  <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
-    <div class="flex items-center justify-between">
-      <h2 class="font-semibold text-gray-900 dark:text-white">Actividad reciente</h2>
-      <a routerLink="/audit" class="text-sm font-medium text-primary-700 hover:underline dark:text-primary-300">
-        Ver toda la auditoría →
+<!-- Activity feed + alerts (Pro list-card pattern) -->
+<section class="mt-4 grid grid-cols-1 gap-4 2xl:grid-cols-3">
+  <div class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-6 2xl:col-span-2">
+    <div class="mb-4 flex items-center justify-between">
+      <h2 class="text-lg font-bold leading-none text-gray-900 dark:text-white">Actividad reciente</h2>
+      <a
+        routerLink="/audit"
+        class="inline-flex items-center rounded-lg p-1.5 text-sm font-medium text-primary-700 hover:bg-gray-100 dark:text-primary-300 dark:hover:bg-gray-700"
+      >
+        Ver toda la auditoría
       </a>
     </div>
     @if (feed().length > 0) {
-      <ul class="mt-4 divide-y divide-gray-100 dark:divide-gray-700">
+      <ul role="list" class="divide-y divide-gray-200 dark:divide-gray-700">
         @for (item of feed(); track item.id) {
-          <li class="flex items-center justify-between gap-3 py-2.5">
-            <div class="min-w-0">
-              <p class="truncate text-sm text-gray-700 dark:text-gray-200">
-                <span class="font-medium">{{ eventLabel(item.eventType) }}</span>
-                <span class="text-gray-400"> · </span>
-                @if (item.driverId) {
-                  <a
-                    [routerLink]="['/drivers', item.driverId]"
-                    class="text-primary-700 hover:underline dark:text-primary-300"
-                  >
-                    {{ feedSubject(item) }}
-                  </a>
-                } @else {
-                  {{ feedSubject(item) }}
-                }
-              </p>
-              <p class="text-xs text-gray-400 dark:text-gray-500">
-                {{ item.actorType === 'system' ? 'Sistema' : (item.actorName ?? '—') }}
-              </p>
+          <li class="py-3 sm:py-3.5">
+            <div class="flex items-center gap-3">
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700 dark:bg-gray-700 dark:text-gold-400">
+                {{ subjectInitials(item) }}
+              </span>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-medium text-gray-900 dark:text-white">
+                  {{ eventLabel(item.eventType) }}
+                  <span class="font-normal text-gray-400"> · </span>
+                  @if (item.driverId) {
+                    <a [routerLink]="['/drivers', item.driverId]" class="font-medium text-primary-700 hover:underline dark:text-primary-300">
+                      {{ feedSubject(item) }}
+                    </a>
+                  } @else {
+                    <span class="font-normal">{{ feedSubject(item) }}</span>
+                  }
+                </p>
+                <p class="truncate text-sm text-gray-500 dark:text-gray-400">
+                  {{ item.actorType === 'system' ? 'Sistema' : (item.actorName ?? '—') }}
+                </p>
+              </div>
+              <span class="shrink-0 text-sm text-gray-500 dark:text-gray-400">
+                {{ item.createdAt | date: 'dd/MM HH:mm' }}
+              </span>
             </div>
-            <span class="shrink-0 text-xs text-gray-400 dark:text-gray-500">
-              {{ item.createdAt | date: 'dd/MM HH:mm' }}
-            </span>
           </li>
         }
       </ul>
     } @else {
-      <div class="mt-4 flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
+      <div class="flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
         <p class="text-sm text-gray-400 dark:text-gray-500">Aún no hay actividad registrada.</p>
       </div>
     }
-  </article>
+  </div>
 
-  <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-    <h2 class="font-semibold text-gray-900 dark:text-white">Alertas</h2>
+  <div class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-6">
+    <h2 class="mb-4 text-lg font-bold leading-none text-gray-900 dark:text-white">Alertas</h2>
     @if (summary(); as s) {
       @if (hasAlerts) {
-        <ul class="mt-4 space-y-3 text-sm">
+        <ul class="space-y-3 text-sm">
           @if (s.subscriptions.expired > 0) {
             <li>
               <a routerLink="/drivers" class="flex items-center gap-2 text-gray-700 hover:underline dark:text-gray-200">
-                <span class="h-2 w-2 shrink-0 rounded-full bg-red-500"></span>
+                <span class="h-2 w-2 shrink-0 rounded-full bg-primary-700 dark:bg-primary-400"></span>
                 {{ s.subscriptions.expired }} tarifa(s) vencida(s) — esos afiliados no operan
               </a>
             </li>
@@ -121,6 +205,22 @@
               <a routerLink="/drivers" class="flex items-center gap-2 text-gray-700 hover:underline dark:text-gray-200">
                 <span class="h-2 w-2 shrink-0 rounded-full bg-gold-400"></span>
                 {{ s.subscriptions.dueSoon }} tarifa(s) por vencer en ≤ {{ s.subscriptions.reminderDays }} días
+              </a>
+            </li>
+          }
+          @if (s.documents.expired > 0) {
+            <li>
+              <a routerLink="/documents" class="flex items-center gap-2 text-gray-700 hover:underline dark:text-gray-200">
+                <span class="h-2 w-2 shrink-0 rounded-full bg-primary-700 dark:bg-primary-400"></span>
+                {{ s.documents.expired }} documento(s) vencido(s)
+              </a>
+            </li>
+          }
+          @if (s.documents.dueSoon > 0) {
+            <li>
+              <a routerLink="/documents" class="flex items-center gap-2 text-gray-700 hover:underline dark:text-gray-200">
+                <span class="h-2 w-2 shrink-0 rounded-full bg-gold-400"></span>
+                {{ s.documents.dueSoon }} documento(s) por vencer en ≤ {{ s.documents.warningDays }} días
               </a>
             </li>
           }
@@ -140,16 +240,24 @@
               </a>
             </li>
           }
+          @if (s.drivers.paused > 0) {
+            <li>
+              <a routerLink="/drivers" class="flex items-center gap-2 text-gray-700 hover:underline dark:text-gray-200">
+                <span class="h-2 w-2 shrink-0 rounded-full bg-blue-500"></span>
+                {{ s.drivers.paused }} afiliado(s) en pausa (licencia)
+              </a>
+            </li>
+          }
         </ul>
       } @else {
-        <div class="mt-4 flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
+        <div class="flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
           <p class="px-4 text-center text-sm text-gray-400 dark:text-gray-500">Sin alertas. Todo en orden.</p>
         </div>
       }
     } @else {
-      <div class="mt-4 flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
+      <div class="flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
         <p class="text-sm text-gray-400 dark:text-gray-500">{{ loading() ? 'Cargando…' : 'Sin datos' }}</p>
       </div>
     }
-  </article>
+  </div>
 </section>

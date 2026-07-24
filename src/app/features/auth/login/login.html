@@ -1,70 +1,83 @@
-<main class="min-h-screen bg-brand-gradient flex items-center justify-center p-4">
-  <section class="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl dark:bg-gray-800">
-    <img
-      src="assets/logos/edv-logo-vertical-red.svg"
-      alt="EDV Route"
-      class="mx-auto w-44"
-    />
+<!--
+  Login screen. Visual structure adapted from the Flowbite Pro "sign-in" block,
+  re-themed to EDV and reduced to what the panel supports: username + password
+  only (no social/sign-up/reset). Logic lives in login.ts and is untouched.
+  Layout: fixed-width form sidebar + full-bleed brand panel that fills the rest.
+-->
+<main class="min-h-screen w-full bg-gray-50 dark:bg-gray-900 lg:flex">
+  <!-- Form panel: half the screen, content centered -->
+  <div class="flex min-h-screen w-full flex-col items-center justify-center px-6 py-10 lg:w-1/2 lg:px-12">
+    <div class="w-full max-w-md">
+      <!-- Brand logo: red on light background, white on dark -->
+      <img src="assets/logos/edv-logo-vertical-red.svg" alt="EDV Route" class="mx-auto w-36 dark:hidden" />
+      <img src="assets/logos/edv-logo-vertical-white.svg" alt="EDV Route" class="mx-auto hidden w-36 dark:block" />
 
-    <h1 class="mt-6 text-center text-xl font-bold text-gray-900 dark:text-white">
-      Panel de Administración
-    </h1>
-    <p class="mt-1 text-center text-sm text-gray-500 dark:text-gray-400">
-      Acceso restringido al personal autorizado
-    </p>
+      <h1 class="mt-8 text-center text-2xl font-extrabold leading-tight tracking-tight text-gray-900 dark:text-white">
+        Bienvenido de nuevo
+      </h1>
+      <p class="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">
+        Panel de Administración · acceso restringido al personal autorizado
+      </p>
 
-    <form class="mt-8 space-y-5" (ngSubmit)="onSubmit()">
-      <div>
-        <label
-          for="username"
-          class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white"
+      <form class="mt-8 space-y-5" (ngSubmit)="onSubmit()">
+        <div>
+          <label for="username" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Usuario</label>
+          <input
+            id="username"
+            name="username"
+            type="text"
+            autocomplete="username"
+            required
+            [(ngModel)]="username"
+            placeholder="usuario"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400"
+          />
+        </div>
+
+        <div>
+          <label for="password" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Contraseña</label>
+          <app-password-input
+            inputId="password"
+            name="password"
+            autocomplete="current-password"
+            [(ngModel)]="password"
+            placeholder="••••••••"
+          />
+        </div>
+
+        @if (error(); as message) {
+          <p class="rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-700 dark:text-primary-300">
+            {{ message }}
+          </p>
+        }
+
+        <button
+          type="submit"
+          [disabled]="loading()"
+          class="w-full rounded-lg bg-primary-700 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 disabled:cursor-not-allowed disabled:opacity-60 dark:focus:ring-primary-800"
         >
-          Usuario
-        </label>
-        <input
-          id="username"
-          name="username"
-          type="text"
-          autocomplete="username"
-          required
-          [(ngModel)]="username"
-          placeholder="usuario"
-          class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-        />
-      </div>
+          {{ loading() ? 'Verificando…' : 'Ingresar' }}
+        </button>
+      </form>
 
-      <div>
-        <label
-          for="password"
-          class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white"
-        >
-          Contraseña
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autocomplete="current-password"
-          required
-          [(ngModel)]="password"
-          placeholder="••••••••"
-          class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-        />
-      </div>
+      <p class="mt-10 text-center text-xs text-gray-400 dark:text-gray-500">
+        EDV Route · Profesionales del Volante
+      </p>
+    </div>
+  </div>
 
-      @if (error(); as message) {
-        <p class="rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-700 dark:text-primary-300">
-          {{ message }}
-        </p>
-      }
-
-      <button
-        type="submit"
-        [disabled]="loading()"
-        class="w-full rounded-lg bg-primary-700 px-5 py-3 text-sm font-semibold text-white hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {{ loading() ? 'Verificando…' : 'Ingresar' }}
-      </button>
-    </form>
-  </section>
+  <!-- Brand panel: the other half (hidden on small screens) -->
+  <div class="relative hidden overflow-hidden bg-brand-gradient lg:flex lg:w-1/2 lg:items-center lg:justify-center">
+    <div class="relative z-10 px-12 text-center">
+      <img src="assets/logos/edv-logo-horizontal-white.svg" alt="EDV Route" class="mx-auto w-80" />
+      <p class="mt-8 text-3xl font-extrabold leading-tight text-white">Profesionales del Volante</p>
+      <p class="mx-auto mt-4 max-w-lg text-base leading-relaxed text-white/70">
+        Gestión integral del gremio: afiliados, membresías, tarifas, documentos y capacitaciones,
+        desde un solo panel.
+      </p>
+    </div>
+    <!-- Subtle gold glow accents -->
+    <div class="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-gold-400/10 blur-3xl"></div>
+    <div class="pointer-events-none absolute -top-32 -left-32 h-80 w-80 rounded-full bg-gold-400/5 blur-3xl"></div>
+  </div>
 </main>

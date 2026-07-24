@@ -10,6 +10,10 @@ export interface BenefitInput {
   active?: boolean;
 }
 
+/**
+ * Benefits are the membership's catalog: a benefit only exists to be granted
+ * by a membership version. Its API lives with the membership feature.
+ */
 @Injectable({ providedIn: 'root' })
 export class BenefitsApi {
   private readonly http = inject(HttpClient);

@@ -42,18 +42,30 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admins/admins').then((m) => m.Admins),
       },
       {
+        path: 'settings',
+        loadComponent: () => import('./features/settings/settings').then((m) => m.Settings),
+      },
+      {
         path: 'requirements',
         loadComponent: () =>
           import('./features/requirements/requirements').then((m) => m.Requirements),
       },
       {
-        path: 'benefits',
-        loadComponent: () => import('./features/benefits/benefits').then((m) => m.Benefits),
-      },
-      {
         path: 'membership',
         loadComponent: () =>
           import('./features/membership/membership').then((m) => m.MembershipPage),
+      },
+      {
+        path: 'billing',
+        loadComponent: () => import('./features/billing/billing').then((m) => m.Billing),
+      },
+      {
+        path: 'documents',
+        loadComponent: () => import('./features/documents/documents').then((m) => m.Documents),
+      },
+      {
+        path: 'trainings',
+        loadComponent: () => import('./features/trainings/trainings').then((m) => m.Trainings),
       },
       {
         path: 'audit',
@@ -65,6 +77,11 @@ export const routes: Routes = [
           import('./features/subscription-plans/subscription-plans').then(
             (m) => m.SubscriptionPlans,
           ),
+      },
+      {
+        path: 'payment-methods',
+        loadComponent: () =>
+          import('./features/payment-methods/payment-methods').then((m) => m.PaymentMethods),
       },
     ],
   },

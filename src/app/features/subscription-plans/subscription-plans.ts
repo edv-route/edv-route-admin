@@ -32,9 +32,16 @@ export class SubscriptionPlans {
 
   name = '';
   description = '';
-  billingPeriod: BillingPeriod = 'weekly';
   priceUsd = 0;
-  selectedTypes = new Set<number>();
+
+  /**
+   * Business decision (2026-07-16): period and vehicle types are NOT editable
+   * for now - new tariffs are weekly and apply to every vehicle type (sent as
+   * null = "all", so future vehicle types stay covered). Editing an existing
+   * plan preserves its stored values instead of silently rewriting them.
+   */
+  billingPeriod: BillingPeriod = 'weekly';
+  private allowedTypesPayload: number[] | null = null;
 
   constructor() {
     this.load();
@@ -66,7 +73,7 @@ export class SubscriptionPlans {
     this.description = '';
     this.billingPeriod = 'weekly';
     this.priceUsd = 0;
-    this.selectedTypes = new Set();
+    this.allowedTypesPayload = null; // null = all vehicle types
     this.error.set(null);
     this.modal.set({ mode: 'create' });
   }
@@ -76,17 +83,14 @@ export class SubscriptionPlans {
     this.description = item.description ?? '';
     this.billingPeriod = item.billingPeriod;
     this.priceUsd = Number(item.priceUsd);
-    this.selectedTypes = new Set(item.allowedVehicleTypes ?? []);
+    this.allowedTypesPayload = item.allowedVehicleTypes;
     this.error.set(null);
     this.modal.set({ mode: 'edit', item });
   }
 
-  toggleType(id: number): void {
-    if (this.selectedTypes.has(id)) {
-      this.selectedTypes.delete(id);
-    } else {
-      this.selectedTypes.add(id);
-    }
+  /** Locked checkboxes: which ones appear checked (null = all of them). */
+  isTypeChecked(id: number): boolean {
+    return this.allowedTypesPayload === null || this.allowedTypesPayload.includes(id);
   }
 
   save(): void {
@@ -100,7 +104,7 @@ export class SubscriptionPlans {
       description: this.description.trim() === '' ? null : this.description.trim(),
       billingPeriod: this.billingPeriod,
       priceUsd: this.priceUsd,
-      allowedVehicleTypeIds: [...this.selectedTypes],
+      allowedVehicleTypeIds: this.allowedTypesPayload,
     };
 
     const request =

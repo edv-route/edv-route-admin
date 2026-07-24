@@ -1,4 +1,13 @@
-export type DriverStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
+export type DriverStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'suspended'
+  | 'paused'
+  /** Debt engine (v8): in arrears but still operating, up to the cap. */
+  | 'overdue'
+  /** Debt engine (v8): went past the debt cap, does not operate. */
+  | 'penalized';
 
 export interface DriverSubscriptionSummary {
   status: 'active' | 'scheduled' | 'pending_payment' | 'expired';
@@ -47,20 +56,58 @@ export interface DriverDocument {
 }
 
 export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  secondLastName: string | null;
+  birthDate: string | null;
+  address: string | null;
+  /** The app password itself never leaves the backend. */
+  hasAppPassword: boolean;
   isAvailable: boolean;
   contractUrl: string | null;
+  /** The driver's "current" vehicle (backend sends it; used to flag it in the UI). */
+  currentVehicleId: string | null;
   vehicles: DriverVehicle[];
   documents: DriverDocument[];
   membershipPayment: { id: string; amountUsd: string; status: string; paidAt: string | null } | null;
+  /** Benefits of the membership version the driver paid (empty if not a member). */
+  benefits: { id: number; name: string; description: string | null }[];
   subscription: {
     id: string;
     planId: number;
     planName: string;
     status: string;
     billingPeriod: string;
+    priceUsd: string;
+    startedAt: string | null;
     currentPeriodStart: string | null;
     currentPeriodEnd: string | null;
     paidPeriods: number;
+  } | null;
+  /**
+   * Outstanding debt (v8 debt engine): unpaid weekly charges + penalty.
+   * Always present (zeros when nothing is owed). Read-only: settled via renewal
+   * or external payment, never registered by hand.
+   */
+  debt: {
+    totalUsd: string;
+    weeksOwed: number;
+    penaltyCount: number;
+    charges: {
+      id: string;
+      kind: 'period' | 'penalty';
+      amountUsd: string;
+      status: string;
+      periodStart: string | null;
+      periodEnd: string | null;
+    }[];
+  };
+  /** Programmed plan change waiting for the paid coverage to run out. */
+  scheduledPlan: {
+    planName: string;
+    billingPeriod: string;
+    startsAt: string | null;
   } | null;
 }
 
@@ -69,4 +116,7 @@ export const DRIVER_STATUS_LABELS: Record<DriverStatus, string> = {
   approved: 'Aprobado',
   rejected: 'Rechazado',
   suspended: 'Suspendido',
+  paused: 'Pausado',
+  overdue: 'En mora',
+  penalized: 'Penalizado',
 };

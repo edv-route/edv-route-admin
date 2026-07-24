@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @plugin "flowbite/plugin";
 @source "../node_modules/flowbite";
+/* Datepicker popup builds its DOM at runtime: Tailwind must scan its bundle */
+@source "../node_modules/flowbite-datepicker";
 
 /* Class-based dark mode (toggled by adding .dark to <html>) */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -81,9 +83,72 @@
   --color-gold-900: #6e531a;
   --color-gold-950: #402e0b;
   --color-gold: #ebca54;
+
+  /* Flowbite v4 semantic tokens used by flowbite-datepicker's runtime DOM.
+   * The theme only defined primary/gold, so the calendar rendered unstyled;
+   * mapping these to EDV/neutral values makes the popup look native-brand
+   * (selected day in brand red). Popup stays light in both themes. */
+  --color-brand: #920606; /* selected day */
+  --color-brand-strong: #7a0b0b; /* selected day hover */
+  --color-neutral-primary-medium: #ffffff; /* picker + title background */
+  --color-neutral-secondary-medium: #f9fafb;
+  --color-neutral-tertiary-medium: #f3f4f6; /* cell hover */
+  --color-default-medium: #e5e7eb; /* border */
+  --color-body: #374151; /* day numbers */
+  --color-heading: #111827; /* month/year title */
+  --radius-base: 0.5rem;
 }
 
 /* Official brand gradient (red to black), e.g. auth screens and banners */
 @utility bg-brand-gradient {
   background-image: linear-gradient(135deg, var(--color-primary-700) 0%, #1a0303 100%);
+}
+
+/* ---------------------------------------------------------------------------
+ * Base layer
+ * Tailwind 4 dropped the v3 default of cursor:pointer on buttons; restore it
+ * globally so every current and future clickable control behaves like one.
+ * Disabled controls keep the not-allowed cursor.
+ * ------------------------------------------------------------------------- */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  input[type="button"]:not(:disabled),
+  input[type="file"]:not(:disabled)::file-selector-button,
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"]:disabled,
+  input[type="submit"]:disabled,
+  input[type="button"]:disabled {
+    cursor: not-allowed;
+  }
+
+  /* Angular adds novalidate to every form, so the browser never signals an
+   * invalid required field. Paint it ourselves once the user has touched it:
+   * applies to every current and future form of the panel. */
+  input.ng-invalid.ng-touched,
+  select.ng-invalid.ng-touched,
+  textarea.ng-invalid.ng-touched,
+  /* Custom controls carry ng-* on their host: reach the inner element */
+  app-password-input.ng-invalid.ng-touched input,
+  app-date-picker.ng-invalid.ng-touched input,
+  app-select.ng-invalid.ng-touched button {
+    border-color: var(--color-primary-600);
+    background-color: var(--color-primary-50);
+  }
+  input.ng-invalid.ng-touched:focus,
+  select.ng-invalid.ng-touched:focus,
+  textarea.ng-invalid.ng-touched:focus,
+  app-password-input.ng-invalid.ng-touched input:focus,
+  app-date-picker.ng-invalid.ng-touched input:focus {
+    border-color: var(--color-primary-700);
+    outline: none;
+    box-shadow: 0 0 0 1px var(--color-primary-700);
+  }
 }

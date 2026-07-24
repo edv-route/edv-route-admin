@@ -18,6 +18,7 @@
     "@angular/platform-browser": "^22.0.0",
     "@angular/router": "^22.0.0",
     "@tailwindcss/postcss": "^4.3.2",
+    "apexcharts": "^6.5.0",
     "flowbite": "^4.0.2",
     "postcss": "^8.5.16",
     "rxjs": "~7.8.0",

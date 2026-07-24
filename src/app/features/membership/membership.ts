@@ -5,7 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { environment } from '../../../environments/environment';
 import type { Benefit } from '../../core/models/benefit.model';
 import type { Membership } from '../../core/models/membership.model';
-import { BenefitsApi } from '../benefits/benefits.api';
+import { BenefitsApi } from './benefits.api';
+import { BenefitsCatalog } from './benefits-catalog';
 
 interface MembershipPayload {
   name: string;
@@ -16,7 +17,7 @@ interface MembershipPayload {
 
 @Component({
   selector: 'app-membership',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, BenefitsCatalog],
   templateUrl: './membership.html',
 })
 export class MembershipPage {
@@ -62,6 +63,13 @@ export class MembershipPage {
 
   benefitName(id: number): string {
     return this.benefits().find((b) => b.id === id)?.name ?? `#${id}`;
+  }
+
+  /** The embedded catalog changed: refresh the benefits offered per version. */
+  reloadBenefits(): void {
+    this.benefitsApi.list().subscribe({
+      next: (items) => this.benefits.set(items.filter((b) => b.active)),
+    });
   }
 
   openModal(): void {

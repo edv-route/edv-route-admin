@@ -1,64 +1,246 @@
+<!-- Centered container: use the available width instead of hugging the left -->
+<div class="mx-auto w-full max-w-6xl">
 <header class="mb-6">
   <a routerLink="/drivers" class="text-sm text-gray-400 hover:text-primary-700">← Afiliados</a>
   <h1 class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">Nuevo afiliado</h1>
 </header>
 
-<!-- Stepper -->
-<ol class="mb-8 flex flex-wrap items-center gap-2 text-xs font-semibold">
-  @for (s of [[1, 'Datos'], [2, 'Documentos'], [3, 'Vehículo'], [4, 'Pagos']]; track s[0]) {
-    <li
-      [class]="step() === s[0]
-        ? 'rounded-full bg-primary-700 px-4 py-2 text-white'
-        : (step() > +s[0] || step() === 5)
-          ? 'rounded-full bg-green-100 px-4 py-2 text-green-800'
-          : 'rounded-full bg-gray-100 px-4 py-2 text-gray-500 dark:bg-gray-700 dark:text-gray-400'"
-    >
-      {{ s[0] }}. {{ s[1] }}
-    </li>
-  }
-</ol>
-
-@if (error(); as message) {
-  <p class="mb-4 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-800 dark:text-primary-300">
-    {{ message }}
-  </p>
+<!-- Wizard: everything is accumulated client-side and persisted in one
+     transaction at the final submit (nothing is saved before that). -->
+<!-- Pro stepper band: card strip, two-line labels, connectors that fill in
+     brand red as steps complete -->
+@if (step() < 5) {
+  <div class="mb-4 rounded-lg bg-white px-4 py-4 shadow-sm dark:bg-gray-800 md:px-6 md:py-5">
+    <ol class="flex w-full items-center">
+      @for (s of [[1, 'Datos'], [2, 'Documentos'], [3, 'Vehículo'], [4, 'Pago']]; track s[0]; let last = $last) {
+        <li
+          [class]="!last
+            ? 'flex w-full items-center after:mx-4 after:inline-block after:h-1 after:w-full after:rounded-full after:content-[\'\'] ' +
+              (+s[0] < step() ? 'after:bg-primary-700' : 'after:bg-gray-200 dark:after:bg-gray-700')
+            : 'flex items-center'"
+        >
+          <button type="button" (click)="goToStep(+s[0])" class="group flex shrink-0 items-center gap-3">
+            <span
+              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold shadow-sm transition group-hover:scale-105"
+              [class]="+s[0] < step()
+                ? 'bg-primary-700 text-white'
+                : step() === +s[0]
+                  ? 'border-2 border-primary-700 bg-primary-50 text-primary-700 dark:border-gold-400 dark:bg-gray-800 dark:text-gold-400'
+                  : 'border border-gray-300 bg-white text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+            >
+              @if (+s[0] < step()) {
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              } @else {
+                {{ s[0] }}
+              }
+            </span>
+            <span class="hidden flex-col items-start leading-tight sm:flex">
+              <span class="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Paso {{ s[0] }}</span>
+              <span
+                class="whitespace-nowrap text-sm font-semibold"
+                [class]="step() === +s[0]
+                  ? 'text-primary-700 dark:text-gold-400'
+                  : +s[0] < step()
+                    ? 'text-gray-900 dark:text-white'
+                    : 'text-gray-400 dark:text-gray-500'"
+              >
+                {{ s[1] }}
+              </span>
+            </span>
+          </button>
+        </li>
+      }
+    </ol>
+    <p class="mt-4 border-t border-gray-100 pt-3 text-xs text-gray-400 dark:border-gray-700">
+      Todo se envía junto al finalizar; nada se guarda antes. Documentos y vehículo son
+      opcionales y también podrás gestionarlos luego desde el perfil del afiliado.
+    </p>
+  </div>
 }
 
-<section class="max-w-2xl rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+<!-- Steps 2-4 are shorter: the top banner is visible. Step 1 renders its own
+     error next to the submit button (the form is taller than the screen). -->
+@if (error(); as message) {
+  @if (step() !== 1 && step() !== 5) {
+    <p class="mb-4 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-800 dark:text-primary-300">
+      {{ message }}
+    </p>
+  }
+}
+
+<div class="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
+<section
+  class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-6"
+  [class]="step() < 5 ? 'xl:col-span-2' : 'xl:col-span-3'"
+>
   @switch (step()) {
     @case (1) {
       <h2 class="text-lg font-bold text-gray-900 dark:text-white">Datos personales</h2>
       <p class="mt-1 text-xs text-gray-400">
-        Solo el nombre es obligatorio al registrar desde el panel. La cédula es obligatoria
-        únicamente cuando el chofer se registra desde la app.
+        Primer nombre y primer apellido son obligatorios; el resto es opcional pero se valida.
+        Documento y contraseña son obligatorios: son el acceso del chofer a la app.
       </p>
-      <form class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2" (ngSubmit)="saveStep1()">
-        <div class="sm:col-span-2">
-          <label for="w-name" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Nombre completo *</label>
-          <input id="w-name" name="fullName" type="text" required minlength="3" [(ngModel)]="fullName"
-            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+      <!-- gap-y-5 + single-line labels keep both columns aligned -->
+      <form #step1Form="ngForm" class="mt-6 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2" (ngSubmit)="goToStep(2)">
+        <div>
+          <label for="w-first" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Primer nombre *</label>
+          <input id="w-first" name="firstName" type="text" required minlength="2" #firstNameCtrl="ngModel"
+            [(ngModel)]="person.firstName"
+            class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          @if (firstNameCtrl.invalid && firstNameCtrl.touched) {
+            <p class="mt-1 text-xs font-medium text-primary-700">
+              {{ firstNameCtrl.errors?.['required'] ? 'El primer nombre es obligatorio.' : 'Mínimo 2 letras.' }}
+            </p>
+          }
         </div>
         <div>
-          <label for="w-ci" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
-            Cédula <span class="font-normal text-gray-400">(opcional por panel)</span>
+          <label for="w-middle" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+            Segundo nombre <span class="font-normal text-gray-400">(opcional)</span>
           </label>
-          <input id="w-ci" name="nationalId" type="text" [(ngModel)]="nationalId" placeholder="V12345678"
-            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          <input id="w-middle" name="middleName" type="text" [(ngModel)]="person.middleName"
+            class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
         </div>
         <div>
-          <label for="w-phone" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Teléfono</label>
-          <input id="w-phone" name="phone" type="tel" [(ngModel)]="phone" placeholder="04141234567"
-            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          <label for="w-last" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Primer apellido *</label>
+          <input id="w-last" name="lastName" type="text" required minlength="2" #lastNameCtrl="ngModel"
+            [(ngModel)]="person.lastName"
+            class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          @if (lastNameCtrl.invalid && lastNameCtrl.touched) {
+            <p class="mt-1 text-xs font-medium text-primary-700">
+              {{ lastNameCtrl.errors?.['required'] ? 'El primer apellido es obligatorio.' : 'Mínimo 2 letras.' }}
+            </p>
+          }
         </div>
+        <div>
+          <label for="w-second-last" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+            Segundo apellido <span class="font-normal text-gray-400">(opcional)</span>
+          </label>
+          <input id="w-second-last" name="secondLastName" type="text" [(ngModel)]="person.secondLastName"
+            class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+
+        <div>
+          <label for="w-birth" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+            Fecha de nacimiento <span class="font-normal text-gray-400">(mayor de 18)</span>
+          </label>
+          <app-date-picker inputId="w-birth" name="birthDate" [max]="maxBirthDate" [(ngModel)]="person.birthDate" />
+        </div>
+        <div>
+          <label for="w-ci-number" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+            Documento de identidad *
+          </label>
+          <div class="flex gap-2">
+            <app-select
+              class="w-24 shrink-0"
+              name="nationalIdType"
+              [(ngModel)]="person.nationalIdType"
+              [options]="nationalIdOptions"
+              [compact]="true"
+              ariaLabel="Tipo de documento de identidad"
+            />
+            <input id="w-ci-number" name="nationalIdNumber" type="text" inputmode="numeric" maxlength="9"
+              required #ciCtrl="ngModel"
+              [(ngModel)]="person.nationalIdNumber" placeholder="12345678"
+              class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          </div>
+          @if (ciCtrl.invalid && ciCtrl.touched) {
+            <p class="mt-1 text-xs font-medium text-primary-700">
+              El documento es obligatorio: es el usuario de acceso a la app.
+            </p>
+          }
+        </div>
+
+        <div>
+          <label for="w-phone-number" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Teléfono</label>
+          <div class="flex gap-2">
+            <app-select
+              class="w-28 shrink-0"
+              name="phoneCountry"
+              ngModel="+58"
+              [options]="phoneCountryOptions"
+              [compact]="true"
+              [disabled]="true"
+              ariaLabel="Código de país (solo Venezuela por ahora)"
+            />
+            <input id="w-phone-number" name="phoneNumber" type="tel" inputmode="numeric" maxlength="11"
+              [(ngModel)]="person.phoneNumber" placeholder="4141234567"
+              class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          </div>
+        </div>
+        <div>
+          <label for="w-email" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+            Email <span class="font-normal text-gray-400">(opcional)</span>
+          </label>
+          <input id="w-email" name="email" type="email" [(ngModel)]="person.email"
+            class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+
         <div class="sm:col-span-2">
-          <label for="w-email" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Email</label>
-          <input id="w-email" name="email" type="email" [(ngModel)]="email"
-            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          <label for="w-address" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+            Dirección de domicilio <span class="font-normal text-gray-400">(opcional)</span>
+          </label>
+          <textarea id="w-address" name="address" rows="2" maxlength="300" [(ngModel)]="person.address"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
         </div>
-        <div class="sm:col-span-2 flex justify-end">
-          <button type="submit" [disabled]="saving()"
-            class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
-            {{ saving() ? 'Guardando…' : 'Continuar →' }}
+
+        <div class="sm:col-span-2 rounded-lg border border-gold-200 p-5" style="background-color: #fdfaec">
+          <p class="text-sm font-semibold text-gray-900">Acceso a la app del chofer</p>
+          <p class="mt-1 text-xs text-gray-500">
+            El usuario será su <strong>número de documento</strong>. Mínimo
+            {{ passwordMinLength }} caracteres; puede ser solo números.
+          </p>
+          <div class="mt-4 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+            <div>
+              <label for="w-password" class="mb-2 block text-sm font-semibold text-gray-900">Crear contraseña *</label>
+              <app-password-input
+                inputId="w-password"
+                name="password"
+                appPasswordPolicy
+                [required]="true"
+                #passwordCtrl="ngModel"
+                [(ngModel)]="person.password"
+                placeholder="••••••"
+              />
+              <!-- Live requirement: the field no longer accepts anything silently -->
+              @if (person.password) {
+                <p class="mt-1.5 text-xs" [class]="passwordChecks().minLength ? 'text-green-700' : 'text-primary-700'">
+                  {{ passwordChecks().minLength ? '✓' : '✕' }} Mínimo {{ passwordMinLength }} caracteres
+                </p>
+              } @else if (passwordCtrl.invalid && passwordCtrl.touched) {
+                <p class="mt-1.5 text-xs font-medium text-primary-700">La contraseña es obligatoria.</p>
+              }
+            </div>
+            <div>
+              <label for="w-password-repeat" class="mb-2 block text-sm font-semibold text-gray-900">Repetir contraseña *</label>
+              <app-password-input
+                inputId="w-password-repeat"
+                name="passwordRepeat"
+                [required]="true"
+                [(ngModel)]="person.passwordRepeat"
+                placeholder="••••••"
+              />
+              @if (person.passwordRepeat && person.password !== person.passwordRepeat) {
+                <p class="mt-1.5 text-xs font-medium text-primary-700">Las contraseñas no coinciden.</p>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Error next to the action: the top banner was off-screen -->
+        @if (error(); as message) {
+          <p class="sm:col-span-2 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-700 dark:text-primary-300">
+            {{ message }}
+          </p>
+        }
+        <div class="sm:col-span-2 flex items-center justify-end gap-3">
+          <button
+            type="submit"
+            [disabled]="saving()"
+            class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-50"
+          >
+            Continuar →
           </button>
         </div>
       </form>
@@ -66,15 +248,31 @@
     @case (2) {
       <h2 class="text-lg font-bold text-gray-900 dark:text-white">Documentos del chofer</h2>
       <p class="mt-1 text-xs text-gray-400">
-        Paso opcional: al registrar por el panel nada bloquea. Lo que falte quedará visible
-        como pendiente en el perfil. Archivos adjuntos: próximamente (se registran los datos).
+        Paso opcional: agrega los documentos que tengas a mano. El archivo (PDF, JPG o PNG,
+        máx. 10 MB) es opcional y se sube al finalizar el registro.
       </p>
-      @if (registeredDocs() > 0) {
-        <p class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm font-medium text-green-800">
-          {{ registeredDocs() }} documento(s) registrado(s) ✓
-        </p>
+
+      @if (docs().length > 0) {
+        <ul class="mt-4 space-y-2">
+          @for (doc of docs(); track $index) {
+            <li class="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2.5 text-sm dark:border-gray-700">
+              <span class="text-gray-700 dark:text-gray-300">
+                {{ doc.requirementName }}
+                @if (doc.expiresAt) { <span class="text-xs text-gray-400">· vence {{ doc.expiresAt }}</span> }
+                @if (doc.fileName) {
+                  <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">{{ doc.fileName }}</span>
+                } @else {
+                  <span class="ml-1 text-xs text-gray-400">(sin archivo)</span>
+                }
+              </span>
+              <button type="button" (click)="removeDocumentDraft($index)"
+                class="shrink-0 text-xs font-medium text-primary-700 hover:underline">Quitar</button>
+            </li>
+          }
+        </ul>
       }
-      <form class="mt-5 flex flex-wrap items-end gap-3" (ngSubmit)="addDocument()">
+
+      <form class="mt-5 flex flex-wrap items-end gap-3" (ngSubmit)="addDocumentDraft()">
         <div class="min-w-48 flex-1">
           <label for="w-req" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Requerimiento</label>
           <select id="w-req" name="docRequirementId" [(ngModel)]="docRequirementId"
@@ -85,19 +283,27 @@
             }
           </select>
         </div>
-        <div>
+        <div class="min-w-44">
           <label for="w-expires" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Vence</label>
-          <input id="w-expires" name="docExpiresAt" type="date" [(ngModel)]="docExpiresAt"
-            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          <app-date-picker inputId="w-expires" name="docExpiresAt" [(ngModel)]="docExpiresAt" />
         </div>
-        <button type="submit" [disabled]="!docRequirementId || saving()"
+        <div class="min-w-56 flex-1">
+          <label for="w-file" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+            Archivo <span class="font-normal text-gray-400">(opcional)</span>
+          </label>
+          <input #docFileInput id="w-file" type="file" accept="application/pdf,image/jpeg,image/png"
+            (change)="onDocFileSelected($event)"
+            class="block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 file:mr-3 file:cursor-pointer file:border-0 file:bg-gray-100 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-gray-700 hover:file:bg-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:file:bg-gray-600 dark:file:text-gray-200" />
+        </div>
+        <button type="submit" [disabled]="!docRequirementId"
           class="rounded-lg border border-primary-700 px-4 py-2.5 text-sm font-semibold text-primary-700 hover:bg-primary-50 disabled:opacity-40 dark:hover:bg-gray-700">
-          Registrar
+          + Agregar
         </button>
       </form>
+
       <div class="mt-6 flex justify-between">
-        <button type="button" (click)="skipTo(1)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
-        <button type="button" (click)="skipTo(3)"
+        <button type="button" (click)="goToStep(1)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
+        <button type="button" (click)="goToStep(3)"
           class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800">
           Continuar →
         </button>
@@ -106,13 +312,29 @@
     @case (3) {
       <h2 class="text-lg font-bold text-gray-900 dark:text-white">Vehículo</h2>
       <p class="mt-1 text-xs text-gray-400">
-        Registrado por el panel queda aprobado directamente. También puedes saltarlo y
-        agregarlo después desde el perfil.
+        Paso opcional: registra uno o más vehículos. Por el panel quedan aprobados directamente.
       </p>
-      <form class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3" (ngSubmit)="saveStep3()">
+
+      @if (vehicles().length > 0) {
+        <ul class="mt-4 space-y-2">
+          @for (v of vehicles(); track $index) {
+            <li class="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2.5 text-sm dark:border-gray-700">
+              <span class="text-gray-700 dark:text-gray-300">
+                <span class="capitalize">{{ vehicleTypeName(v.vehicleTypeId) }}</span>
+                @if (v.brand || v.model) { · {{ v.brand }} {{ v.model }} }
+                @if (v.plate) { · <span class="font-semibold uppercase">{{ v.plate }}</span> }
+              </span>
+              <button type="button" (click)="removeVehicleDraft($index)"
+                class="shrink-0 text-xs font-medium text-primary-700 hover:underline">Quitar</button>
+            </li>
+          }
+        </ul>
+      }
+
+      <form class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3" (ngSubmit)="addVehicleDraft()">
         <div>
           <label for="w-vtype" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Tipo</label>
-          <select id="w-vtype" name="vehicleTypeId" [(ngModel)]="vehicleTypeId"
+          <select id="w-vtype" name="vehicleTypeId" [(ngModel)]="vehicleForm.vehicleTypeId"
             class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 capitalize text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
             <option [ngValue]="null">Sin definir</option>
             @for (t of vehicleTypes(); track t.id) {
@@ -122,50 +344,63 @@
         </div>
         <div>
           <label for="w-brand" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Marca</label>
-          <input id="w-brand" name="brand" type="text" [(ngModel)]="brand"
+          <input id="w-brand" name="brand" type="text" [(ngModel)]="vehicleForm.brand"
             class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
         </div>
         <div>
           <label for="w-model" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Modelo</label>
-          <input id="w-model" name="model" type="text" [(ngModel)]="model"
+          <input id="w-model" name="model" type="text" [(ngModel)]="vehicleForm.model"
             class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
         </div>
         <div>
           <label for="w-year" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Año</label>
-          <input id="w-year" name="year" type="number" min="1950" max="2100" [(ngModel)]="year"
+          <input id="w-year" name="year" type="number" min="1950" max="2100" [(ngModel)]="vehicleForm.year"
             class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
         </div>
         <div>
           <label for="w-color" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Color</label>
-          <input id="w-color" name="color" type="text" [(ngModel)]="color"
+          <input id="w-color" name="color" type="text" [(ngModel)]="vehicleForm.color"
             class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
         </div>
         <div>
           <label for="w-plate" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Placa</label>
-          <input id="w-plate" name="plate" type="text" [(ngModel)]="plate" placeholder="AB123CD"
+          <input id="w-plate" name="plate" type="text" [(ngModel)]="vehicleForm.plate" placeholder="AB123CD"
             class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 uppercase text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
         </div>
-        <div class="flex items-center justify-between sm:col-span-3">
-          <button type="button" (click)="skipTo(2)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
-          <div class="flex gap-3">
-            <button type="button" (click)="skipTo(4)"
-              class="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-              Saltar
-            </button>
-            <button type="submit" [disabled]="saving()"
-              class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
-              {{ saving() ? 'Guardando…' : 'Registrar y continuar →' }}
-            </button>
-          </div>
+        <div class="sm:col-span-3 flex justify-end">
+          <button type="submit" [disabled]="!canAddVehicle()"
+            class="rounded-lg border border-primary-700 px-4 py-2.5 text-sm font-semibold text-primary-700 hover:bg-primary-50 disabled:opacity-40 dark:hover:bg-gray-700">
+            + Agregar vehículo
+          </button>
         </div>
       </form>
+
+      <div class="mt-6 flex justify-between">
+        <button type="button" (click)="goToStep(2)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
+        <button type="button" (click)="goToStep(4)"
+          class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800">
+          Continuar →
+        </button>
+      </div>
     }
     @case (4) {
-      <h2 class="text-lg font-bold text-gray-900 dark:text-white">Pagos: membresía + tarifa</h2>
+      <h2 class="text-lg font-bold text-gray-900 dark:text-white">Pago: membresía + tarifa</h2>
+      <p class="mt-1 text-xs text-gray-400">
+        Último paso, opcional: si finalizas sin pago, el afiliado queda registrado como
+        pendiente y podrás cobrarle desde su perfil (la aprobación exige los pagos).
+      </p>
       @if (!membership()) {
         <p class="mt-3 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700">
-          No existe una membresía vigente. Créala en la sección Membresía antes de completar este paso.
+          No existe una membresía vigente. Créala en la sección Membresía para poder cobrar,
+          o finaliza dejando al afiliado pendiente.
         </p>
+        <div class="mt-6 flex items-center justify-between gap-3">
+          <button type="button" (click)="goToStep(3)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
+          <button type="button" (click)="register(false)" [disabled]="saving()"
+            class="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+            {{ saving() ? 'Registrando…' : 'Registrar sin pago' }}
+          </button>
+        </div>
       } @else {
         <div class="mt-4 rounded-lg border border-gray-200 p-4 dark:border-gray-600">
           <p class="text-sm text-gray-500 dark:text-gray-400">Membresía (pago único)</p>
@@ -173,7 +408,7 @@
             {{ membership()!.name }} — ${{ membership()!.priceUsd }}
           </p>
         </div>
-        <form class="mt-4 space-y-4" (ngSubmit)="enroll()">
+        <form class="mt-4 space-y-4" (ngSubmit)="register(true)">
           <div>
             <label for="w-plan" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Tarifa</label>
             <select id="w-plan" name="planId" required [(ngModel)]="planId"
@@ -199,12 +434,18 @@
               (la #1 agrupa membresía + primer período).
             </p>
           }
-          <div class="flex items-center justify-between">
-            <button type="button" (click)="skipTo(3)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
-            <button type="submit" [disabled]="!planId || saving()"
-              class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
-              {{ saving() ? 'Registrando pagos…' : 'Registrar pagos y facturar' }}
-            </button>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <button type="button" (click)="goToStep(3)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
+            <div class="flex flex-wrap gap-3">
+              <button type="button" (click)="register(false)" [disabled]="saving()"
+                class="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                Finalizar sin pago
+              </button>
+              <button type="submit" [disabled]="!planId || saving()"
+                class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+                {{ saving() ? 'Registrando…' : 'Registrar y facturar' }}
+              </button>
+            </div>
           </div>
         </form>
       }
@@ -212,29 +453,134 @@
     @case (5) {
       <div class="text-center">
         <p class="text-4xl">✅</p>
-        <h2 class="mt-2 text-lg font-bold text-gray-900 dark:text-white">Registro completo</h2>
-        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          Facturas emitidas:
-          @for (n of invoiceNumbers(); track n) {
-            <span class="mx-1 rounded-full bg-gold-100 px-2.5 py-0.5 text-xs font-bold text-gold-800">
-              N° {{ n }}
-            </span>
+        <h2 class="mt-2 text-lg font-bold text-gray-900 dark:text-white">Afiliado registrado</h2>
+        @if (invoiceNumbers().length > 0) {
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Facturas emitidas:
+            @for (n of invoiceNumbers(); track n) {
+              <span class="mx-1 rounded-full bg-gold-100 px-2.5 py-0.5 text-xs font-bold text-gold-800">
+                N° {{ n }}
+              </span>
+            }
+          </p>
+        }
+        @if (fileWarning(); as warning) {
+          <p class="mx-auto mt-3 max-w-md rounded-lg bg-gold-50 px-4 py-3 text-sm font-medium text-gold-800" style="background-color: #fdfaec">
+            {{ warning }}
+          </p>
+        }
+        <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">
+          El afiliado está <strong>pendiente</strong>.
+          @if (paidAtRegister()) {
+            Al aprobarlo, la tarifa comienza a correr.
+          } @else {
+            Cóbrale la membresía y la tarifa desde su perfil; la aprobación exige esos pagos.
           }
         </p>
-        <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">
-          El afiliado está <strong>pendiente</strong>. Al aprobarlo, la tarifa comienza a correr.
-        </p>
         <div class="mt-6 flex justify-center gap-3">
-          <button type="button" (click)="finishPending()"
+          <button type="button" (click)="finish()"
             class="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-            Dejar pendiente
+            Ir al perfil
           </button>
-          <button type="button" (click)="approveNow()" [disabled]="saving()"
-            class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
-            {{ saving() ? 'Aprobando…' : 'Aprobar ahora' }}
-          </button>
+          @if (paidAtRegister()) {
+            <button type="button" (click)="approveNow()" [disabled]="saving()"
+              class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+              {{ saving() ? 'Aprobando…' : 'Aprobar ahora' }}
+            </button>
+          }
         </div>
       </div>
     }
   }
 </section>
+
+<!-- Live summary sidebar (Pro checkout pattern): builds up as the wizard fills -->
+@if (step() < 5) {
+  <aside class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-6 xl:sticky xl:top-20">
+    <h2 class="text-base font-bold text-gray-900 dark:text-white">Resumen del registro</h2>
+
+    <dl class="mt-4 space-y-4 text-sm">
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400">Afiliado</dt>
+        <dd class="mt-1 font-medium text-gray-900 dark:text-white">
+          @if (person.firstName || person.lastName) {
+            {{ person.firstName }} {{ person.middleName }} {{ person.lastName }} {{ person.secondLastName }}
+          } @else {
+            <span class="font-normal text-gray-400">Sin datos aún</span>
+          }
+        </dd>
+        @if (person.nationalIdNumber) {
+          <dd class="text-gray-500 dark:text-gray-400">{{ person.nationalIdType }}-{{ person.nationalIdNumber }}</dd>
+        }
+        @if (person.phoneNumber) {
+          <dd class="text-gray-500 dark:text-gray-400">+58{{ person.phoneNumber }}</dd>
+        }
+      </div>
+
+      <div class="border-t border-gray-100 pt-4 dark:border-gray-700">
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400">Documentos</dt>
+        @if (docs().length > 0) {
+          <dd class="mt-1 space-y-1">
+            @for (doc of docs(); track $index) {
+              <p class="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+                <svg class="h-3.5 w-3.5 shrink-0 text-green-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                {{ doc.requirementName }}
+                @if (doc.fileName) { <span class="text-xs text-gray-400">(con archivo)</span> }
+              </p>
+            }
+          </dd>
+        } @else {
+          <dd class="mt-1 text-gray-400">Ninguno (opcional)</dd>
+        }
+      </div>
+
+      <div class="border-t border-gray-100 pt-4 dark:border-gray-700">
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400">Vehículos</dt>
+        @if (vehicles().length > 0) {
+          <dd class="mt-1 space-y-1">
+            @for (v of vehicles(); track $index) {
+              <p class="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+                <svg class="h-3.5 w-3.5 shrink-0 text-green-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span class="capitalize">{{ vehicleTypeName(v.vehicleTypeId) }}</span>
+                @if (v.plate) { <span class="font-semibold uppercase">{{ v.plate }}</span> }
+              </p>
+            }
+          </dd>
+        } @else {
+          <dd class="mt-1 text-gray-400">Ninguno (opcional)</dd>
+        }
+      </div>
+
+      <div class="border-t border-gray-100 pt-4 dark:border-gray-700">
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400">Pago</dt>
+        @if (membership() && selectedPlan()) {
+          <dd class="mt-1 space-y-0.5 text-gray-700 dark:text-gray-300">
+            <p class="flex justify-between"><span>Membresía</span> <span>${{ membership()!.priceUsd }}</span></p>
+            <p class="flex justify-between">
+              <span>{{ selectedPlan()!.name }} × {{ periods }}</span>
+              <span>${{ (+selectedPlan()!.priceUsd * periods).toFixed(2) }}</span>
+            </p>
+          </dd>
+          @if (total(); as t) {
+            <dd class="mt-2 flex items-baseline justify-between border-t border-gray-100 pt-2 dark:border-gray-700">
+              <span class="font-semibold text-gray-900 dark:text-white">Total a facturar</span>
+              <span class="text-xl font-bold text-primary-700 dark:text-gold-400">${{ t }}</span>
+            </dd>
+          }
+        } @else {
+          <dd class="mt-1 text-gray-400">Sin pago: el afiliado quedará pendiente</dd>
+        }
+      </div>
+    </dl>
+
+    <p class="mt-5 rounded-lg bg-gold-50 px-3 py-2 text-xs text-gold-800" style="background-color: #fdfaec">
+      Nada se guarda hasta pulsar «Registrar» en el último paso.
+    </p>
+  </aside>
+}
+</div>
+</div>

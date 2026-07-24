@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, output, signal } from '@angular/core';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import type { Benefit } from '../../core/models/benefit.model';
@@ -6,13 +6,20 @@ import { BenefitsApi } from './benefits.api';
 
 type ModalState = { mode: 'create' } | { mode: 'edit'; item: Benefit } | null;
 
+/**
+ * Benefits catalog, embedded in the membership screen (they are one section:
+ * a benefit only means something granted by a membership version). Emits
+ * `changed` so the parent can refresh the benefits it offers per version.
+ */
 @Component({
-  selector: 'app-benefits',
+  selector: 'app-benefits-catalog',
   imports: [FormsModule],
-  templateUrl: './benefits.html',
+  templateUrl: './benefits-catalog.html',
 })
-export class Benefits {
+export class BenefitsCatalog {
   private readonly api = inject(BenefitsApi);
+
+  readonly changed = output<void>();
 
   readonly items = signal<Benefit[]>([]);
   readonly loading = signal(true);
@@ -80,7 +87,7 @@ export class Benefits {
       next: () => {
         this.saving.set(false);
         this.modal.set(null);
-        this.load();
+        this.reload();
       },
       error: (err: HttpErrorResponse) => {
         this.saving.set(false);
@@ -91,7 +98,7 @@ export class Benefits {
 
   toggleActive(item: Benefit): void {
     this.api.update(item.id, { active: !item.active }).subscribe({
-      next: () => this.load(),
+      next: () => this.reload(),
       error: (err: HttpErrorResponse) => this.error.set(this.messageOf(err)),
     });
   }
@@ -110,7 +117,7 @@ export class Benefits {
       next: () => {
         this.saving.set(false);
         this.deleteTarget.set(null);
-        this.load();
+        this.reload();
       },
       error: (err: HttpErrorResponse) => {
         this.saving.set(false);
@@ -120,10 +127,15 @@ export class Benefits {
     });
   }
 
+  /** Refreshes the catalog and notifies the parent (membership benefit picker). */
+  private reload(): void {
+    this.load();
+    this.changed.emit();
+  }
+
   private messageOf(err: HttpErrorResponse): string {
     return (
-      (err.error as { message?: string } | null)?.message ??
-      'Error de conexión con la API'
+      (err.error as { message?: string } | null)?.message ?? 'Error de conexión con la API'
     );
   }
 }

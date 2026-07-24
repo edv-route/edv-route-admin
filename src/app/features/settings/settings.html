@@ -1,0 +1,91 @@
+<header class="mb-6">
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Configuración</h1>
+  <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+    Parámetros de negocio de la plataforma. Las claves nacen con el sistema: aquí solo se
+    ajusta su valor, y cada cambio queda registrado en Auditoría.
+  </p>
+</header>
+
+@if (error(); as message) {
+  <p class="mb-4 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-800 dark:text-primary-300">
+    {{ message }}
+  </p>
+}
+
+@if (loading()) {
+  <p class="rounded-lg bg-white px-4 py-8 text-center text-gray-400 shadow-sm dark:bg-gray-800">
+    Cargando…
+  </p>
+} @else {
+  <div class="space-y-4">
+    @for (setting of items(); track setting.key) {
+      <article class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-6">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div class="min-w-64 flex-1">
+            <h2 class="font-semibold text-gray-900 dark:text-white">{{ label(setting.key) }}</h2>
+            <p class="mt-1 font-mono text-[11px] text-gray-400">{{ setting.key }}</p>
+            @if (setting.description) {
+              <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
+            }
+            <p class="mt-2 text-xs text-gray-400">
+              Última actualización: {{ setting.updatedAt | date: 'dd/MM/yyyy HH:mm' }}
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            @if (isTimezone(setting)) {
+              <input
+                [id]="'set-' + setting.key"
+                list="tz-options"
+                [value]="draft(setting.key)"
+                (input)="setDraft(setting.key, $any($event.target).value)"
+                class="w-56 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              />
+              <datalist id="tz-options">
+                @for (tz of timezones; track tz) {
+                  <option [value]="tz"></option>
+                }
+              </datalist>
+            } @else if (isNumeric(setting)) {
+              <input
+                [id]="'set-' + setting.key"
+                type="number"
+                min="0"
+                step="1"
+                [value]="draft(setting.key)"
+                (input)="setDraft(setting.key, $any($event.target).value)"
+                class="w-28 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              />
+            } @else {
+              <input
+                [id]="'set-' + setting.key"
+                type="text"
+                [value]="draft(setting.key)"
+                (input)="setDraft(setting.key, $any($event.target).value)"
+                class="w-56 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              />
+            }
+
+            @if (isDirty(setting)) {
+              <button type="button" (click)="reset(setting)"
+                class="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700">
+                Descartar
+              </button>
+            }
+            <button
+              type="button"
+              (click)="save(setting)"
+              [disabled]="!isDirty(setting) || savingKey() === setting.key"
+              class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-40"
+            >
+              {{ savingKey() === setting.key ? 'Guardando…' : 'Guardar' }}
+            </button>
+            @if (savedKey() === setting.key) {
+              <span class="text-sm font-semibold text-green-600">✓</span>
+            }
+          </div>
+        </div>
+      </article>
+    }
+  </div>
+}

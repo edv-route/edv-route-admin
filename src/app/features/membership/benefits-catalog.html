@@ -1,18 +1,18 @@
-<header class="mb-6 flex flex-wrap items-center justify-between gap-3">
+<div class="mb-3 mt-10 flex flex-wrap items-center justify-between gap-3">
   <div>
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Beneficios</h1>
+    <h2 class="text-lg font-bold text-gray-900 dark:text-white">Catálogo de beneficios</h2>
     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-      Catálogo del gremio. Cada versión de la membresía otorgará un conjunto de estos beneficios.
+      Cada versión de la membresía otorga un conjunto de estos beneficios.
     </p>
   </div>
   <button
     type="button"
     (click)="openCreate()"
-    class="rounded-lg bg-primary-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300"
+    class="rounded-lg border border-primary-700 px-4 py-2 text-sm font-semibold text-primary-700 hover:bg-primary-50 dark:hover:bg-gray-700"
   >
     + Nuevo beneficio
   </button>
-</header>
+</div>
 
 @if (error(); as message) {
   <p class="mb-4 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-800 dark:text-primary-300">
@@ -20,13 +20,13 @@
   </p>
 }
 
-<div class="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-  <table class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-    <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+<div class="overflow-x-auto rounded-lg bg-white shadow-sm dark:bg-gray-800">
+  <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+    <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-400">
       <tr>
-        <th scope="col" class="px-6 py-3">Nombre</th>
-        <th scope="col" class="px-6 py-3">Descripción</th>
-        <th scope="col" class="px-6 py-3">Estado</th>
+        <th scope="col" class="px-4 py-3 font-semibold">Nombre</th>
+        <th scope="col" class="px-4 py-3 font-semibold">Descripción</th>
+        <th scope="col" class="px-4 py-3 font-semibold">Estado</th>
         <th scope="col" class="px-6 py-3 text-right">Acciones</th>
       </tr>
     </thead>
@@ -37,21 +37,21 @@
         </tr>
       } @else {
         @for (item of items(); track item.id) {
-          <tr class="border-t border-gray-100 dark:border-gray-700">
-            <td class="px-6 py-4 font-semibold text-gray-900 dark:text-white">{{ item.name }}</td>
-            <td class="px-6 py-4">{{ item.description ?? '—' }}</td>
-            <td class="px-6 py-4">
-              @if (item.active) {
-                <span class="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-900 dark:text-green-300">
+          <tr class="border-b border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
+            <td class="px-4 py-3 font-semibold text-gray-900 dark:text-white">{{ item.name }}</td>
+            <td class="px-4 py-3">{{ item.description ?? '—' }}</td>
+            <td class="whitespace-nowrap px-4 py-3 font-medium text-gray-900 dark:text-white">
+              <div class="flex items-center">
+                @if (item.active) {
+                  <div class="mr-2 h-2.5 w-2.5 rounded-full bg-green-500"></div>
                   Activo
-                </span>
-              } @else {
-                <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                } @else {
+                  <div class="mr-2 h-2.5 w-2.5 rounded-full bg-gray-400"></div>
                   Inactivo
-                </span>
-              }
+                }
+              </div>
             </td>
-            <td class="px-6 py-4">
+            <td class="px-4 py-3">
               <div class="flex justify-end gap-2">
                 <button
                   type="button"

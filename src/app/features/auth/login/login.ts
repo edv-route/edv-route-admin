@@ -3,10 +3,11 @@ import type { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { PasswordInput } from '../../../shared/components/password-input';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule],
+  imports: [FormsModule, PasswordInput],
   templateUrl: './login.html',
 })
 export class Login {

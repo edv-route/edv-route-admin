@@ -1,96 +1,109 @@
-<header class="mb-6 flex flex-wrap items-center justify-between gap-3">
-  <div>
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Tipos de vehículo</h1>
-    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-      Catálogo de la flota: define qué tipos puede registrar un afiliado.
-    </p>
+<!-- Vehicle types catalog. Pro list-card chassis (header + table + totals footer); EDV colors. -->
+<div class="rounded-lg bg-white shadow-sm dark:bg-gray-800">
+  <div class="items-start justify-between px-4 pt-4 sm:flex md:px-6 md:pt-6">
+    <div class="mb-4 sm:mb-0">
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">Tipos de vehículo</h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Catálogo de la flota: define qué tipos puede registrar un afiliado.
+      </p>
+    </div>
+    <button
+      type="button"
+      (click)="openCreate()"
+      class="flex w-full items-center justify-center rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 sm:w-auto"
+    >
+      <svg class="-ms-0.5 me-1.5 h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-7 7V5" />
+      </svg>
+      Nuevo tipo
+    </button>
   </div>
-  <button
-    type="button"
-    (click)="openCreate()"
-    class="rounded-lg bg-primary-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300"
-  >
-    + Nuevo tipo
-  </button>
-</header>
 
-@if (error(); as message) {
-  <p class="mb-4 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-800 dark:text-primary-300">
-    {{ message }}
-  </p>
-}
+  @if (error(); as message) {
+    <p class="mx-4 mt-4 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-700 dark:text-primary-300 md:mx-6">
+      {{ message }}
+    </p>
+  }
 
-<div class="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-  <table class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-    <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500 dark:bg-gray-700 dark:text-gray-400">
-      <tr>
-        <th scope="col" class="px-6 py-3">ID</th>
-        <th scope="col" class="px-6 py-3">Nombre</th>
-        <th scope="col" class="px-6 py-3">Estado</th>
-        <th scope="col" class="px-6 py-3">Actualizado</th>
-        <th scope="col" class="px-6 py-3 text-right">Acciones</th>
-      </tr>
-    </thead>
-    <tbody>
-      @if (loading()) {
+  <div class="mt-4 overflow-x-auto">
+    <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+      <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-400">
         <tr>
-          <td colspan="5" class="px-6 py-8 text-center text-gray-400">Cargando…</td>
+          <th scope="col" class="px-4 py-3 font-semibold">ID</th>
+          <th scope="col" class="px-4 py-3 font-semibold">Nombre</th>
+          <th scope="col" class="px-4 py-3 font-semibold">Estado</th>
+          <th scope="col" class="px-4 py-3 font-semibold">Actualizado</th>
+          <th scope="col" class="px-4 py-3 text-right font-semibold">Acciones</th>
         </tr>
-      } @else {
-        @for (item of items(); track item.id) {
-          <tr class="border-t border-gray-100 dark:border-gray-700">
-            <td class="px-6 py-4 font-mono text-xs">{{ item.id }}</td>
-            <td class="px-6 py-4 font-semibold capitalize text-gray-900 dark:text-white">
-              {{ item.name }}
-            </td>
-            <td class="px-6 py-4">
-              @if (item.active) {
-                <span class="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-900 dark:text-green-300">
-                  Activo
-                </span>
-              } @else {
-                <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                  Inactivo
-                </span>
-              }
-            </td>
-            <td class="px-6 py-4">{{ item.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
-            <td class="px-6 py-4">
-              <div class="flex justify-end gap-2">
-                <button
-                  type="button"
-                  (click)="openEdit(item)"
-                  class="rounded-lg px-3 py-1.5 text-xs font-semibold text-primary-700 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-gray-700"
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  (click)="toggleActive(item)"
-                  class="rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  {{ item.active ? 'Desactivar' : 'Activar' }}
-                </button>
-                <button
-                  type="button"
-                  (click)="confirmDelete(item)"
-                  class="rounded-lg px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-gray-700"
-                >
-                  Eliminar
-                </button>
-              </div>
-            </td>
-          </tr>
-        } @empty {
+      </thead>
+      <tbody>
+        @if (loading()) {
           <tr>
-            <td colspan="5" class="px-6 py-8 text-center text-gray-400">
-              No hay tipos de vehículo registrados.
-            </td>
+            <td colspan="5" class="px-4 py-8 text-center text-gray-400">Cargando…</td>
           </tr>
+        } @else {
+          @for (item of items(); track item.id) {
+            <tr class="border-b border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
+              <td class="px-4 py-3 font-mono text-xs">{{ item.id }}</td>
+              <th scope="row" class="whitespace-nowrap px-4 py-3 font-medium capitalize text-gray-900 dark:text-white">
+                {{ item.name }}
+              </th>
+              <td class="whitespace-nowrap px-4 py-3 font-medium text-gray-900 dark:text-white">
+                <div class="flex items-center">
+                  @if (item.active) {
+                    <div class="mr-2 h-2.5 w-2.5 rounded-full bg-green-500"></div>
+                    Activo
+                  } @else {
+                    <div class="mr-2 h-2.5 w-2.5 rounded-full bg-gray-400"></div>
+                    Inactivo
+                  }
+                </div>
+              </td>
+              <td class="whitespace-nowrap px-4 py-3">{{ item.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+              <td class="px-4 py-3">
+                <div class="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    (click)="openEdit(item)"
+                    class="rounded-lg px-3 py-1.5 text-xs font-semibold text-primary-700 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-gray-700"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    (click)="toggleActive(item)"
+                    class="rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    {{ item.active ? 'Desactivar' : 'Activar' }}
+                  </button>
+                  <button
+                    type="button"
+                    (click)="confirmDelete(item)"
+                    class="rounded-lg px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-gray-700"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="px-4 py-8 text-center text-gray-400">
+                No hay tipos de vehículo registrados.
+              </td>
+            </tr>
+          }
         }
-      }
-    </tbody>
-  </table>
+      </tbody>
+    </table>
+  </div>
+
+  <nav class="flex items-center justify-between p-4" aria-label="Resumen de la tabla">
+    <p class="text-sm">
+      <span class="font-normal text-gray-500 dark:text-gray-400">Total tipos:</span>
+      <span class="font-semibold text-gray-900 dark:text-white">{{ items().length }}</span>
+    </p>
+  </nav>
 </div>
 
 <!-- Create/edit modal -->

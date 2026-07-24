@@ -80,4 +80,10 @@ export class Drivers {
     this.page.set(page);
     this.load();
   }
+
+  /** Initials for the avatar chip in the name cell (Pro table pattern). */
+  initials(fullName: string): string {
+    const parts = fullName.trim().split(/\s+/);
+    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
+  }
 }

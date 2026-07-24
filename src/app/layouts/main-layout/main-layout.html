@@ -1,45 +1,122 @@
-<!-- Top navbar -->
-<nav class="fixed top-0 z-50 w-full border-b border-primary-900 bg-primary-950">
-  <div class="px-3 py-3 lg:px-5 lg:pl-3">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center justify-start">
-        <button
-          data-drawer-target="app-sidebar"
-          data-drawer-toggle="app-sidebar"
-          aria-controls="app-sidebar"
-          type="button"
-          class="inline-flex items-center rounded-lg p-2 text-sm text-gold-400 hover:bg-primary-900 focus:outline-none focus:ring-2 focus:ring-gold-400 sm:hidden"
-        >
-          <span class="sr-only">Abrir menú</span>
-          <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-            <path clip-rule="evenodd" fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z" />
-          </svg>
-        </button>
-        <a routerLink="/dashboard" class="ml-2 flex items-center">
-          <img src="assets/logos/edv-logo-horizontal-white.svg" alt="EDV Route" class="h-7" />
-          <span class="ml-3 hidden text-sm font-semibold tracking-wider text-gold-400 md:block">
-            ADMIN
-          </span>
-        </a>
-      </div>
+<!--
+  App shell. Structure adapted from the Flowbite Pro dashboard (h-16 navbar,
+  account dropdown with avatar, theme toggle, drawer sidebar) but keeping the
+  established EDV identity: navbar/sidebar in brand dark red (primary-950)
+  with gold accents. Dark mode only affects the content area (the chrome is
+  already dark by brand). Non-functional Pro demo bits (global search,
+  notifications, apps grid) are omitted until they have a backend.
+-->
 
-      <div class="flex items-center gap-3">
+<!-- Top navbar -->
+<nav
+  class="fixed top-0 z-40 flex h-16 w-full items-center border-b border-primary-900 bg-primary-950 px-3 lg:px-5"
+>
+  <div class="flex w-full items-center justify-between">
+    <div class="flex items-center">
+      <!-- Mobile drawer toggle -->
+      <button
+        data-drawer-target="app-sidebar"
+        data-drawer-toggle="app-sidebar"
+        aria-controls="app-sidebar"
+        type="button"
+        class="me-2 rounded-lg p-2 text-gold-400 hover:bg-primary-900 focus:outline-none focus:ring-2 focus:ring-gold-400 lg:hidden"
+      >
+        <span class="sr-only">Abrir menú</span>
+        <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+      <a routerLink="/dashboard" class="flex items-center">
+        <img src="assets/logos/edv-logo-horizontal-white.svg" alt="EDV Route" class="h-7" />
+        <span class="ml-3 hidden text-xs font-semibold tracking-widest text-gold-400 md:block">ADMIN</span>
+      </a>
+    </div>
+
+    <div class="flex items-center gap-1">
+      <!-- Theme toggle (content area only; the chrome is brand-dark already) -->
+      <button
+        type="button"
+        (click)="toggleTheme()"
+        [title]="isDark() ? 'Modo claro' : 'Modo oscuro'"
+        class="rounded-lg p-2 text-gray-300 hover:bg-primary-900 hover:text-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400"
+      >
+        <span class="sr-only">Cambiar tema</span>
+        @if (isDark()) {
+          <!-- sun -->
+          <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" d="M13 3a1 1 0 1 0-2 0v2a1 1 0 1 0 2 0V3ZM6.343 4.929A1 1 0 0 0 4.93 6.343l1.414 1.414a1 1 0 0 0 1.414-1.414L6.343 4.929Zm12.728 1.414a1 1 0 0 0-1.414-1.414l-1.414 1.414a1 1 0 0 0 1.414 1.414l1.414-1.414ZM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm-9 4a1 1 0 1 0 0 2h2a1 1 0 1 0 0-2H3Zm16 0a1 1 0 1 0 0 2h2a1 1 0 1 0 0-2h-2ZM7.757 17.657a1 1 0 1 0-1.414-1.414l-1.414 1.414a1 1 0 1 0 1.414 1.414l1.414-1.414Zm9.9-1.414a1 1 0 0 0-1.414 1.414l1.414 1.414a1 1 0 0 0 1.414-1.414l-1.414-1.414ZM13 19a1 1 0 1 0-2 0v2a1 1 0 1 0 2 0v-2Z" clip-rule="evenodd" />
+          </svg>
+        } @else {
+          <!-- moon -->
+          <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12.322 5.687A6.5 6.5 0 1 0 18.313 11.7a.75.75 0 0 0-1.045-.858 4.5 4.5 0 0 1-5.71-5.71.75.75 0 0 0-.858-1.046 6.5 6.5 0 0 0-.378.301Z" />
+          </svg>
+        }
+      </button>
+
+      <div class="mx-1 hidden h-6 w-px bg-primary-900 sm:block"></div>
+
+      <!-- Account menu -->
+      <button
+        type="button"
+        data-dropdown-toggle="accountDropdown"
+        class="flex items-center gap-2 rounded-full p-1 hover:bg-primary-900 focus:outline-none focus:ring-2 focus:ring-gold-400 sm:pe-2"
+      >
+        <span class="sr-only">Abrir menú de cuenta</span>
+        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold-400 text-xs font-bold text-primary-950">
+          {{ adminInitials() }}
+        </span>
         @if (currentAdmin(); as admin) {
-          <span class="hidden text-sm text-gray-200 md:block">
-            {{ admin.fullName }}
-            <span class="text-gray-400">({{ admin.username }})</span>
+          <span class="hidden text-left leading-tight sm:block">
+            <span class="block text-sm font-semibold text-white">{{ admin.fullName }}</span>
+            <span class="block text-xs text-gray-400">{{ admin.username }}</span>
           </span>
         }
-        <button
-          type="button"
-          (click)="logout()"
-          class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white hover:bg-primary-900 focus:outline-none focus:ring-2 focus:ring-gold-400"
-        >
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-          </svg>
-          Salir
-        </button>
+        <svg class="hidden h-4 w-4 text-gray-400 sm:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m19 9-7 7-7-7" />
+        </svg>
+      </button>
+      <!-- Dropdown -->
+      <div id="accountDropdown" class="z-50 hidden w-56 divide-y divide-gray-100 overflow-hidden rounded-lg bg-white shadow-lg dark:divide-gray-600 dark:bg-gray-700">
+        @if (currentAdmin(); as admin) {
+          <div class="px-4 py-3">
+            <p class="truncate text-sm font-semibold text-gray-900 dark:text-white">{{ admin.fullName }}</p>
+            <p class="truncate text-xs text-gray-400">{{ admin.username }}</p>
+          </div>
+        }
+        <ul class="p-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+          <li>
+            <a routerLink="/settings" class="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+              <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.076.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 0 1 0 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 0 1 0-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              </svg>
+              Configuración
+            </a>
+          </li>
+          <li>
+            <a routerLink="/admins" class="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+              <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+              </svg>
+              Administradores
+            </a>
+          </li>
+        </ul>
+        <ul class="p-2">
+          <li>
+            <button
+              type="button"
+              (click)="logout()"
+              class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-gray-600"
+            >
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+              </svg>
+              Cerrar sesión
+            </button>
+          </li>
+        </ul>
       </div>
     </div>
   </div>
@@ -48,14 +125,14 @@
 <!-- Sidebar -->
 <aside
   id="app-sidebar"
-  class="fixed left-0 top-0 z-40 h-screen w-64 -translate-x-full border-r border-primary-900 bg-primary-950 pt-16 transition-transform sm:translate-x-0"
+  class="fixed left-0 top-0 z-30 h-screen w-64 -translate-x-full border-r border-primary-900 bg-primary-950 pt-16 transition-transform lg:translate-x-0"
   aria-label="Menú lateral"
 >
-  <div class="flex h-full flex-col justify-between overflow-y-auto px-3 pb-4 pt-4">
-    <div class="space-y-5">
+  <div class="flex h-full flex-col justify-between overflow-y-auto px-3 pb-4 pt-5">
+    <div class="space-y-6">
       @for (group of navGroups; track group.title) {
         <div>
-          <p class="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-widest text-gray-400/70">
+          <p class="px-3 pb-2 text-[11px] font-semibold uppercase tracking-widest text-gray-400/70">
             {{ group.title }}
           </p>
           <ul class="space-y-1 font-medium">
@@ -86,9 +163,7 @@
       }
     </div>
 
-    <p class="px-2 text-center text-[11px] text-gray-400/60">
-      EDV Route Admin · v0.1.0
-    </p>
+    <p class="px-3 text-center text-[11px] text-gray-400/60">EDV Route Admin · v0.1.0</p>
   </div>
 </aside>
 
@@ -126,6 +201,13 @@
       @case ('user-circle') {
         <path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
       }
+      @case ('cog') {
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      }
+      @case ('receipt') {
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185zM9.75 9h.008v.008H9.75V9zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 4.5h.008v.008h-.008V13.5zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+      }
       @case ('clipboard') {
         <path stroke-linecap="round" stroke-linejoin="round" d="M11.35 3.836c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m8.9-4.414c.376.03.75.057 1.124.08 1.131.094 1.976 1.057 1.976 2.192V16.5A2.25 2.25 0 0118 18.75h-2.25m-7.5-10.5H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V18.75m-7.5-10.5h6.375c.621 0 1.125.504 1.125 1.125v9.375m-8.25-3l1.5 1.5 3-3.75" />
       }
@@ -134,8 +216,8 @@
 </ng-template>
 
 <!-- Page content -->
-<div class="pt-[60px] sm:ml-64">
-  <main class="min-h-screen bg-gray-50 p-4 dark:bg-gray-900 lg:p-6">
+<div class="pt-16 lg:ml-64">
+  <main class="min-h-[calc(100vh-4rem)] bg-gray-50 p-4 dark:bg-gray-900 lg:p-6">
     <router-outlet />
   </main>
 </div>
