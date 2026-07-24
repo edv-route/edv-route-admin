@@ -21,9 +21,11 @@ import {
 } from '../../shared/directives/password-policy.directive';
 import { DocumentsApi, validateFile } from '../documents/documents.api';
 import { DriversApi, type CreateDriverInput } from './drivers.api';
+import { PaymentCapture, type PaymentCaptureValue, emptyPaymentCapture } from './payment-capture';
 import {
   NATIONAL_ID_OPTIONS,
   PHONE_COUNTRY_OPTIONS,
+  PHONE_OPERATOR_OPTIONS,
   composePerson,
   emptyPersonForm,
   maxBirthDate,
@@ -58,7 +60,7 @@ interface VehicleDraft {
  */
 @Component({
   selector: 'app-driver-wizard',
-  imports: [FormsModule, RouterLink, Select, PasswordInput, DatePicker, PasswordPolicyDirective],
+  imports: [FormsModule, RouterLink, Select, PasswordInput, DatePicker, PasswordPolicyDirective, PaymentCapture],
   templateUrl: './driver-wizard.html',
 })
 export class DriverWizard {
@@ -88,6 +90,7 @@ export class DriverWizard {
   readonly maxBirthDate = maxBirthDate();
   readonly nationalIdOptions = NATIONAL_ID_OPTIONS;
   readonly phoneCountryOptions = PHONE_COUNTRY_OPTIONS;
+  readonly phoneOperatorOptions = PHONE_OPERATOR_OPTIONS;
   readonly passwordMinLength = PASSWORD_MIN_LENGTH;
   private readonly step1Form = viewChild<NgForm>('step1Form');
   private composed: CreateDriverInput | null = null;
@@ -106,6 +109,7 @@ export class DriverWizard {
   // Step 4: payment
   planId: number | null = null;
   periods = 1;
+  readonly payment = signal<PaymentCaptureValue>(emptyPaymentCapture());
 
   readonly driverRequirements = computed(() =>
     this.requirements().filter((r) => r.active && r.appliesTo === 'driver'),
@@ -252,8 +256,17 @@ export class DriverWizard {
       this.step.set(1);
       return;
     }
+    const pay = this.payment();
     const payment =
-      withPayment && this.planId ? { planId: this.planId, periods: this.periods } : null;
+      withPayment && this.planId
+        ? {
+            planId: this.planId,
+            periods: this.periods,
+            paymentMethodId: pay.paymentMethodId,
+            reference: pay.reference,
+            payerBank: pay.payerBank,
+          }
+        : null;
     const vehicles = this.vehicles().map((v) => ({
       vehicleTypeId: v.vehicleTypeId,
       brand: v.brand.trim() || null,
@@ -275,7 +288,7 @@ export class DriverWizard {
       .register(this.composed!, { payment, vehicles, documents })
       .pipe(
         switchMap((result) => {
-          // Upload each queued file against its created document id (same order).
+          // Upload each queued document file against its created id (same order).
           const uploads = docDrafts
             .map((d, i) => ({ file: d.file, id: result.createdDocumentIds[i] }))
             .filter((x): x is { file: File; id: string } => !!x.file && !!x.id)
@@ -285,6 +298,15 @@ export class DriverWizard {
                 catchError(() => of(false)),
               ),
             );
+          // Payment receipt (best-effort, attached to the primary invoice).
+          if (payment && pay.file && result.primaryInvoiceId) {
+            uploads.push(
+              this.api.uploadInvoiceProof(result.primaryInvoiceId, pay.file).pipe(
+                map(() => true),
+                catchError(() => of(false)),
+              ),
+            );
+          }
           return (uploads.length ? forkJoin(uploads) : of<boolean[]>([])).pipe(
             map((flags) => ({ result, flags })),
           );
@@ -299,7 +321,7 @@ export class DriverWizard {
           const failed = flags.filter((ok) => !ok).length;
           if (failed > 0) {
             this.fileWarning.set(
-              `${failed} archivo(s) no se pudieron subir. Adjúntalos desde el perfil del afiliado.`,
+              `${failed} archivo(s) no se pudieron subir. Adjúntalos desde el perfil o Facturación.`,
             );
           }
           this.step.set(5);

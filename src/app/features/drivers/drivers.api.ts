@@ -73,15 +73,16 @@ export class DriversApi {
   register(
     data: CreateDriverInput,
     extras: {
-      payment: { planId: number; periods: number } | null;
+      payment: ({ planId: number; periods: number } & PaymentMeta) | null;
       vehicles: VehicleInput[];
       documents: { requirementId: number; expiresAt: string | null }[];
     },
-  ): Observable<DriverDetail & { invoiceNumbers: string[]; createdDocumentIds: string[] }> {
-    return this.http.post<DriverDetail & { invoiceNumbers: string[]; createdDocumentIds: string[] }>(
-      `${this.baseUrl}/register`,
-      { ...data, ...extras },
-    );
+  ): Observable<
+    DriverDetail & { invoiceNumbers: string[]; createdDocumentIds: string[]; primaryInvoiceId: string | null }
+  > {
+    return this.http.post<
+      DriverDetail & { invoiceNumbers: string[]; createdDocumentIds: string[]; primaryInvoiceId: string | null }
+    >(`${this.baseUrl}/register`, { ...data, ...extras });
   }
 
   update(id: string, data: Partial<CreateDriverInput> & { status?: string }): Observable<DriverDetail> {
@@ -135,20 +136,24 @@ export class DriversApi {
     id: string,
     periods: number,
     planId?: number,
+    meta: PaymentMeta = {},
   ): Observable<{
     invoiceNumbers: string[];
     reactivated: boolean;
     planChanged: boolean;
     startsAt?: string;
+    primaryInvoiceId: string | null;
   }> {
     return this.http.post<{
       invoiceNumbers: string[];
       reactivated: boolean;
       planChanged: boolean;
       startsAt?: string;
+      primaryInvoiceId: string | null;
     }>(`${this.baseUrl}/${id}/subscription/renew`, {
       periods,
       ...(planId !== undefined ? { planId } : {}),
+      ...meta,
     });
   }
 

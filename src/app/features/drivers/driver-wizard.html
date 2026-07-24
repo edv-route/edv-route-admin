@@ -138,7 +138,8 @@
               [(ngModel)]="person.nationalIdType"
               [options]="nationalIdOptions"
               [compact]="true"
-              ariaLabel="Tipo de documento de identidad"
+              [disabled]="true"
+              ariaLabel="Tipo de documento de identidad (solo V por ahora)"
             />
             <input id="w-ci-number" name="nationalIdNumber" type="text" inputmode="numeric" maxlength="9"
               required #ciCtrl="ngModel"
@@ -156,7 +157,7 @@
           <label for="w-phone-number" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Teléfono</label>
           <div class="flex gap-2">
             <app-select
-              class="w-28 shrink-0"
+              class="w-20 shrink-0"
               name="phoneCountry"
               ngModel="+58"
               [options]="phoneCountryOptions"
@@ -164,8 +165,17 @@
               [disabled]="true"
               ariaLabel="Código de país (solo Venezuela por ahora)"
             />
-            <input id="w-phone-number" name="phoneNumber" type="tel" inputmode="numeric" maxlength="11"
-              [(ngModel)]="person.phoneNumber" placeholder="4141234567"
+            <app-select
+              class="w-20 shrink-0"
+              name="phoneOperator"
+              [(ngModel)]="person.phoneOperator"
+              [options]="phoneOperatorOptions"
+              [compact]="true"
+              placeholder="Operadora"
+              ariaLabel="Operadora del teléfono"
+            />
+            <input id="w-phone-number" name="phoneNumber" type="tel" inputmode="numeric" maxlength="7"
+              [(ngModel)]="person.phoneNumber" placeholder="1234567"
               class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
           </div>
         </div>
@@ -434,6 +444,7 @@
               (la #1 agrupa membresía + primer período).
             </p>
           }
+          <app-payment-capture [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
           <div class="flex flex-wrap items-center justify-between gap-3">
             <button type="button" (click)="goToStep(3)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
             <div class="flex flex-wrap gap-3">

@@ -1,6 +1,6 @@
 import { Component, computed, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { HttpClient, type HttpErrorResponse } from '@angular/common/http';
-import { DatePipe, NgTemplateOutlet } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { FormsModule, type NgForm } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { of } from 'rxjs';
@@ -19,29 +19,24 @@ import { RequirementsApi } from '../requirements/requirements.api';
 import { VehicleTypesApi } from '../vehicle-types/vehicle-types.api';
 import { DatePicker } from '../../shared/components/date-picker';
 import { PasswordInput } from '../../shared/components/password-input';
-import { Select, type SelectOption } from '../../shared/components/select';
+import { Select } from '../../shared/components/select';
 import { DocumentsApi, validateFile } from '../documents/documents.api';
 import { DriversApi } from './drivers.api';
-import { PaymentMethodsApi } from '../payment-methods/payment-methods.api';
-import {
-  PAYMENT_METHOD_FIELDS,
-  PAYMENT_METHOD_TYPE_LABELS,
-  VENEZUELAN_BANKS,
-  type PaymentMethod,
-} from '../../core/models/payment-method.model';
+import { PaymentCapture, type PaymentCaptureValue, emptyPaymentCapture } from './payment-capture';
 import {
   NATIONAL_ID_OPTIONS,
   PHONE_COUNTRY_OPTIONS,
+  PHONE_OPERATOR_OPTIONS,
   composePerson,
   emptyPersonForm,
   maxBirthDate,
   parseNationalId,
-  parsePhoneNumber,
+  parsePhone,
 } from './person-form';
 
 @Component({
   selector: 'app-driver-detail',
-  imports: [FormsModule, DatePipe, RouterLink, Select, PasswordInput, DatePicker, NgTemplateOutlet],
+  imports: [FormsModule, DatePipe, RouterLink, Select, PasswordInput, DatePicker, PaymentCapture],
   templateUrl: './driver-detail.html',
 })
 export class DriverDetail {
@@ -49,7 +44,6 @@ export class DriverDetail {
   private readonly documentsApi = inject(DocumentsApi);
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
-  private readonly paymentMethodsApi = inject(PaymentMethodsApi);
 
   readonly id = input.required<string>();
   readonly statusLabels = DRIVER_STATUS_LABELS;
@@ -77,13 +71,8 @@ export class DriverDetail {
   readonly enrollOpen = signal(false);
   readonly enrollPeriods = signal(1);
   readonly membership = signal<{ id: number; name: string; priceUsd: string } | null>(null);
-  readonly paymentMethods = signal<PaymentMethod[]>([]);
-  /** Payment capture shared by the enroll and external-payment modals (Pieza 2). */
-  readonly payMethodId = signal<number | null>(null);
-  payReference = '';
-  readonly payerBank = signal<string | null>(null);
-  payFile: File | null = null;
-  private readonly payFileInput = viewChild<ElementRef<HTMLInputElement>>('payFileInput');
+  /** Payment capture shared by the enroll, renewal and external-payment modals (Pieza 2). */
+  readonly payment = signal<PaymentCaptureValue>(emptyPaymentCapture());
   readonly periodLabels = BILLING_PERIOD_LABELS;
 
   // Fleet + documents are living data managed here (moved out of the alta,
@@ -100,6 +89,7 @@ export class DriverDetail {
   readonly maxBirthDate = maxBirthDate();
   readonly nationalIdOptions = NATIONAL_ID_OPTIONS;
   readonly phoneCountryOptions = PHONE_COUNTRY_OPTIONS;
+  readonly phoneOperatorOptions = PHONE_OPERATOR_OPTIONS;
   private readonly editForm = viewChild<NgForm>('editForm');
 
   /** Active driver-requirements with no registered document = visibly incomplete. */
@@ -141,33 +131,6 @@ export class DriverDetail {
     return (tariff + memb).toFixed(2);
   });
 
-  /** Active payment methods offered when registering a payment. */
-  readonly methodOptions = computed<SelectOption[]>(() =>
-    this.paymentMethods()
-      .filter((m) => m.isActive)
-      .map((m) => ({ value: m.id, label: `${m.name} · ${PAYMENT_METHOD_TYPE_LABELS[m.type]}` })),
-  );
-  readonly bankOptions = VENEZUELAN_BANKS;
-
-  /** Details of the selected method, mapped to human labels so the admin can
-   * confirm the account the driver paid into. Select values are resolved to
-   * their readable option label; empty details are dropped. */
-  readonly selectedMethodDetails = computed<{ label: string; value: string }[]>(() => {
-    const method = this.paymentMethods().find((m) => m.id === this.payMethodId());
-    if (!method) return [];
-    return PAYMENT_METHOD_FIELDS[method.type]
-      .map((field) => {
-        const raw = method.details[field.key]?.trim();
-        if (!raw) return null;
-        const value =
-          field.control === 'select'
-            ? (field.options?.find((o) => o.value === raw)?.label ?? raw)
-            : raw;
-        return { label: field.label, value };
-      })
-      .filter((row): row is { label: string; value: string } => row !== null);
-  });
-
   constructor(requirementsApi: RequirementsApi, vehicleTypesApi: VehicleTypesApi) {
     requirementsApi.list().subscribe({ next: (r) => this.requirements.set(r) });
     vehicleTypesApi.list().subscribe({
@@ -182,10 +145,6 @@ export class DriverDetail {
     this.http
       .get<{ id: number; name: string; priceUsd: string }>(`${environment.apiUrl}/memberships/current`)
       .subscribe({ next: (m) => this.membership.set(m), error: () => {} });
-    this.paymentMethodsApi.list().subscribe({
-      next: (m) => this.paymentMethods.set(m),
-      error: () => {},
-    });
   }
 
   ngOnInit(): void {
@@ -210,6 +169,7 @@ export class DriverDetail {
     const d = this.driver();
     if (!d) return;
     const nationalId = parseNationalId(d.nationalId);
+    const phone = parsePhone(d.phone);
     this.person = {
       ...emptyPersonForm(),
       firstName: d.firstName,
@@ -221,7 +181,8 @@ export class DriverDetail {
       email: d.email ?? '',
       nationalIdType: nationalId.type,
       nationalIdNumber: nationalId.number,
-      phoneNumber: parsePhoneNumber(d.phone),
+      phoneOperator: phone.operator,
+      phoneNumber: phone.number,
       // Password fields stay empty: blank = keep the current app password
     };
     this.error.set(null);
@@ -276,6 +237,7 @@ export class DriverDetail {
     this.renewPeriods.set(1);
     this.renewPlanId.set(null);
     this.renewResult.set(null);
+    this.resetPaymentCapture();
     this.error.set(null);
     this.renewOpen.set(true);
   }
@@ -283,28 +245,25 @@ export class DriverDetail {
   renew(): void {
     if (this.saving()) return;
     this.saving.set(true);
+    this.error.set(null);
     const planId = this.renewPlanId();
 
-    this.api.renewSubscription(this.id(), this.renewPeriods(), planId ?? undefined).subscribe({
+    this.api.renewSubscription(this.id(), this.renewPeriods(), planId ?? undefined, this.paymentMeta()).subscribe({
       next: (result) => {
-        this.saving.set(false);
-        this.renewOpen.set(false);
         const invoices = `Factura(s): N° ${result.invoiceNumbers.join(', N° ')}`;
+        let message: string;
         if (result.planChanged) {
           const starts = result.startsAt
             ? new Date(result.startsAt).toLocaleDateString('es-VE')
             : null;
-          this.renewResult.set(
-            result.reactivated
-              ? `Tarifa cambiada y activa desde ahora. ${invoices}`
-              : `Cambio de tarifa programado: comienza el ${starts} al agotarse lo pagado. ${invoices}`,
-          );
+          message = result.reactivated
+            ? `Tarifa cambiada y activa desde ahora. ${invoices}`
+            : `Cambio de tarifa programado: comienza el ${starts} al agotarse lo pagado. ${invoices}`;
         } else {
-          this.renewResult.set(
-            `${result.reactivated ? 'Tarifa reactivada. ' : ''}${invoices}`,
-          );
+          message = `${result.reactivated ? 'Tarifa reactivada. ' : ''}${invoices}`;
         }
-        this.load();
+        // Attaches the receipt (if any) to the primary invoice, then finishes.
+        this.afterCobro(result.primaryInvoiceId, message, () => this.renewOpen.set(false));
       },
       error: (err: HttpErrorResponse) => {
         this.renewOpen.set(false);
@@ -328,40 +287,12 @@ export class DriverDetail {
   }
 
   private resetPaymentCapture(): void {
-    this.payMethodId.set(null);
-    this.payReference = '';
-    this.payerBank.set(null);
-    this.payFile = null;
-  }
-
-  onPayFileSelected(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
-    if (file) {
-      const problem = validateFile(file);
-      if (problem) {
-        this.error.set(problem);
-        this.payFile = null;
-        return;
-      }
-    }
-    this.error.set(null);
-    this.payFile = file;
-  }
-
-  /** Clears the chosen receipt and resets the native input so the same file can
-   * be re-selected afterwards. */
-  clearPayFile(): void {
-    this.payFile = null;
-    const input = this.payFileInput()?.nativeElement;
-    if (input) input.value = '';
+    this.payment.set(emptyPaymentCapture());
   }
 
   private paymentMeta() {
-    return {
-      paymentMethodId: this.payMethodId(),
-      reference: this.payReference.trim() || null,
-      payerBank: this.payerBank(),
-    };
+    const p = this.payment();
+    return { paymentMethodId: p.paymentMethodId, reference: p.reference, payerBank: p.payerBank };
   }
 
   /** After a cobro: attach the receipt (if any) to the primary invoice, then finish. */
@@ -372,8 +303,9 @@ export class DriverDetail {
       this.renewResult.set(message + extra);
       this.load();
     };
-    if (this.payFile && primaryInvoiceId) {
-      this.api.uploadInvoiceProof(primaryInvoiceId, this.payFile).subscribe({
+    const file = this.payment().file;
+    if (file && primaryInvoiceId) {
+      this.api.uploadInvoiceProof(primaryInvoiceId, file).subscribe({
         next: () => finish(),
         error: () => finish(' (⚠️ el comprobante no se pudo subir; adjúntalo luego desde Facturación).'),
       });

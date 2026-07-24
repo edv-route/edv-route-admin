@@ -34,6 +34,10 @@
       </div>
     </div>
     <div class="flex flex-wrap gap-2">
+      <a [routerLink]="['/drivers', d.userId, 'payments']"
+        class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+        Historial de pagos
+      </a>
       <button type="button" (click)="openEdit()"
         class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
         Editar datos
@@ -469,7 +473,7 @@
             class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
           <div class="flex gap-2">
             <app-select
-              class="w-28 shrink-0"
+              class="w-20 shrink-0"
               name="phoneCountry"
               ngModel="+58"
               [options]="phoneCountryOptions"
@@ -477,8 +481,17 @@
               [disabled]="true"
               ariaLabel="Código de país (solo Venezuela por ahora)"
             />
-            <input name="phoneNumber" type="tel" inputmode="numeric" maxlength="11"
-              [(ngModel)]="person.phoneNumber" placeholder="4141234567"
+            <app-select
+              class="w-20 shrink-0"
+              name="phoneOperator"
+              [(ngModel)]="person.phoneOperator"
+              [options]="phoneOperatorOptions"
+              [compact]="true"
+              placeholder="Operadora"
+              ariaLabel="Operadora del teléfono"
+            />
+            <input name="phoneNumber" type="tel" inputmode="numeric" maxlength="7"
+              [(ngModel)]="person.phoneNumber" placeholder="1234567"
               class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
           </div>
           <textarea name="address" rows="2" maxlength="300" [(ngModel)]="person.address" placeholder="Dirección de domicilio"
@@ -608,8 +621,9 @@
 
   <!-- Renew tariff modal -->
   @if (renewOpen()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4">
-      <div class="w-full max-w-md rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800 sm:p-6">
+    <div class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/60">
+      <div class="flex min-h-full items-center justify-center p-4">
+        <div class="w-full max-w-2xl rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800 sm:p-6">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white">
           {{ d.subscription?.status === 'expired' ? 'Cobrar y reactivar tarifa' : 'Renovar tarifa' }}
         </h2>
@@ -658,6 +672,7 @@
           (input)="renewPeriods.set(+$any($event.target).value)"
           class="mt-2 block w-28 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
         />
+        <app-payment-capture [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
         <div class="mt-5 flex justify-end gap-3">
           <button type="button" (click)="renewOpen.set(false)"
             class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
@@ -667,6 +682,7 @@
             class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
             {{ saving() ? 'Registrando…' : 'Cobrar y facturar' }}
           </button>
+        </div>
         </div>
       </div>
     </div>
@@ -699,7 +715,7 @@
   @if (enrollOpen()) {
     <div class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/60">
       <div class="flex min-h-full items-center justify-center p-4">
-        <div class="w-full max-w-md rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800 sm:p-6">
+        <div class="w-full max-w-2xl rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800 sm:p-6">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white">Registrar pago</h2>
         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
           Se cobrará la <strong>membresía vigente</strong> (si aún no la pagó) y la
@@ -719,7 +735,7 @@
         } @else {
           <p class="mt-4 text-sm text-red-600">No hay una tarifa activa configurada.</p>
         }
-        <ng-container [ngTemplateOutlet]="paymentCapture" />
+        <app-payment-capture [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
         <div class="mt-5 flex justify-end gap-3">
           <button type="button" (click)="enrollOpen.set(false)"
             class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
@@ -739,7 +755,7 @@
   @if (externalPayOpen()) {
     <div class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/60">
       <div class="flex min-h-full items-center justify-center p-4">
-        <div class="w-full max-w-md rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800 sm:p-6">
+        <div class="w-full max-w-2xl rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800 sm:p-6">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white">Registrar pago externo</h2>
         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
           Se saldarán <strong>todos los cargos pendientes</strong> de {{ d.fullName }} (deuda y
@@ -751,7 +767,7 @@
         <textarea id="extNote" name="extNote" rows="2" maxlength="300" [(ngModel)]="externalPayNote"
           placeholder="Ej.: pago en efectivo recibido por el administrador"
           class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
-        <ng-container [ngTemplateOutlet]="paymentCapture" />
+        <app-payment-capture [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
         <div class="mt-5 flex justify-end gap-3">
           <button type="button" (click)="externalPayOpen.set(false)"
             class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
@@ -795,66 +811,4 @@
     </div>
   }
 
-  <!-- Reusable payment capture (method + reference + payer bank + receipt) -->
-  <ng-template #paymentCapture>
-    <div class="mt-4 space-y-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-      <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Datos del pago (opcional)</p>
-      <div>
-        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Método de pago</label>
-        <app-select name="payMethod" [options]="methodOptions()" [ngModel]="payMethodId()"
-          (ngModelChange)="payMethodId.set($event)" placeholder="Elegir método…" ariaLabel="Método de pago" />
-        <!-- Details of the chosen method: the account the driver paid into -->
-        @if (selectedMethodDetails().length) {
-          <dl class="mt-2 space-y-1 rounded-lg bg-gray-50 p-3 dark:bg-gray-900/40">
-            @for (row of selectedMethodDetails(); track row.label) {
-              <div class="flex items-baseline justify-between gap-3">
-                <dt class="shrink-0 text-xs text-gray-500 dark:text-gray-400">{{ row.label }}</dt>
-                <dd class="break-all text-right text-xs font-semibold text-gray-800 dark:text-gray-100">{{ row.value }}</dd>
-              </div>
-            }
-          </dl>
-        }
-      </div>
-      <div>
-        <label for="payRef" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Referencia</label>
-        <input id="payRef" name="payRef" type="text" [(ngModel)]="payReference"
-          placeholder="N° de referencia / confirmación"
-          class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-      </div>
-      <div>
-        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Banco emisor</label>
-        <app-select name="payerBank" [options]="bankOptions" [ngModel]="payerBank()"
-          (ngModelChange)="payerBank.set($event)" placeholder="Elegir banco…" ariaLabel="Banco emisor" />
-      </div>
-      <div>
-        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Comprobante (imagen o PDF)</label>
-        <!-- Native input stays hidden; the labels below trigger it via `for` -->
-        <input #payFileInput id="payProof" type="file" class="hidden"
-          accept="image/png,image/jpeg,application/pdf" (change)="onPayFileSelected($event)" />
-        @if (payFile; as file) {
-          <div class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-600 dark:bg-gray-700">
-            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-300">
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
-            </span>
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ file.name }}</p>
-              <p class="text-xs text-green-600 dark:text-green-400">Listo para adjuntar</p>
-            </div>
-            <label for="payProof" class="cursor-pointer rounded-md px-2 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-gray-600">Cambiar</label>
-            <button type="button" (click)="clearPayFile()"
-              class="rounded-md px-2 py-1 text-xs font-semibold text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-600 dark:hover:text-red-400">Quitar</button>
-          </div>
-        } @else {
-          <label for="payProof"
-            class="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center transition hover:border-primary-400 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700/40 dark:hover:border-primary-500 dark:hover:bg-gray-700">
-            <svg class="h-7 w-7 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 7.5L12 3m0 0L7.5 7.5M12 3v13.5" /></svg>
-            <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
-              <span class="font-semibold text-primary-700 dark:text-primary-400">Haz clic para subir</span> el comprobante
-            </p>
-            <p class="mt-0.5 text-xs text-gray-400">PNG, JPG o PDF · máx. 10 MB</p>
-          </label>
-        }
-      </div>
-    </div>
-  </ng-template>
 }

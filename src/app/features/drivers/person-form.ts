@@ -9,14 +9,27 @@ import type { CreateDriverInput } from './drivers.api';
 export type NationalIdType = 'V' | 'E' | 'J';
 
 export const NATIONAL_ID_OPTIONS: SelectOption[] = [
-  { value: 'V', label: 'V', prefix: '🇻🇪' },
+  { value: 'V', label: 'V' },
   { value: 'E', label: 'E' },
   { value: 'J', label: 'J' },
 ];
 
 /** Only Venezuela for now; the list is where new countries will land. */
 export const PHONE_COUNTRY_OPTIONS: SelectOption[] = [
-  { value: '+58', label: '+58', prefix: '🇻🇪' },
+  { value: '+58', label: '+58' },
+];
+
+/**
+ * Venezuelan mobile operator codes (the 3 digits after +58). The label shows
+ * the local "0xxx" form; the value is the E.164 fragment without the leading 0.
+ */
+export const PHONE_OPERATOR_OPTIONS: SelectOption[] = [
+  { value: '412', label: '0412' },
+  { value: '422', label: '0422' },
+  { value: '414', label: '0414' },
+  { value: '424', label: '0424' },
+  { value: '416', label: '0416' },
+  { value: '426', label: '0426' },
 ];
 
 /**
@@ -34,7 +47,9 @@ export interface PersonFormFields {
   email: string;
   nationalIdType: NationalIdType;
   nationalIdNumber: string;
-  /** National number as typed (may carry a leading 0); +58 is fixed for now. */
+  /** Mobile operator code (the 3 digits after +58), e.g. '414'. */
+  phoneOperator: string;
+  /** The 7-digit local number (after the operator code). */
   phoneNumber: string;
   password: string;
   passwordRepeat: string;
@@ -51,6 +66,7 @@ export function emptyPersonForm(): PersonFormFields {
     email: '',
     nationalIdType: 'V',
     nationalIdNumber: '',
+    phoneOperator: '',
     phoneNumber: '',
     password: '',
     passwordRepeat: '',
@@ -72,9 +88,12 @@ export function parseNationalId(value: string | null): { type: NationalIdType; n
     : { type: 'V', number: '' };
 }
 
-/** "+584141234567" -> "4141234567" for the national-number field. */
-export function parsePhoneNumber(value: string | null): string {
-  return value?.replace(/^\+58/, '') ?? '';
+/** "+584141234567" -> { operator: '414', number: '1234567' } for editing. */
+export function parsePhone(value: string | null): { operator: string; number: string } {
+  const digits = (value ?? '').replace(/^\+58/, '').replace(/\D/g, '');
+  return digits.length >= 10
+    ? { operator: digits.slice(0, 3), number: digits.slice(3, 10) }
+    : { operator: '', number: digits };
 }
 
 export type ComposeResult =
@@ -119,11 +138,14 @@ export function composePerson(f: PersonFormFields, opts: ComposeOptions = {}): C
 
   let phone: string | null = null;
   if (f.phoneNumber.trim()) {
-    const digits = f.phoneNumber.replace(/\D/g, '').replace(/^0/, '');
-    if (digits.length !== 10) {
-      return { ok: false, error: 'El teléfono debe tener 10 dígitos después del +58 (ej. 4141234567).' };
+    if (!f.phoneOperator) {
+      return { ok: false, error: 'Selecciona la operadora del teléfono.' };
     }
-    phone = `+58${digits}`;
+    const local = f.phoneNumber.replace(/\D/g, '');
+    if (local.length !== 7) {
+      return { ok: false, error: 'El número de teléfono debe tener 7 dígitos (ej. 1234567).' };
+    }
+    phone = `+58${f.phoneOperator}${local}`;
   }
 
   let password: string | null = null;
