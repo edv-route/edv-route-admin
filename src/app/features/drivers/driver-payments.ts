@@ -2,6 +2,8 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { EMPTY, type Observable } from 'rxjs';
+import { expand, last, map } from 'rxjs/operators';
 import { BillingApi } from '../billing/billing.api';
 import {
   PAYMENT_KIND_LABELS,
@@ -10,6 +12,9 @@ import {
   type PaymentListItem,
 } from '../../core/models/billing.model';
 import { DriversApi } from './drivers.api';
+
+/** The list endpoints cap `limit` at 100, so we page through the ledger in 100s. */
+const PAGE_SIZE = 100;
 
 /**
  * Driver-focused payment history: a reduced, per-driver view of the global
@@ -63,10 +68,12 @@ export class DriverPayments {
       next: (d) => this.driverName.set(d.fullName),
       error: () => {},
     });
-    // A generous page: a single driver's ledger is small; no paging needed here.
-    this.billingApi.payments({ driverId, page: 1, limit: 200 }).subscribe({
-      next: (r) => {
-        this.payments.set(r.items);
+    // Load the driver's full ledger, paging by 100 (the endpoint's max limit).
+    this.loadAll<PaymentListItem>((page) =>
+      this.billingApi.payments({ driverId, page, limit: PAGE_SIZE }),
+    ).subscribe({
+      next: (items) => {
+        this.payments.set(items);
         this.loading.set(false);
       },
       error: (err: HttpErrorResponse) => {
@@ -74,10 +81,29 @@ export class DriverPayments {
         this.fail(err);
       },
     });
-    this.billingApi.invoices({ driverId, page: 1, limit: 200 }).subscribe({
-      next: (r) => this.invoices.set(r.items),
+    this.loadAll<InvoiceListItem>((page) =>
+      this.billingApi.invoices({ driverId, page, limit: PAGE_SIZE }),
+    ).subscribe({
+      next: (items) => this.invoices.set(items),
       error: () => {},
     });
+  }
+
+  /** Fetches every page of a driver-scoped list and concatenates the items. */
+  private loadAll<T>(
+    fetch: (page: number) => Observable<{ items: T[]; total: number }>,
+  ): Observable<T[]> {
+    const acc: T[] = [];
+    return fetch(1).pipe(
+      expand((res) => {
+        acc.push(...res.items);
+        return acc.length < res.total && res.items.length > 0
+          ? fetch(Math.floor(acc.length / PAGE_SIZE) + 1)
+          : EMPTY;
+      }),
+      last(),
+      map(() => acc),
+    );
   }
 
   openDetail(payment: PaymentListItem): void {
