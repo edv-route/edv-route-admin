@@ -45,6 +45,9 @@ export class MainLayout {
   /** Dark mode toggle (Pro navbar pattern; class-based via `.dark` on <html>). */
   readonly isDark = signal(this.readInitialTheme());
 
+  /** Confirmation modal before logging out. */
+  readonly confirmLogout = signal(false);
+
   /** Initials for the avatar chip in the account menu. */
   readonly adminInitials = computed(() => {
     const admin = this.currentAdmin();

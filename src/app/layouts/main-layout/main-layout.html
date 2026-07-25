@@ -107,7 +107,7 @@
           <li>
             <button
               type="button"
-              (click)="logout()"
+              (click)="confirmLogout.set(true)"
               class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-gray-600"
             >
               <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -221,3 +221,25 @@
     <router-outlet />
   </main>
 </div>
+
+<!-- Logout confirmation -->
+@if (confirmLogout()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4">
+    <div class="w-full max-w-sm rounded-lg bg-white p-4 text-center shadow-lg dark:bg-gray-800 sm:p-6">
+      <h2 class="text-lg font-bold text-gray-900 dark:text-white">¿Cerrar sesión?</h2>
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        Saldrás del panel y volverás a la pantalla de acceso.
+      </p>
+      <div class="mt-5 flex justify-center gap-3">
+        <button type="button" (click)="confirmLogout.set(false)"
+          class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+          Cancelar
+        </button>
+        <button type="button" (click)="logout()"
+          class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  </div>
+}
