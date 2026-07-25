@@ -2,6 +2,7 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { EMPTY, type Observable } from 'rxjs';
 import { expand, last, map } from 'rxjs/operators';
 import { BillingApi } from '../billing/billing.api';
@@ -31,6 +32,7 @@ const PAGE_SIZE = 100;
 export class DriverPayments {
   private readonly billingApi = inject(BillingApi);
   private readonly driversApi = inject(DriversApi);
+  private readonly sanitizer = inject(DomSanitizer);
 
   readonly id = input.required<string>();
   readonly kindLabels = PAYMENT_KIND_LABELS;
@@ -42,6 +44,8 @@ export class DriverPayments {
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly loadingProof = signal(false);
+  /** Signed URL of the receipt shown inline (null = not loaded yet). */
+  readonly proofUrl = signal<string | null>(null);
   /** The payment whose detail modal is open (null = closed). */
   readonly selected = signal<PaymentListItem | null>(null);
 
@@ -55,6 +59,17 @@ export class DriverPayments {
   readonly selectedInvoice = computed<InvoiceListItem | null>(() => {
     const p = this.selected();
     return p?.invoiceId ? (this.invoicesById().get(p.invoiceId) ?? null) : null;
+  });
+
+  /** The receipt is a PDF (embedded in an iframe); otherwise it renders as an image. */
+  readonly proofIsPdf = computed(() =>
+    (this.proofUrl() ?? '').split('?')[0].toLowerCase().endsWith('.pdf'),
+  );
+
+  /** Sanitized URL for the <iframe> src (the signed URL comes from our backend). */
+  readonly safeProofUrl = computed<SafeResourceUrl | null>(() => {
+    const url = this.proofUrl();
+    return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
   });
 
   ngOnInit(): void {
@@ -108,17 +123,23 @@ export class DriverPayments {
 
   openDetail(payment: PaymentListItem): void {
     this.error.set(null);
+    this.proofUrl.set(null);
     this.selected.set(payment);
   }
 
-  /** Opens the receipt of the selected payment's invoice in a new tab (signed URL). */
+  closeDetail(): void {
+    this.selected.set(null);
+    this.proofUrl.set(null);
+  }
+
+  /** Loads the receipt's signed URL to show it INLINE in the modal (image or PDF). */
   viewProof(invoiceId: string): void {
-    if (this.loadingProof()) return;
+    if (this.loadingProof() || this.proofUrl()) return;
     this.loadingProof.set(true);
     this.billingApi.invoiceProofUrl(invoiceId).subscribe({
       next: ({ url }) => {
         this.loadingProof.set(false);
-        window.open(url, '_blank', 'noopener');
+        this.proofUrl.set(url);
       },
       error: (err: HttpErrorResponse) => {
         this.loadingProof.set(false);
