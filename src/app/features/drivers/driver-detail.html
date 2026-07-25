@@ -60,19 +60,24 @@
         </button>
       }
       @if (d.status === 'approved' || d.status === 'suspended') {
-        <button type="button" (click)="toggleSuspension()" [disabled]="saving()"
+        <button type="button" [disabled]="saving()"
+          (click)="askConfirm(d.status === 'suspended'
+            ? { title: '¿Reactivar a ' + d.fullName + '?', message: 'El afiliado vuelve a operar y a recibir viajes.', confirmLabel: 'Reactivar', danger: false, action: 'suspend' }
+            : { title: '¿Suspender a ' + d.fullName + '?', message: 'Dejará de operar y no recibirá viajes hasta que lo reactives.', confirmLabel: 'Suspender', danger: true, action: 'suspend' })"
           class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
           {{ d.status === 'suspended' ? 'Reactivar' : 'Suspender' }}
         </button>
       }
       @if (d.status === 'approved') {
-        <button type="button" (click)="pause()" [disabled]="saving()"
+        <button type="button" [disabled]="saving()"
+          (click)="askConfirm({ title: '¿Pausar a ' + d.fullName + '?', message: 'Licencia administrativa: se congela la tarifa (el tiempo no corre) hasta reanudar. Exige la tarifa al día.', confirmLabel: 'Pausar', danger: false, action: 'pause' })"
           class="rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-60 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-gray-700">
           Pausar (licencia)
         </button>
       }
       @if (d.status === 'paused') {
-        <button type="button" (click)="resume()" [disabled]="saving()"
+        <button type="button" [disabled]="saving()"
+          (click)="askConfirm({ title: '¿Reanudar a ' + d.fullName + '?', message: 'Vuelve a operar; la tarifa corre de nuevo, desplazada por el tiempo que estuvo en pausa.', confirmLabel: 'Reanudar', danger: false, action: 'resume' })"
           class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
           Reanudar
         </button>
@@ -84,7 +89,8 @@
         </button>
       }
       @if (d.status === 'penalized') {
-        <button type="button" (click)="reactivate()" [disabled]="saving()"
+        <button type="button" [disabled]="saving()"
+          (click)="askConfirm({ title: '¿Reactivar a ' + d.fullName + '?', message: 'Vuelve a la calle de inmediato, sin esperar al día de reincorporación automática. Exige deuda 0.', confirmLabel: 'Reactivar', danger: false, action: 'reactivate' })"
           class="rounded-lg border border-green-300 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-50 disabled:opacity-60 dark:border-green-800 dark:text-green-300 dark:hover:bg-gray-700">
           Reactivar ahora
         </button>
@@ -778,6 +784,34 @@
             {{ saving() ? 'Registrando…' : 'Registrar pago' }}
           </button>
         </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Generic confirmation for one-click important actions (loading spinner on confirm) -->
+  @if (confirm(); as c) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4">
+      <div class="w-full max-w-sm rounded-lg bg-white p-4 text-center shadow-lg dark:bg-gray-800 sm:p-6">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ c.title }}</h2>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ c.message }}</p>
+        <div class="mt-5 flex justify-center gap-3">
+          <button type="button" (click)="confirm.set(null)" [disabled]="saving()"
+            class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+            Cancelar
+          </button>
+          <button type="button" (click)="runConfirm()" [disabled]="saving()"
+            [class]="c.danger
+              ? 'inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60'
+              : 'inline-flex items-center rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60'">
+            @if (saving()) {
+              <svg class="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+            }
+            {{ saving() ? 'Procesando…' : c.confirmLabel }}
+          </button>
         </div>
       </div>
     </div>

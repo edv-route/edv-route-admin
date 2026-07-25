@@ -3,7 +3,7 @@ import { HttpClient, type HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule, type NgForm } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { of } from 'rxjs';
+import { of, type Observable } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import type {
   DriverDetail as DriverDetailModel,
@@ -34,6 +34,17 @@ import {
   parsePhone,
 } from './person-form';
 
+/** One-click important actions gated behind a confirmation modal. */
+type ImportantAction = 'suspend' | 'pause' | 'resume' | 'reactivate';
+
+interface ConfirmDialog {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  danger: boolean;
+  action: ImportantAction;
+}
+
 @Component({
   selector: 'app-driver-detail',
   imports: [FormsModule, DatePipe, RouterLink, Select, PasswordInput, DatePicker, PaymentCapture],
@@ -56,6 +67,8 @@ export class DriverDetail {
   readonly error = signal<string | null>(null);
   readonly editOpen = signal(false);
   readonly confirmAction = signal<'approve' | 'reject' | null>(null);
+  /** Generic confirmation modal for one-click important actions. */
+  readonly confirm = signal<ConfirmDialog | null>(null);
   readonly renewOpen = signal(false);
   readonly renewPeriods = signal(1);
   readonly renewResult = signal<string | null>(null);
@@ -233,6 +246,49 @@ export class DriverDetail {
     });
   }
 
+  /** Opens the generic confirmation modal for an important action. */
+  askConfirm(dialog: ConfirmDialog): void {
+    this.error.set(null);
+    this.confirm.set(dialog);
+  }
+
+  /** Dispatches the confirmed action; the modal closes when the request finishes. */
+  runConfirm(): void {
+    const dialog = this.confirm();
+    if (!dialog || this.saving()) return;
+    switch (dialog.action) {
+      case 'suspend':
+        this.toggleSuspension();
+        break;
+      case 'pause':
+        this.pause();
+        break;
+      case 'resume':
+        this.resume();
+        break;
+      case 'reactivate':
+        this.reactivate();
+        break;
+    }
+  }
+
+  /** Runs a confirmed request: loading on; close the modal + reload on success. */
+  private runConfirmed(request: Observable<unknown>): void {
+    this.saving.set(true);
+    this.error.set(null);
+    request.subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.confirm.set(null);
+        this.load();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.confirm.set(null);
+        this.fail(err);
+      },
+    });
+  }
+
   openRenew(): void {
     this.renewPeriods.set(1);
     this.renewPlanId.set(null);
@@ -337,32 +393,16 @@ export class DriverDetail {
 
   toggleSuspension(): void {
     const d = this.driver();
-    if (!d || this.saving()) return;
-    this.saving.set(true);
-    this.api
-      .update(this.id(), { status: d.status === 'suspended' ? 'approved' : 'suspended' })
-      .subscribe({
-        next: () => {
-          this.saving.set(false);
-          this.load();
-        },
-        error: (err: HttpErrorResponse) => this.fail(err),
-      });
+    if (!d) return;
+    this.runConfirmed(
+      this.api.update(this.id(), { status: d.status === 'suspended' ? 'approved' : 'suspended' }),
+    );
   }
 
   /** Administrative pause (licencia): freezes the tariff. Backend requires the
    * tariff to be up to date; a business error surfaces via `fail`. */
   pause(): void {
-    if (this.saving()) return;
-    this.saving.set(true);
-    this.error.set(null);
-    this.api.pause(this.id()).subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.load();
-      },
-      error: (err: HttpErrorResponse) => this.fail(err),
-    });
+    this.runConfirmed(this.api.pause(this.id()));
   }
 
   /** Registers money received outside the system: settles arrears + penalty. */
@@ -388,30 +428,12 @@ export class DriverDetail {
 
   /** Manual reactivation: back on the road now instead of waiting the anchor day. */
   reactivate(): void {
-    if (this.saving()) return;
-    this.saving.set(true);
-    this.error.set(null);
-    this.api.reactivate(this.id()).subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.load();
-      },
-      error: (err: HttpErrorResponse) => this.fail(err),
-    });
+    this.runConfirmed(this.api.reactivate(this.id()));
   }
 
   /** Lifts the pause: back to approved + available, tariff resumes running. */
   resume(): void {
-    if (this.saving()) return;
-    this.saving.set(true);
-    this.error.set(null);
-    this.api.resume(this.id()).subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.load();
-      },
-      error: (err: HttpErrorResponse) => this.fail(err),
-    });
+    this.runConfirmed(this.api.resume(this.id()));
   }
 
   /** Undoes a programmed plan change (refunds its periods, voids invoices). */
