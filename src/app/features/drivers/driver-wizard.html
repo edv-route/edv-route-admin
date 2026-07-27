@@ -282,22 +282,21 @@
         </ul>
       }
 
-      <form class="mt-5 flex flex-wrap items-end gap-3" (ngSubmit)="addDocumentDraft()">
-        <div class="min-w-48 flex-1">
-          <label for="w-req" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Requerimiento</label>
-          <select id="w-req" name="docRequirementId" [(ngModel)]="docRequirementId"
-            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-            <option [ngValue]="null">Selecciona…</option>
-            @for (r of driverRequirements(); track r.id) {
-              <option [ngValue]="r.id">{{ r.name }}{{ r.isRequired ? ' *' : '' }}</option>
-            }
-          </select>
+      <form class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2" (ngSubmit)="addDocumentDraft()">
+        <div>
+          <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Requerimiento</label>
+          <app-select
+            name="docRequirementId"
+            [(ngModel)]="docRequirementId"
+            [options]="docRequirementOptions()"
+            placeholder="Selecciona…"
+            ariaLabel="Requerimiento" />
         </div>
-        <div class="min-w-44">
+        <div>
           <label for="w-expires" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Vence</label>
           <app-date-picker inputId="w-expires" name="docExpiresAt" [(ngModel)]="docExpiresAt" />
         </div>
-        <div class="min-w-56 flex-1">
+        <div class="sm:col-span-2">
           <label for="w-file" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
             Archivo <span class="font-normal text-gray-400">(opcional)</span>
           </label>
@@ -305,10 +304,12 @@
             (change)="onDocFileSelected($event)"
             class="block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 file:mr-3 file:cursor-pointer file:border-0 file:bg-gray-100 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-gray-700 hover:file:bg-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:file:bg-gray-600 dark:file:text-gray-200" />
         </div>
-        <button type="submit" [disabled]="!docRequirementId"
-          class="rounded-lg border border-primary-700 px-4 py-2.5 text-sm font-semibold text-primary-700 hover:bg-primary-50 disabled:opacity-40 dark:hover:bg-gray-700">
-          + Agregar
-        </button>
+        <div class="sm:col-span-2">
+          <button type="submit" [disabled]="!docRequirementId"
+            class="rounded-lg border border-primary-700 px-4 py-2.5 text-sm font-semibold text-primary-700 hover:bg-primary-50 disabled:opacity-40 dark:hover:bg-gray-700">
+            + Agregar
+          </button>
+        </div>
       </form>
 
       <div class="mt-6 flex justify-between">
@@ -343,14 +344,13 @@
 
       <form class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3" (ngSubmit)="addVehicleDraft()">
         <div>
-          <label for="w-vtype" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Tipo</label>
-          <select id="w-vtype" name="vehicleTypeId" [(ngModel)]="vehicleForm.vehicleTypeId"
-            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 capitalize text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-            <option [ngValue]="null">Sin definir</option>
-            @for (t of vehicleTypes(); track t.id) {
-              <option [ngValue]="t.id">{{ t.name }}</option>
-            }
-          </select>
+          <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Tipo</label>
+          <app-select
+            name="vehicleTypeId"
+            [(ngModel)]="vehicleForm.vehicleTypeId"
+            [options]="vehicleTypeOptions()"
+            placeholder="Sin definir"
+            ariaLabel="Tipo de vehículo" />
         </div>
         <div>
           <label for="w-brand" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Marca</label>
@@ -377,10 +377,10 @@
           <input id="w-plate" name="plate" type="text" [(ngModel)]="vehicleForm.plate" placeholder="AB123CD"
             class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 uppercase text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
         </div>
-        <div class="sm:col-span-3 flex justify-end">
+        <div class="sm:col-span-3">
           <button type="submit" [disabled]="!canAddVehicle()"
             class="rounded-lg border border-primary-700 px-4 py-2.5 text-sm font-semibold text-primary-700 hover:bg-primary-50 disabled:opacity-40 dark:hover:bg-gray-700">
-            + Agregar vehículo
+            + Agregar
           </button>
         </div>
       </form>
@@ -420,16 +420,14 @@
         </div>
         <form class="mt-4 space-y-4" (ngSubmit)="register(true)">
           <div>
-            <label for="w-plan" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Tarifa</label>
-            <select id="w-plan" name="planId" required [(ngModel)]="planId"
-              class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-              <option [ngValue]="null">Selecciona…</option>
-              @for (p of activePlans(); track p.id) {
-                <option [ngValue]="p.id">
-                  {{ p.name }} — {{ periodLabels[p.billingPeriod] }} ${{ p.priceUsd }}
-                </option>
-              }
-            </select>
+            <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Tarifa</label>
+            <app-select
+              name="planId"
+              required
+              [(ngModel)]="planId"
+              [options]="planOptions()"
+              placeholder="Selecciona…"
+              ariaLabel="Tarifa" />
           </div>
           <div>
             <label for="w-periods" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">

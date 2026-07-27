@@ -66,7 +66,8 @@ export function emptyPersonForm(): PersonFormFields {
     email: '',
     nationalIdType: 'V',
     nationalIdNumber: '',
-    phoneOperator: '',
+    // Default to the first operator so the select is never on a blank placeholder.
+    phoneOperator: String(PHONE_OPERATOR_OPTIONS[0].value),
     phoneNumber: '',
     password: '',
     passwordRepeat: '',

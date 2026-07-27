@@ -13,7 +13,7 @@ import { RequirementsApi } from '../requirements/requirements.api';
 import { VehicleTypesApi } from '../vehicle-types/vehicle-types.api';
 import { DatePicker } from '../../shared/components/date-picker';
 import { PasswordInput } from '../../shared/components/password-input';
-import { Select } from '../../shared/components/select';
+import { Select, type SelectOption } from '../../shared/components/select';
 import {
   PASSWORD_MIN_LENGTH,
   PasswordPolicyDirective,
@@ -114,7 +114,28 @@ export class DriverWizard {
   readonly driverRequirements = computed(() =>
     this.requirements().filter((r) => r.active && r.appliesTo === 'driver'),
   );
+  /** Requirements still selectable: a requirement can be documented only once. */
+  readonly availableDocRequirements = computed(() => {
+    const used = new Set(this.docs().map((d) => d.requirementId));
+    return this.driverRequirements().filter((r) => !used.has(r.id));
+  });
   readonly activePlans = computed(() => this.plans().filter((p) => p.active));
+  /** app-select options (branded dropdown; native <select> is not used). */
+  readonly docRequirementOptions = computed<SelectOption[]>(() =>
+    this.availableDocRequirements().map((r) => ({
+      value: r.id,
+      label: r.isRequired ? `${r.name} *` : r.name,
+    })),
+  );
+  readonly vehicleTypeOptions = computed<SelectOption[]>(() =>
+    this.vehicleTypes().map((t) => ({ value: t.id, label: t.name })),
+  );
+  readonly planOptions = computed<SelectOption[]>(() =>
+    this.activePlans().map((p) => ({
+      value: p.id,
+      label: `${p.name} — ${this.periodLabels[p.billingPeriod]} $${p.priceUsd}`,
+    })),
+  );
   readonly selectedPlan = computed(
     () => this.activePlans().find((p) => p.id === this.planId) ?? null,
   );

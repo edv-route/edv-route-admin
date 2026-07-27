@@ -151,4 +151,17 @@
     outline: none;
     box-shadow: 0 0 0 1px var(--color-primary-700);
   }
+
+  /* Hide the native number spinners: they clash with the branded fields and the
+   * panel's numeric inputs (vehicle year, advance periods) are typed, not
+   * stepped. Applies to every current and future number input. */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
 }

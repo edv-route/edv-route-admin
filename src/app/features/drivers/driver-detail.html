@@ -356,8 +356,8 @@
     <section class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-6">
       <div class="flex items-center justify-between gap-2">
         <h2 class="font-semibold text-gray-900 dark:text-white">Documentos</h2>
-        <button type="button" (click)="openAddDocument()"
-          class="text-xs font-semibold text-primary-700 hover:underline dark:text-primary-300">
+        <button type="button" (click)="openAddDocument()" [disabled]="missingRequirements().length === 0"
+          class="text-xs font-semibold text-primary-700 hover:underline disabled:text-gray-300 disabled:no-underline dark:text-primary-300 dark:disabled:text-gray-600">
           + Agregar
         </button>
       </div>
@@ -401,7 +401,7 @@
 
                   <div class="mt-2 flex flex-wrap items-center gap-3">
                     @if (doc.fileUrl) {
-                      <button type="button" (click)="openFile(doc.id)"
+                      <button type="button" (click)="openFile(doc)"
                         class="inline-flex items-center gap-1 text-xs font-semibold text-primary-700 hover:underline dark:text-primary-300">
                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         Ver
@@ -536,14 +536,13 @@
         <p class="mt-1 text-xs text-gray-400">Registrado por el panel queda aprobado directamente.</p>
         <form class="mt-5 grid grid-cols-2 gap-3" (ngSubmit)="addVehicle()">
           <div class="col-span-2">
-            <label for="v-type" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Tipo</label>
-            <select id="v-type" name="vehicleTypeId" [(ngModel)]="vehicleForm.vehicleTypeId"
-              class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 capitalize text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-              <option [ngValue]="null">Sin definir</option>
-              @for (t of vehicleTypes(); track t.id) {
-                <option [ngValue]="t.id">{{ t.name }}</option>
-              }
-            </select>
+            <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Tipo</label>
+            <app-select
+              name="vehicleTypeId"
+              [(ngModel)]="vehicleForm.vehicleTypeId"
+              [options]="vehicleTypeOptions()"
+              placeholder="Sin definir"
+              ariaLabel="Tipo de vehículo" />
           </div>
           <input name="brand" type="text" [(ngModel)]="vehicleForm.brand" placeholder="Marca"
             class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
@@ -584,14 +583,13 @@
         </p>
         <form class="mt-5 space-y-4" (ngSubmit)="addDocument()">
           <div>
-            <label for="doc-req" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Requerimiento</label>
-            <select id="doc-req" name="docRequirementId" [(ngModel)]="docRequirementId"
-              class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-              <option [ngValue]="null">Selecciona…</option>
-              @for (r of driverRequirements(); track r.id) {
-                <option [ngValue]="r.id">{{ r.name }}{{ r.isRequired ? ' *' : '' }}</option>
-              }
-            </select>
+            <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Requerimiento</label>
+            <app-select
+              name="docRequirementId"
+              [(ngModel)]="docRequirementId"
+              [options]="docRequirementOptions()"
+              placeholder="Selecciona…"
+              ariaLabel="Requerimiento" />
           </div>
           <div>
             <label for="doc-expires" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
@@ -640,24 +638,16 @@
           }
         </p>
 
-        <label for="renew-plan" class="mt-4 block text-sm font-semibold text-gray-900 dark:text-white">
+        <label class="mt-4 block text-sm font-semibold text-gray-900 dark:text-white">
           Tarifa
         </label>
-        <select
-          id="renew-plan"
-          [value]="renewPlanId() ?? ''"
-          (change)="renewPlanId.set($any($event.target).value ? +$any($event.target).value : null)"
-          class="mt-2 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-        >
-          <option value="">Renovar la actual — {{ d.subscription?.planName }}</option>
-          @for (plan of activePlans(); track plan.id) {
-            @if (plan.id !== d.subscription?.planId) {
-              <option [value]="plan.id">
-                Cambiar a: {{ plan.name }} (${{ plan.priceUsd }} · {{ periodLabels[plan.billingPeriod] }})
-              </option>
-            }
-          }
-        </select>
+        <app-select
+          class="mt-2 block"
+          [ngModel]="renewPlanId() ?? d.subscription?.planId ?? null"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="renewPlanId.set($event === d.subscription?.planId ? null : $event)"
+          [options]="renewPlanOptions()"
+          ariaLabel="Tarifa a renovar o cambiar" />
         @if (renewPlanId()) {
           <p class="mt-2 rounded-lg bg-gold-50 px-3 py-2 text-xs text-gold-800" style="background-color: #fdfaec">
             @if (d.subscription?.status === 'expired') {
@@ -846,3 +836,5 @@
   }
 
 }
+
+<app-file-viewer [state]="viewer()" (close)="viewer.set(null)" />

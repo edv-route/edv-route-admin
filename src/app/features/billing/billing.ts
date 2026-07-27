@@ -21,6 +21,7 @@ import {
   type InvoiceListItem,
   type PaymentListItem,
 } from '../../core/models/billing.model';
+import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
 import { DriversApi } from '../drivers/drivers.api';
 import { BillingApi, type MonthlyInvoicingPoint } from './billing.api';
 
@@ -32,7 +33,7 @@ type BillingTab = 'invoices' | 'payments';
 
 @Component({
   selector: 'app-billing',
-  imports: [FormsModule, DatePipe, RouterLink],
+  imports: [FormsModule, DatePipe, RouterLink, FileViewer],
   templateUrl: './billing.html',
 })
 export class Billing {
@@ -204,15 +205,23 @@ export class Billing {
     this.load();
   }
 
-  /** Opens the receipt in a new tab via a short-lived signed URL. */
+  /** Receipt shown in the modal viewer (null = closed). */
+  readonly viewer = signal<FileViewerState | null>(null);
+
+  /** Opens the receipt in the modal viewer via a short-lived signed URL. */
   openInvoiceProof(invoiceId: string): void {
-    this.error.set(null);
+    const title = 'Comprobante de pago';
+    this.viewer.set({ title, url: null, loading: true, error: null });
     this.api.invoiceProofUrl(invoiceId).subscribe({
-      next: ({ url }) => window.open(url, '_blank', 'noopener'),
+      next: ({ url }) => this.viewer.set({ title, url, loading: false, error: null }),
       error: (err: HttpErrorResponse) =>
-        this.error.set(
-          (err.error as { message?: string } | null)?.message ?? 'No se pudo abrir el comprobante',
-        ),
+        this.viewer.set({
+          title,
+          url: null,
+          loading: false,
+          error:
+            (err.error as { message?: string } | null)?.message ?? 'No se pudo abrir el comprobante',
+        }),
     });
   }
 }

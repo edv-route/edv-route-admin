@@ -19,7 +19,8 @@ import { RequirementsApi } from '../requirements/requirements.api';
 import { VehicleTypesApi } from '../vehicle-types/vehicle-types.api';
 import { DatePicker } from '../../shared/components/date-picker';
 import { PasswordInput } from '../../shared/components/password-input';
-import { Select } from '../../shared/components/select';
+import { Select, type SelectOption } from '../../shared/components/select';
+import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
 import { DocumentsApi, validateFile } from '../documents/documents.api';
 import { DriversApi } from './drivers.api';
 import { PaymentCapture, type PaymentCaptureValue, emptyPaymentCapture } from './payment-capture';
@@ -47,7 +48,7 @@ interface ConfirmDialog {
 
 @Component({
   selector: 'app-driver-detail',
-  imports: [FormsModule, DatePipe, RouterLink, Select, PasswordInput, DatePicker, PaymentCapture],
+  imports: [FormsModule, DatePipe, RouterLink, Select, PasswordInput, DatePicker, PaymentCapture, FileViewer],
   templateUrl: './driver-detail.html',
 })
 export class DriverDetail {
@@ -115,13 +116,37 @@ export class DriverDetail {
     );
   });
 
-  /** Active driver requirements offered when adding a document from the profile. */
-  readonly driverRequirements = computed(() =>
-    this.requirements().filter((r) => r.active && r.appliesTo === 'driver'),
-  );
-
   /** Active catalog for the plan-change picker (archived ones are excluded). */
   readonly activePlans = computed(() => this.plans().filter((p) => p.active));
+
+  /** app-select options (branded dropdown; native <select> is not used). */
+  readonly docRequirementOptions = computed<SelectOption[]>(() =>
+    this.missingRequirements().map((r) => ({
+      value: r.id,
+      label: r.isRequired ? `${r.name} *` : r.name,
+    })),
+  );
+  readonly vehicleTypeOptions = computed<SelectOption[]>(() =>
+    this.vehicleTypes().map((t) => ({ value: t.id, label: t.name })),
+  );
+  /** First option ("renew current", value = current plan id) is mapped back to
+   *  null on change; the rest are plan changes. Preserves the renewPlanId contract. */
+  readonly renewPlanOptions = computed<SelectOption[]>(() => {
+    const sub = this.driver()?.subscription;
+    if (!sub) return [];
+    const options: SelectOption[] = [
+      { value: sub.planId, label: `Renovar la actual — ${sub.planName ?? ''}` },
+    ];
+    for (const p of this.activePlans()) {
+      if (p.id !== sub.planId) {
+        options.push({
+          value: p.id,
+          label: `Cambiar a: ${p.name} ($${p.priceUsd} · ${this.periodLabels[p.billingPeriod]})`,
+        });
+      }
+    }
+    return options;
+  });
 
   readonly selectedPlan = computed(() =>
     this.plans().find((p) => p.id === this.renewPlanId()) ?? null,
@@ -464,12 +489,23 @@ export class DriverDetail {
     return this.vehicleTypes().find((t) => t.id === id)?.name ?? 'Sin definir';
   }
 
-  /** Opens the private file in a new tab through a short-lived signed URL. */
-  openFile(documentId: string): void {
-    this.error.set(null);
-    this.documentsApi.fileUrl(documentId).subscribe({
-      next: ({ url }) => window.open(url, '_blank', 'noopener'),
-      error: (err: HttpErrorResponse) => this.fail(err),
+  /** File shown in the modal viewer (null = closed). */
+  readonly viewer = signal<FileViewerState | null>(null);
+
+  /** Opens the private file in the modal viewer through a short-lived signed URL. */
+  openFile(doc: DriverDocument): void {
+    const title = doc.requirementName;
+    this.viewer.set({ title, url: null, loading: true, error: null });
+    this.documentsApi.fileUrl(doc.id).subscribe({
+      next: ({ url }) => this.viewer.set({ title, url, loading: false, error: null }),
+      error: (err: HttpErrorResponse) =>
+        this.viewer.set({
+          title,
+          url: null,
+          loading: false,
+          error:
+            (err.error as { message?: string } | null)?.message ?? 'Error de conexión con la API',
+        }),
     });
   }
 

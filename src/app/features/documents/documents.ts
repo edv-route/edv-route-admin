@@ -10,6 +10,7 @@ import {
 } from '../../core/models/document.model';
 import type { Requirement } from '../../core/models/requirement.model';
 import { Select, type SelectOption } from '../../shared/components/select';
+import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
 import { RequirementsApi } from '../requirements/requirements.api';
 import { DocumentsApi } from './documents.api';
 
@@ -18,7 +19,7 @@ const WARNING_DAYS = 30;
 
 @Component({
   selector: 'app-documents',
-  imports: [FormsModule, DatePipe, RouterLink, Select],
+  imports: [FormsModule, DatePipe, RouterLink, Select, FileViewer],
   templateUrl: './documents.html',
 })
 export class Documents {
@@ -33,6 +34,8 @@ export class Documents {
   readonly requirements = signal<Requirement[]>([]);
   readonly statusFilter = signal<DocumentStatus | ''>('');
   readonly expiringOnly = signal(false);
+  /** File shown in the modal viewer (null = closed). */
+  readonly viewer = signal<FileViewerState | null>(null);
 
   /** Requirement filter options for app-select ('' = all). */
   readonly requirementOptions = computed<SelectOption[]>(() => [
@@ -120,15 +123,20 @@ export class Documents {
     this.load();
   }
 
-  /** Opens the private file through a short-lived signed URL. */
-  openFile(documentId: string): void {
-    this.error.set(null);
-    this.api.fileUrl(documentId).subscribe({
-      next: ({ url }) => window.open(url, '_blank', 'noopener'),
+  /** Opens the private file in the modal viewer through a short-lived signed URL. */
+  openFile(item: DocumentListItem): void {
+    const title = item.requirementName;
+    this.viewer.set({ title, url: null, loading: true, error: null });
+    this.api.fileUrl(item.id).subscribe({
+      next: ({ url }) => this.viewer.set({ title, url, loading: false, error: null }),
       error: (err: HttpErrorResponse) =>
-        this.error.set(
-          (err.error as { message?: string } | null)?.message ?? 'Error de conexión con la API',
-        ),
+        this.viewer.set({
+          title,
+          url: null,
+          loading: false,
+          error:
+            (err.error as { message?: string } | null)?.message ?? 'Error de conexión con la API',
+        }),
     });
   }
 

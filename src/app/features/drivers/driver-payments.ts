@@ -2,9 +2,9 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { EMPTY, type Observable } from 'rxjs';
 import { expand, last, map } from 'rxjs/operators';
+import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
 import { BillingApi } from '../billing/billing.api';
 import {
   PAYMENT_KIND_LABELS,
@@ -26,13 +26,12 @@ const PAGE_SIZE = 100;
  */
 @Component({
   selector: 'app-driver-payments',
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, FileViewer],
   templateUrl: './driver-payments.html',
 })
 export class DriverPayments {
   private readonly billingApi = inject(BillingApi);
   private readonly driversApi = inject(DriversApi);
-  private readonly sanitizer = inject(DomSanitizer);
 
   readonly id = input.required<string>();
   readonly kindLabels = PAYMENT_KIND_LABELS;
@@ -43,9 +42,8 @@ export class DriverPayments {
   readonly invoices = signal<InvoiceListItem[]>([]);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
-  readonly loadingProof = signal(false);
-  /** Signed URL of the receipt shown inline (null = not loaded yet). */
-  readonly proofUrl = signal<string | null>(null);
+  /** Receipt shown in the modal viewer (null = closed). */
+  readonly viewer = signal<FileViewerState | null>(null);
   /** The payment whose detail modal is open (null = closed). */
   readonly selected = signal<PaymentListItem | null>(null);
 
@@ -59,17 +57,6 @@ export class DriverPayments {
   readonly selectedInvoice = computed<InvoiceListItem | null>(() => {
     const p = this.selected();
     return p?.invoiceId ? (this.invoicesById().get(p.invoiceId) ?? null) : null;
-  });
-
-  /** The receipt is a PDF (embedded in an iframe); otherwise it renders as an image. */
-  readonly proofIsPdf = computed(() =>
-    (this.proofUrl() ?? '').split('?')[0].toLowerCase().endsWith('.pdf'),
-  );
-
-  /** Sanitized URL for the <iframe> src (the signed URL comes from our backend). */
-  readonly safeProofUrl = computed<SafeResourceUrl | null>(() => {
-    const url = this.proofUrl();
-    return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
   });
 
   ngOnInit(): void {
@@ -123,28 +110,30 @@ export class DriverPayments {
 
   openDetail(payment: PaymentListItem): void {
     this.error.set(null);
-    this.proofUrl.set(null);
+    this.viewer.set(null);
     this.selected.set(payment);
   }
 
   closeDetail(): void {
     this.selected.set(null);
-    this.proofUrl.set(null);
+    this.viewer.set(null);
   }
 
-  /** Loads the receipt's signed URL to show it INLINE in the modal (image or PDF). */
+  /** Loads the receipt's signed URL and shows it in the shared modal viewer. */
   viewProof(invoiceId: string): void {
-    if (this.loadingProof() || this.proofUrl()) return;
-    this.loadingProof.set(true);
+    if (this.viewer()?.loading) return;
+    const title = 'Comprobante de pago';
+    this.viewer.set({ title, url: null, loading: true, error: null });
     this.billingApi.invoiceProofUrl(invoiceId).subscribe({
-      next: ({ url }) => {
-        this.loadingProof.set(false);
-        this.proofUrl.set(url);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.loadingProof.set(false);
-        this.fail(err);
-      },
+      next: ({ url }) => this.viewer.set({ title, url, loading: false, error: null }),
+      error: (err: HttpErrorResponse) =>
+        this.viewer.set({
+          title,
+          url: null,
+          loading: false,
+          error:
+            (err.error as { message?: string } | null)?.message ?? 'Error de conexión con la API',
+        }),
     });
   }
 

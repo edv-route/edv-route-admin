@@ -143,7 +143,7 @@
               </td>
               <td class="whitespace-nowrap px-4 py-3">
                 @if (item.fileUrl) {
-                  <button type="button" (click)="openFile(item.id)"
+                  <button type="button" (click)="openFile(item)"
                     class="text-xs font-semibold text-primary-700 hover:underline dark:text-primary-300">
                     Ver
                   </button>
@@ -192,3 +192,5 @@
     }
   </nav>
 </div>
+
+<app-file-viewer [state]="viewer()" (close)="viewer.set(null)" />
