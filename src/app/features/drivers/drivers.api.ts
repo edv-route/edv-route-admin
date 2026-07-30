@@ -43,6 +43,14 @@ export interface PaymentMeta {
   payerBank?: string | null;
 }
 
+/** Response of the transactional registration. */
+export type RegisterResult = DriverDetail & {
+  invoiceNumbers: string[];
+  createdDocumentIds: string[];
+  createdVehicles: { id: string; documentIds: string[] }[];
+  primaryInvoiceId: string | null;
+};
+
 @Injectable({ providedIn: 'root' })
 export class DriversApi {
   private readonly http = inject(HttpClient);
@@ -74,23 +82,56 @@ export class DriversApi {
     data: CreateDriverInput,
     extras: {
       payment: ({ planId: number; periods: number } & PaymentMeta) | null;
-      vehicles: VehicleInput[];
+      vehicles: (VehicleInput & { documents?: { requirementId: number }[] })[];
       documents: { requirementId: number; expiresAt: string | null }[];
     },
-  ): Observable<
-    DriverDetail & { invoiceNumbers: string[]; createdDocumentIds: string[]; primaryInvoiceId: string | null }
-  > {
-    return this.http.post<
-      DriverDetail & { invoiceNumbers: string[]; createdDocumentIds: string[]; primaryInvoiceId: string | null }
-    >(`${this.baseUrl}/register`, { ...data, ...extras });
+  ): Observable<RegisterResult> {
+    return this.http.post<RegisterResult>(`${this.baseUrl}/register`, { ...data, ...extras });
   }
 
   update(id: string, data: Partial<CreateDriverInput> & { status?: string }): Observable<DriverDetail> {
     return this.http.patch<DriverDetail>(`${this.baseUrl}/${id}`, data);
   }
 
-  addVehicle(id: string, data: VehicleInput): Observable<unknown> {
-    return this.http.post(`${this.baseUrl}/${id}/vehicles`, data);
+  /** Returns the created vehicle id (used to attach its documents afterwards). */
+  addVehicle(id: string, data: VehicleInput): Observable<{ id: string }> {
+    return this.http.post<{ id: string }>(`${this.baseUrl}/${id}/vehicles`, data);
+  }
+
+  /** Edits a vehicle's data. */
+  updateVehicle(driverId: string, vehicleId: string, data: VehicleInput): Observable<unknown> {
+    return this.http.patch(`${this.baseUrl}/${driverId}/vehicles/${vehicleId}`, data);
+  }
+
+  /** Uploads a vehicle photo (multipart). Returns its id + slot (1-3). */
+  vehicleImageUpload(
+    driverId: string,
+    vehicleId: string,
+    file: File,
+  ): Observable<{ id: string; position: number }> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.post<{ id: string; position: number }>(
+      `${this.baseUrl}/${driverId}/vehicles/${vehicleId}/images`,
+      form,
+    );
+  }
+
+  /** Signed URL to view a vehicle photo. */
+  vehicleImageUrl(
+    driverId: string,
+    vehicleId: string,
+    imageId: string,
+  ): Observable<{ url: string; expiresIn: number }> {
+    return this.http.get<{ url: string; expiresIn: number }>(
+      `${this.baseUrl}/${driverId}/vehicles/${vehicleId}/images/${imageId}/file`,
+    );
+  }
+
+  vehicleImageDelete(driverId: string, vehicleId: string, imageId: string): Observable<void> {
+    return this.http.delete<void>(
+      `${this.baseUrl}/${driverId}/vehicles/${vehicleId}/images/${imageId}`,
+    );
   }
 
   /** Returns the created record id: the file is attached to it afterwards. */
@@ -137,6 +178,7 @@ export class DriversApi {
     periods: number,
     planId?: number,
     meta: PaymentMeta = {},
+    note?: string | null,
   ): Observable<{
     invoiceNumbers: string[];
     reactivated: boolean;
@@ -153,6 +195,7 @@ export class DriversApi {
     }>(`${this.baseUrl}/${id}/subscription/renew`, {
       periods,
       ...(planId !== undefined ? { planId } : {}),
+      ...(note ? { note } : {}),
       ...meta,
     });
   }

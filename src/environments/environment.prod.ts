@@ -8,4 +8,6 @@
  */
 export const environment = {
   apiUrl: 'https://edv-route-backend.up.railway.app/api/v1',
+  /** Step-unlock is a development-only aid; never enabled in production. */
+  unlockSteps: false,
 };

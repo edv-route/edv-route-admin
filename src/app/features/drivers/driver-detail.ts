@@ -1,4 +1,4 @@
-import { Component, computed, ElementRef, inject, input, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, input, signal, viewChild } from '@angular/core';
 import { HttpClient, type HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule, type NgForm } from '@angular/forms';
@@ -24,6 +24,7 @@ import { FileViewer, type FileViewerState } from '../../shared/components/file-v
 import { DocumentsApi, validateFile } from '../documents/documents.api';
 import { DriversApi } from './drivers.api';
 import { PaymentCapture, type PaymentCaptureValue, emptyPaymentCapture } from './payment-capture';
+import { VehicleForm } from './vehicle-form';
 import {
   NATIONAL_ID_OPTIONS,
   PHONE_COUNTRY_OPTIONS,
@@ -38,6 +39,9 @@ import {
 /** One-click important actions gated behind a confirmation modal. */
 type ImportantAction = 'suspend' | 'pause' | 'resume' | 'reactivate';
 
+/** Full-width tabs of the affiliate profile. */
+type ProfileTab = 'personal' | 'vehicles' | 'documents';
+
 interface ConfirmDialog {
   title: string;
   message: string;
@@ -48,7 +52,7 @@ interface ConfirmDialog {
 
 @Component({
   selector: 'app-driver-detail',
-  imports: [FormsModule, DatePipe, RouterLink, Select, PasswordInput, DatePicker, PaymentCapture, FileViewer],
+  imports: [FormsModule, DatePipe, RouterLink, Select, PasswordInput, DatePicker, PaymentCapture, FileViewer, VehicleForm],
   templateUrl: './driver-detail.html',
 })
 export class DriverDetail {
@@ -67,6 +71,13 @@ export class DriverDetail {
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly editOpen = signal(false);
+  /** Active full-width profile tab. */
+  readonly activeTab = signal<ProfileTab>('personal');
+  readonly tabs: { id: ProfileTab; label: string }[] = [
+    { id: 'personal', label: 'Datos personales' },
+    { id: 'vehicles', label: 'Vehículos' },
+    { id: 'documents', label: 'Documentos' },
+  ];
   readonly confirmAction = signal<'approve' | 'reject' | null>(null);
   /** Generic confirmation modal for one-click important actions. */
   readonly confirm = signal<ConfirmDialog | null>(null);
@@ -81,6 +92,8 @@ export class DriverDetail {
   /** External payment (v8): the note leaves the reason on the record. */
   readonly externalPayOpen = signal(false);
   externalPayNote = '';
+  /** Optional note (constancia) for the "Generar pago" modal, e.g. part in cash. */
+  renewNote = '';
   /** Post-registration charge (membership + tariff) for a driver without payment. */
   readonly enrollOpen = signal(false);
   readonly enrollPeriods = signal(1);
@@ -93,11 +106,9 @@ export class DriverDetail {
   // decision 2026-07-21). Both reuse the existing driver sub-endpoints.
   readonly addVehicleOpen = signal(false);
   readonly addDocOpen = signal(false);
-  vehicleForm = { vehicleTypeId: null as number | null, brand: '', model: '', year: null as number | null, color: '', plate: '' };
   docRequirementId: number | null = null;
-  docExpiresAt = '';
   docFile: File | null = null;
-  private readonly docFileInput = viewChild<ElementRef<HTMLInputElement>>('docFileInput');
+  docFileName: string | null = null;
 
   person = emptyPersonForm();
   readonly maxBirthDate = maxBirthDate();
@@ -115,6 +126,65 @@ export class DriverDetail {
       (r) => r.active && r.appliesTo === 'driver' && !covered.has(r.id),
     );
   });
+
+  /** Driver-owned documents shown in the Documentos tab (vehicle docs live in the vehicle detail screen). */
+  readonly driverDocuments = computed(() =>
+    (this.driver()?.documents ?? []).filter((doc) => doc.appliesTo === 'driver'),
+  );
+
+  /**
+   * What the payment modal settles: overdue debt + penalty + the upcoming (not
+   * yet due) charge, all in one (todo-o-nada). Drives the weeks breakdown, the
+   * per-charge list and the modal heading (advance vs. debt). Null with no driver.
+   */
+  readonly paySummary = computed(() => {
+    const d = this.driver();
+    if (!d) return null;
+    const list = [...d.debt.charges];
+    if (d.upcoming) {
+      list.push({
+        id: 'upcoming',
+        kind: 'period' as const,
+        amountUsd: d.upcoming.amountUsd,
+        status: 'pending',
+        periodStart: d.upcoming.periodStart,
+        periodEnd: d.upcoming.periodEnd,
+      });
+    }
+    const periods = list.filter((c) => c.kind === 'period');
+    const weeksUsd = periods.reduce((sum, c) => sum + Number(c.amountUsd), 0);
+    const penaltyUsd = list
+      .filter((c) => c.kind === 'penalty')
+      .reduce((sum, c) => sum + Number(c.amountUsd), 0);
+    const pricePerWeek = periods.length ? weeksUsd / periods.length : Number(d.subscription?.priceUsd ?? 0);
+    return {
+      list,
+      weeks: periods.length,
+      pricePerWeek: pricePerWeek.toFixed(2),
+      weeksUsd: weeksUsd.toFixed(2),
+      penaltyUsd: penaltyUsd.toFixed(2),
+      hasPenalty: penaltyUsd > 0,
+      total: (weeksUsd + penaltyUsd).toFixed(2),
+      isAdvanceOnly: d.debt.charges.length === 0 && !!d.upcoming,
+    };
+  });
+
+  /** Availability badge next to the name: "Activo" only for drivers that can
+   *  actually operate (approved/overdue) AND are available. Everyone else — not
+   *  yet approved, paused, penalized, suspended, rejected — is "Inactivo". The
+   *  lifecycle status itself lives solely in the Estado card, never by the name. */
+  readonly isActive = computed(() => {
+    const d = this.driver();
+    return !!d && d.isAvailable && (d.status === 'approved' || d.status === 'overdue');
+  });
+
+  /** Whole days from today until the prepaid coverage ends; negative = overdue,
+   *  null when there is no paid coverage. Drives the "next invoice in X days". */
+  daysUntilPaidEnd(): number | null {
+    const until = this.driver()?.subscription?.paidUntil;
+    if (!until) return null;
+    return Math.ceil((new Date(until).getTime() - Date.now()) / 86_400_000);
+  }
 
   /** Active catalog for the plan-change picker (archived ones are excluded). */
   readonly activePlans = computed(() => this.plans().filter((p) => p.active));
@@ -147,6 +217,10 @@ export class DriverDetail {
     }
     return options;
   });
+
+  /** With a single tariff available there is nothing to choose: the picker stays
+   *  preselected on the current plan and locked (disabled). */
+  readonly singleRenewOption = computed(() => this.renewPlanOptions().length <= 1);
 
   readonly selectedPlan = computed(() =>
     this.plans().find((p) => p.id === this.renewPlanId()) ?? null,
@@ -318,6 +392,7 @@ export class DriverDetail {
     this.renewPeriods.set(1);
     this.renewPlanId.set(null);
     this.renewResult.set(null);
+    this.renewNote = '';
     this.resetPaymentCapture();
     this.error.set(null);
     this.renewOpen.set(true);
@@ -329,7 +404,7 @@ export class DriverDetail {
     this.error.set(null);
     const planId = this.renewPlanId();
 
-    this.api.renewSubscription(this.id(), this.renewPeriods(), planId ?? undefined, this.paymentMeta()).subscribe({
+    this.api.renewSubscription(this.id(), this.renewPeriods(), planId ?? undefined, this.paymentMeta(), this.renewNote.trim() || null).subscribe({
       next: (result) => {
         const invoices = `Factura(s): N° ${result.invoiceNumbers.join(', N° ')}`;
         let message: string;
@@ -483,6 +558,7 @@ export class DriverDetail {
   }
 
   readonly downloadingDocId = signal<string | null>(null);
+  readonly deletingDocId = signal<string | null>(null);
 
   /** Human name for a vehicle's type id (Pro vehicle card). */
   vehicleTypeName(id: number | null): string {
@@ -506,6 +582,23 @@ export class DriverDetail {
           error:
             (err.error as { message?: string } | null)?.message ?? 'Error de conexión con la API',
         }),
+    });
+  }
+
+  /** Removes a document (driver or vehicle) and reloads the profile. */
+  deleteDocument(doc: DriverDocument): void {
+    if (this.deletingDocId()) return;
+    this.error.set(null);
+    this.deletingDocId.set(doc.id);
+    this.documentsApi.delete(doc.id).subscribe({
+      next: () => {
+        this.deletingDocId.set(null);
+        this.load();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.deletingDocId.set(null);
+        this.fail(err);
+      },
     });
   }
 
@@ -568,59 +661,43 @@ export class DriverDetail {
   }
 
   openAddVehicle(): void {
-    this.vehicleForm = { vehicleTypeId: null, brand: '', model: '', year: null, color: '', plate: '' };
     this.error.set(null);
     this.addVehicleOpen.set(true);
   }
 
-  /** Registers a vehicle from the profile (admin-registered = approved). */
-  addVehicle(): void {
-    if (this.saving()) return;
-    this.saving.set(true);
-    this.error.set(null);
-    this.api
-      .addVehicle(this.id(), {
-        vehicleTypeId: this.vehicleForm.vehicleTypeId,
-        brand: this.vehicleForm.brand.trim() || null,
-        model: this.vehicleForm.model.trim() || null,
-        year: this.vehicleForm.year,
-        color: this.vehicleForm.color.trim() || null,
-        plate: this.vehicleForm.plate.trim() || null,
-      })
-      .subscribe({
-        next: () => {
-          this.saving.set(false);
-          this.addVehicleOpen.set(false);
-          this.load();
-        },
-        error: (err: HttpErrorResponse) => this.fail(err),
-      });
+  /** The add-vehicle dialog finished (vehicle + photos + documents created). */
+  onVehicleSaved(): void {
+    this.addVehicleOpen.set(false);
+    this.load();
   }
 
   openAddDocument(): void {
     this.docRequirementId = null;
-    this.docExpiresAt = '';
     this.docFile = null;
+    this.docFileName = null;
     this.error.set(null);
     this.addDocOpen.set(true);
   }
 
   onDocFileSelected(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
-    if (!file) {
-      this.docFile = null;
-      return;
-    }
-    const problem = validateFile(file);
-    if (problem) {
-      this.error.set(problem);
-      this.docFile = null;
-      const input = this.docFileInput()?.nativeElement;
-      if (input) input.value = '';
-      return;
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    input.value = '';
+    if (file) {
+      const problem = validateFile(file);
+      if (problem) {
+        this.error.set(problem);
+        return;
+      }
     }
     this.error.set(null);
     this.docFile = file;
+    this.docFileName = file?.name ?? null;
+  }
+
+  clearDocFile(): void {
+    this.docFile = null;
+    this.docFileName = null;
   }
 
   /** Registers the document metadata, then attaches its file (optional). */
@@ -632,7 +709,7 @@ export class DriverDetail {
     this.api
       .addDocument(this.id(), {
         requirementId: this.docRequirementId,
-        expiresAt: this.docExpiresAt || null,
+        expiresAt: null,
       })
       .pipe(
         switchMap((doc) =>

@@ -265,52 +265,44 @@
       @if (docs().length > 0) {
         <ul class="mt-4 space-y-2">
           @for (doc of docs(); track $index) {
-            <li class="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2.5 text-sm dark:border-gray-700">
-              <span class="text-gray-700 dark:text-gray-300">
-                {{ doc.requirementName }}
-                @if (doc.expiresAt) { <span class="text-xs text-gray-400">· vence {{ doc.expiresAt }}</span> }
-                @if (doc.fileName) {
-                  <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">{{ doc.fileName }}</span>
-                } @else {
-                  <span class="ml-1 text-xs text-gray-400">(sin archivo)</span>
-                }
+            <li class="flex items-center gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                [class]="doc.file ? 'bg-primary-50 text-primary-700 dark:bg-gray-700 dark:text-gold-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-700'">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9z" /></svg>
               </span>
-              <button type="button" (click)="removeDocumentDraft($index)"
-                class="shrink-0 text-xs font-medium text-primary-700 hover:underline">Quitar</button>
+              <div class="min-w-0 flex-1">
+                <p class="truncate font-medium text-gray-900 dark:text-white">{{ doc.requirementName }}</p>
+                @if (doc.fileName) {
+                  <p class="flex items-center gap-1 truncate text-xs text-gray-500 dark:text-gray-400">
+                    <svg class="h-3.5 w-3.5 shrink-0 text-green-600" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    {{ doc.fileName }}
+                  </p>
+                } @else {
+                  <p class="truncate text-xs text-gold-700">Sin archivo — se adjunta luego</p>
+                }
+              </div>
+              <button type="button" (click)="editDocument($index)" class="shrink-0 text-xs font-medium text-primary-700 hover:underline dark:text-primary-300">Editar</button>
+              <button type="button" (click)="removeDocumentDraft($index)" class="shrink-0 text-xs font-medium text-red-600 hover:underline dark:text-red-400">Quitar</button>
             </li>
           }
         </ul>
       }
 
-      <form class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2" (ngSubmit)="addDocumentDraft()">
-        <div>
-          <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Requerimiento</label>
-          <app-select
-            name="docRequirementId"
-            [(ngModel)]="docRequirementId"
-            [options]="docRequirementOptions()"
-            placeholder="Selecciona…"
-            ariaLabel="Requerimiento" />
-        </div>
-        <div>
-          <label for="w-expires" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Vence</label>
-          <app-date-picker inputId="w-expires" name="docExpiresAt" [(ngModel)]="docExpiresAt" />
-        </div>
-        <div class="sm:col-span-2">
-          <label for="w-file" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
-            Archivo <span class="font-normal text-gray-400">(opcional)</span>
-          </label>
-          <input #docFileInput id="w-file" type="file" accept="application/pdf,image/jpeg,image/png"
-            (change)="onDocFileSelected($event)"
-            class="block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 file:mr-3 file:cursor-pointer file:border-0 file:bg-gray-100 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-gray-700 hover:file:bg-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:file:bg-gray-600 dark:file:text-gray-200" />
-        </div>
-        <div class="sm:col-span-2">
-          <button type="submit" [disabled]="!docRequirementId"
-            class="rounded-lg border border-primary-700 px-4 py-2.5 text-sm font-semibold text-primary-700 hover:bg-primary-50 disabled:opacity-40 dark:hover:bg-gray-700">
-            + Agregar
-          </button>
-        </div>
-      </form>
+      <!-- Add-document tile: opens the draft dialog. Nothing is persisted here;
+           the modal only emits a DocDraft the wizard accumulates. -->
+      @if (availableDocRequirements().length > 0) {
+        <button type="button" (click)="openAddDocument()"
+          class="mt-5 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-5 text-sm font-semibold text-primary-700 hover:border-primary-400 hover:bg-primary-50 dark:border-gray-600 dark:bg-gray-700/40 dark:text-primary-300 dark:hover:bg-gray-700">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+          Agregar documento
+        </button>
+      } @else if (docs().length === 0) {
+        <p class="mt-5 rounded-lg border border-dashed border-gray-200 py-6 text-center text-xs text-gray-400 dark:border-gray-700">
+          No hay requerimientos del chofer configurados.
+        </p>
+      } @else {
+        <p class="mt-5 text-center text-xs text-gray-400">Ya agregaste todos los requerimientos del chofer.</p>
+      }
 
       <div class="mt-6 flex justify-between">
         <button type="button" (click)="goToStep(1)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
@@ -319,71 +311,82 @@
           Continuar →
         </button>
       </div>
+
+      @if (docModalOpen()) {
+        <app-document-draft-modal [takenIds]="docTakenIds()" [initial]="editingDocDraft()" (saved)="onDocumentSaved($event)" (cancel)="closeDocModal()" />
+      }
     }
     @case (3) {
       <h2 class="text-lg font-bold text-gray-900 dark:text-white">Vehículo</h2>
       <p class="mt-1 text-xs text-gray-400">
-        Paso opcional: registra uno o más vehículos. Por el panel quedan aprobados directamente.
+        Paso opcional: agrega uno o más vehículos. Se acumulan en la lista y se registran
+        junto al afiliado al finalizar; por el panel quedan aprobados directamente.
       </p>
 
       @if (vehicles().length > 0) {
-        <ul class="mt-4 space-y-2">
-          @for (v of vehicles(); track $index) {
-            <li class="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2.5 text-sm dark:border-gray-700">
-              <span class="text-gray-700 dark:text-gray-300">
-                <span class="capitalize">{{ vehicleTypeName(v.vehicleTypeId) }}</span>
-                @if (v.brand || v.model) { · {{ v.brand }} {{ v.model }} }
-                @if (v.plate) { · <span class="font-semibold uppercase">{{ v.plate }}</span> }
-              </span>
-              <button type="button" (click)="removeVehicleDraft($index)"
-                class="shrink-0 text-xs font-medium text-primary-700 hover:underline">Quitar</button>
+        <ul class="mt-4 space-y-3">
+          @for (v of vehicles(); track $index; let vIdx = $index) {
+            <li class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+              <!-- Vehicle row -->
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex min-w-0 items-center gap-3">
+                  @if (v.photos.length > 0) {
+                    <img [src]="v.photos[0].url" alt="Foto del vehículo" class="h-12 w-14 shrink-0 rounded-lg object-cover" />
+                  } @else {
+                    <span class="flex h-12 w-14 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-300 dark:bg-gray-700">
+                      <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" /></svg>
+                    </span>
+                  }
+                  <div class="min-w-0">
+                    <p class="truncate font-semibold text-gray-900 dark:text-white">
+                      <span class="capitalize">{{ vehicleTypeName(v.vehicleTypeId) }}</span>
+                      @if (v.brand || v.model) { · {{ v.brand }} {{ v.model }} }
+                      @if (v.plate) { · <span class="uppercase">{{ v.plate }}</span> }
+                    </p>
+                    <p class="mt-0.5 text-xs text-gray-400">{{ v.photos.length }} foto(s) · {{ v.documents.length }} documento(s)</p>
+                  </div>
+                </div>
+                <div class="flex shrink-0 items-center gap-3">
+                  <button type="button" (click)="editVehicleDraft(vIdx)" class="text-xs font-medium text-primary-700 hover:underline dark:text-primary-300">Editar</button>
+                  <button type="button" (click)="removeVehicleDraft(vIdx)" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Quitar</button>
+                </div>
+              </div>
+
+              <!-- Documents of this vehicle -->
+              <div class="mt-3 border-t border-gray-100 pt-3 dark:border-gray-700">
+                @if (v.documents.length > 0) {
+                  <ul class="mb-2 space-y-1.5">
+                    @for (d of v.documents; track $index) {
+                      <li class="flex items-center gap-2 text-sm">
+                        <svg class="h-4 w-4 shrink-0" [class]="d.file ? 'text-green-600' : 'text-gold-600'" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9z" /></svg>
+                        <span class="min-w-0 flex-1 truncate">
+                          <span class="font-medium text-gray-800 dark:text-gray-100">{{ d.requirementName }}</span>
+                          <span class="text-xs" [class]="d.file ? 'text-gray-400' : 'text-gold-700'"> · {{ d.fileName ?? 'sin archivo' }}</span>
+                        </span>
+                        <button type="button" (click)="editVehicleDoc(vIdx, $index)" class="shrink-0 text-xs font-medium text-primary-700 hover:underline dark:text-primary-300">Editar</button>
+                        <button type="button" (click)="removeVehicleDoc(vIdx, $index)" class="shrink-0 text-xs font-medium text-red-600 hover:underline dark:text-red-400">Quitar</button>
+                      </li>
+                    }
+                  </ul>
+                }
+                <button type="button" (click)="openAddVehicleDoc(vIdx)"
+                  class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-gray-300 py-2 text-xs font-semibold text-primary-700 hover:border-primary-400 hover:bg-primary-50 dark:border-gray-600 dark:text-primary-300 dark:hover:bg-gray-700">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                  Agregar documento
+                </button>
+              </div>
             </li>
           }
         </ul>
       }
 
-      <form class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3" (ngSubmit)="addVehicleDraft()">
-        <div>
-          <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Tipo</label>
-          <app-select
-            name="vehicleTypeId"
-            [(ngModel)]="vehicleForm.vehicleTypeId"
-            [options]="vehicleTypeOptions()"
-            placeholder="Sin definir"
-            ariaLabel="Tipo de vehículo" />
-        </div>
-        <div>
-          <label for="w-brand" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Marca</label>
-          <input id="w-brand" name="brand" type="text" [(ngModel)]="vehicleForm.brand"
-            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-        </div>
-        <div>
-          <label for="w-model" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Modelo</label>
-          <input id="w-model" name="model" type="text" [(ngModel)]="vehicleForm.model"
-            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-        </div>
-        <div>
-          <label for="w-year" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Año</label>
-          <input id="w-year" name="year" type="number" min="1950" max="2100" [(ngModel)]="vehicleForm.year"
-            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-        </div>
-        <div>
-          <label for="w-color" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Color</label>
-          <input id="w-color" name="color" type="text" [(ngModel)]="vehicleForm.color"
-            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-        </div>
-        <div>
-          <label for="w-plate" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Placa</label>
-          <input id="w-plate" name="plate" type="text" [(ngModel)]="vehicleForm.plate" placeholder="AB123CD"
-            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 uppercase text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-        </div>
-        <div class="sm:col-span-3">
-          <button type="submit" [disabled]="!canAddVehicle()"
-            class="rounded-lg border border-primary-700 px-4 py-2.5 text-sm font-semibold text-primary-700 hover:bg-primary-50 disabled:opacity-40 dark:hover:bg-gray-700">
-            + Agregar
-          </button>
-        </div>
-      </form>
+      <!-- Add-vehicle tile: opens the draft dialog. Nothing is persisted here;
+           the modal only emits a VehicleDraft the wizard accumulates. -->
+      <button type="button" (click)="openAddVehicle()"
+        class="mt-5 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-5 text-sm font-semibold text-primary-700 hover:border-primary-400 hover:bg-primary-50 dark:border-gray-600 dark:bg-gray-700/40 dark:text-primary-300 dark:hover:bg-gray-700">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+        Agregar vehículo
+      </button>
 
       <div class="mt-6 flex justify-between">
         <button type="button" (click)="goToStep(2)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
@@ -392,6 +395,14 @@
           Continuar →
         </button>
       </div>
+
+      @if (vehicleModalOpen()) {
+        <app-vehicle-draft-modal [initial]="editingDraft()" (saved)="onVehicleSaved($event)" (cancel)="closeVehicleModal()" />
+      }
+      @if (vehicleDocModalOpen()) {
+        <app-document-draft-modal appliesTo="vehicle" [takenIds]="vehicleDocTakenIds()" [initial]="editingVehicleDoc()"
+          (saved)="onVehicleDocSaved($event)" (cancel)="closeVehicleDocModal()" />
+      }
     }
     @case (4) {
       <h2 class="text-lg font-bold text-gray-900 dark:text-white">Pago: membresía + tarifa</h2>
@@ -412,37 +423,64 @@
           </button>
         </div>
       } @else {
-        <div class="mt-4 rounded-lg border border-gray-200 p-4 dark:border-gray-600">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Membresía (pago único)</p>
-          <p class="font-bold text-gray-900 dark:text-white">
-            {{ membership()!.name }} — ${{ membership()!.priceUsd }}
-          </p>
-        </div>
-        <form class="mt-4 space-y-4" (ngSubmit)="register(true)">
-          <div>
-            <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Tarifa</label>
-            <app-select
-              name="planId"
-              required
-              [(ngModel)]="planId"
-              [options]="planOptions()"
-              placeholder="Selecciona…"
-              ariaLabel="Tarifa" />
+        <form class="mt-4 space-y-5" (ngSubmit)="register(true)">
+          <!-- Resumen de cobro: membresía + tarifa destacadas y total prominente -->
+          <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+            <div class="border-b border-gray-100 bg-gray-50 px-4 py-2.5 dark:border-gray-700 dark:bg-gray-700/30">
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Resumen de cobro</p>
+            </div>
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+              <!-- Membresía -->
+              <div class="flex items-center justify-between gap-4 px-4 py-3">
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-semibold text-gray-900 dark:text-white">{{ membership()!.name }}</p>
+                  <p class="text-xs text-gray-400">Membresía · pago único</p>
+                </div>
+                <span class="shrink-0 text-sm font-bold text-gray-900 dark:text-white">${{ membership()!.priceUsd }}</span>
+              </div>
+              <!-- Tarifa -->
+              <div class="px-4 py-3">
+                <div class="flex items-center justify-between gap-4">
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">Tarifa</p>
+                  @if (selectedPlan(); as p) {
+                    <span class="shrink-0 text-sm font-bold text-gray-900 dark:text-white">
+                      ${{ p.priceUsd }} <span class="font-normal text-gray-400">× {{ periods }}</span>
+                    </span>
+                  }
+                </div>
+                <div class="mt-2 flex flex-wrap items-center gap-3">
+                  <div class="min-w-[12rem] flex-1">
+                    <app-select name="planId" required [(ngModel)]="planId" [options]="planOptions()"
+                      [disabled]="singlePlan()" placeholder="Selecciona…" ariaLabel="Tarifa" />
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <label for="w-periods" class="whitespace-nowrap text-xs font-medium text-gray-500 dark:text-gray-400">Semanas</label>
+                    <input id="w-periods" name="periods" type="number" min="1" max="520" required [(ngModel)]="periods"
+                      class="block w-20 rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                  </div>
+                </div>
+                <p class="mt-1.5 text-xs text-gray-400">
+                  @if (singlePlan()) { Única tarifa disponible. } @else { Elige la tarifa. }
+                  1 semana = tarifa básica; más = adelanto (no reembolsable para operativos).
+                </p>
+              </div>
+              <!-- Total -->
+              @if (total(); as t) {
+                <div class="flex items-center justify-between gap-4 px-4 py-3.5" style="background-color: #fdfaec">
+                  <div>
+                    <p class="text-sm font-bold text-gold-900">Total a pagar</p>
+                    <p class="text-xs text-gold-800/80">
+                      1 factura por el total@if (periods > 1) { · cubre {{ periods }} semanas }
+                    </p>
+                  </div>
+                  <span class="shrink-0 text-2xl font-extrabold text-gold-900">${{ t }}</span>
+                </div>
+              }
+            </div>
           </div>
-          <div>
-            <label for="w-periods" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
-              Períodos a pagar <span class="font-normal text-gray-400">(1 = tarifa básica; más = adelanto ×N, no reembolsable para operativos)</span>
-            </label>
-            <input id="w-periods" name="periods" type="number" min="1" max="52" required [(ngModel)]="periods"
-              class="block w-32 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-          </div>
-          @if (total(); as t) {
-            <p class="rounded-lg bg-gold-100 px-4 py-3 text-sm font-bold text-gold-800">
-              Total a cobrar: ${{ t }} USD — se emitirán {{ periods }} factura(s)
-              (la #1 agrupa membresía + primer período).
-            </p>
-          }
-          <app-payment-capture [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
+
+          <app-payment-capture #pc [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
+
           <div class="flex flex-wrap items-center justify-between gap-3">
             <button type="button" (click)="goToStep(3)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
             <div class="flex flex-wrap gap-3">
@@ -450,12 +488,15 @@
                 class="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                 Finalizar sin pago
               </button>
-              <button type="submit" [disabled]="!planId || saving()"
+              <button type="submit" [disabled]="!planId || !pc.complete() || saving()"
                 class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
                 {{ saving() ? 'Registrando…' : 'Registrar y facturar' }}
               </button>
             </div>
           </div>
+          @if (!pc.complete()) {
+            <p class="text-right text-xs text-gray-400">Completa los datos del pago para facturar, o usa «Finalizar sin pago».</p>
+          }
         </form>
       }
     }

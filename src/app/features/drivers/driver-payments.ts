@@ -18,6 +18,22 @@ import { DriversApi } from './drivers.api';
 const PAGE_SIZE = 100;
 
 /**
+ * One row per invoice = the cobro the driver actually made: membership + its
+ * prepaid weeks collapse into a single total with one payment date (decision
+ * 2026-07-28). `items` keeps the breakdown for the detail modal. Payments with
+ * no invoice (not expected in the prepaid flow) stand alone.
+ */
+export interface PaymentGroup {
+  key: string;
+  invoiceId: string | null;
+  invoiceNumber: string | null;
+  totalUsd: string;
+  status: 'paid' | 'pending' | 'refunded';
+  date: string | null;
+  items: PaymentListItem[];
+}
+
+/**
  * Driver-focused payment history: a reduced, per-driver view of the global
  * Facturación screen (`/billing`). Lists the driver's payments (membership +
  * tariff charges: pending / paid / refunded) and lets the admin open each one's
@@ -44,8 +60,42 @@ export class DriverPayments {
   readonly error = signal<string | null>(null);
   /** Receipt shown in the modal viewer (null = closed). */
   readonly viewer = signal<FileViewerState | null>(null);
-  /** The payment whose detail modal is open (null = closed). */
-  readonly selected = signal<PaymentListItem | null>(null);
+  /** The group whose detail modal is open (null = closed). */
+  readonly selected = signal<PaymentGroup | null>(null);
+
+  /** Ledger collapsed to one row per invoice (membership + weeks = one cobro). */
+  readonly groups = computed<PaymentGroup[]>(() => {
+    const byInvoice = new Map<string, PaymentGroup>();
+    const out: PaymentGroup[] = [];
+    for (const p of this.payments()) {
+      if (!p.invoiceId) {
+        out.push({
+          key: p.id, invoiceId: null, invoiceNumber: p.invoiceNumber,
+          totalUsd: p.amountUsd, status: p.status, date: p.paidAt ?? p.createdAt, items: [p],
+        });
+        continue;
+      }
+      const g = byInvoice.get(p.invoiceId);
+      if (g) {
+        g.totalUsd = (Number(g.totalUsd) + Number(p.amountUsd)).toFixed(2);
+        g.items.push(p);
+      } else {
+        const ng: PaymentGroup = {
+          key: p.invoiceId, invoiceId: p.invoiceId, invoiceNumber: p.invoiceNumber,
+          totalUsd: p.amountUsd, status: p.status, date: p.paidAt ?? p.createdAt, items: [p],
+        };
+        byInvoice.set(p.invoiceId, ng);
+        out.push(ng);
+      }
+    }
+    // Derive each group's status from its items (uniform in the prepaid flow).
+    for (const g of byInvoice.values()) {
+      g.status = g.items.every((i) => i.status === 'refunded')
+        ? 'refunded'
+        : g.items.some((i) => i.status === 'pending') ? 'pending' : 'paid';
+    }
+    return out; // payments already come created_at DESC; first-seen order kept
+  });
 
   private readonly invoicesById = computed(() => {
     const map = new Map<string, InvoiceListItem>();
@@ -53,11 +103,21 @@ export class DriverPayments {
     return map;
   });
 
-  /** Invoice (with the payment details) linked to the selected payment, if any. */
+  /** Invoice (with the payment details) linked to the selected group, if any. */
   readonly selectedInvoice = computed<InvoiceListItem | null>(() => {
-    const p = this.selected();
-    return p?.invoiceId ? (this.invoicesById().get(p.invoiceId) ?? null) : null;
+    const g = this.selected();
+    return g?.invoiceId ? (this.invoicesById().get(g.invoiceId) ?? null) : null;
   });
+
+  /** Human label for a group row: "Membresía + N semanas", "N semanas de tarifa", … */
+  groupLabel(g: PaymentGroup): string {
+    const membership = g.items.find((i) => i.kind === 'membership');
+    const weeks = g.items.filter((i) => i.kind === 'subscription').length;
+    const wLabel = `${weeks} semana${weeks === 1 ? '' : 's'} de tarifa`;
+    if (membership && weeks) return `${membership.concept} + ${weeks} semana${weeks === 1 ? '' : 's'}`;
+    if (weeks) return wLabel;
+    return membership?.concept ?? g.items[0]?.concept ?? 'Pago';
+  }
 
   ngOnInit(): void {
     this.load();
@@ -108,10 +168,10 @@ export class DriverPayments {
     );
   }
 
-  openDetail(payment: PaymentListItem): void {
+  openDetail(group: PaymentGroup): void {
     this.error.set(null);
     this.viewer.set(null);
-    this.selected.set(payment);
+    this.selected.set(group);
   }
 
   closeDetail(): void {

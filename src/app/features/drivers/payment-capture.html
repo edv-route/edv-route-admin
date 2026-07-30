@@ -1,5 +1,5 @@
 <div class="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700 sm:grid-cols-2">
-  <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 sm:col-span-2">Datos del pago (opcional)</p>
+  <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 sm:col-span-2">Datos del pago {{ optional() ? '(opcional)' : '(requerido)' }}</p>
   <div class="sm:col-span-2">
     <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Método de pago</label>
     <app-select [options]="methodOptions()" [ngModel]="value().paymentMethodId"

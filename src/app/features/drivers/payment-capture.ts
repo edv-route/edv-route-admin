@@ -3,6 +3,7 @@ import {
   ElementRef,
   computed,
   inject,
+  input,
   model,
   output,
   signal,
@@ -51,6 +52,9 @@ export class PaymentCapture {
 
   /** Two-way value: the parent reads it on submit and resets it by setting a fresh one. */
   readonly value = model<PaymentCaptureValue>(emptyPaymentCapture());
+  /** Whether the payment block is optional. Only labelling — consumers still gate
+   *  their submit on `complete`. Set false when the cobro must not be left blank. */
+  readonly optional = input(true);
   /** A human message when the chosen file is rejected (size/type), or null when cleared. */
   readonly fileError = output<string | null>();
 
@@ -89,6 +93,22 @@ export class PaymentCapture {
         return { label: field.label, value };
       })
       .filter((row): row is { label: string; value: string } => row !== null);
+  });
+
+  /**
+   * Whether the payment is complete enough to invoice, validated per method
+   * (decision 2026-07-28): a method and a receipt are always required; a
+   * reference is required except for "contact"; the payer bank only for the
+   * Venezuelan-bank methods (transfer / pago móvil). Consumers gate their
+   * submit on this (e.g. the wizard's "Registrar y facturar").
+   */
+  readonly complete = computed<boolean>(() => {
+    const v = this.value();
+    const method = this.paymentMethods().find((m) => m.id === v.paymentMethodId);
+    if (!method || !v.file) return false;
+    if (method.type !== 'contact' && !v.reference?.trim()) return false;
+    if ((method.type === 'bank_transfer' || method.type === 'pago_movil') && !v.payerBank) return false;
+    return true;
   });
 
   setMethod(id: number | null): void {

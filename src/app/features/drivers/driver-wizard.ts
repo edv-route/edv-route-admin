@@ -1,4 +1,4 @@
-import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { HttpClient, type HttpErrorResponse } from '@angular/common/http';
 import { FormsModule, type NgForm } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -19,9 +19,11 @@ import {
   PasswordPolicyDirective,
   passwordPolicyErrors,
 } from '../../shared/directives/password-policy.directive';
-import { DocumentsApi, validateFile } from '../documents/documents.api';
+import { DocumentsApi } from '../documents/documents.api';
 import { DriversApi, type CreateDriverInput } from './drivers.api';
 import { PaymentCapture, type PaymentCaptureValue, emptyPaymentCapture } from './payment-capture';
+import { VehicleDraftModal, type VehicleDraft } from './vehicle-draft-modal';
+import { DocumentDraftModal, type DocDraft } from './document-draft-modal';
 import {
   NATIONAL_ID_OPTIONS,
   PHONE_COUNTRY_OPTIONS,
@@ -30,25 +32,6 @@ import {
   emptyPersonForm,
   maxBirthDate,
 } from './person-form';
-
-/** A document queued in the wizard; the File is uploaded after registration. */
-interface DocDraft {
-  requirementId: number;
-  requirementName: string;
-  expiresAt: string;
-  file: File | null;
-  fileName: string | null;
-}
-
-/** A vehicle queued in the wizard (persisted with the alta transaction). */
-interface VehicleDraft {
-  vehicleTypeId: number | null;
-  brand: string;
-  model: string;
-  year: number | null;
-  color: string;
-  plate: string;
-}
 
 /**
  * Registration wizard (decision 2026-07-21): personal data, documents, vehicle
@@ -60,7 +43,7 @@ interface VehicleDraft {
  */
 @Component({
   selector: 'app-driver-wizard',
-  imports: [FormsModule, RouterLink, Select, PasswordInput, DatePicker, PasswordPolicyDirective, PaymentCapture],
+  imports: [FormsModule, RouterLink, Select, PasswordInput, DatePicker, PasswordPolicyDirective, PaymentCapture, VehicleDraftModal, DocumentDraftModal],
   templateUrl: './driver-wizard.html',
 })
 export class DriverWizard {
@@ -95,16 +78,59 @@ export class DriverWizard {
   private readonly step1Form = viewChild<NgForm>('step1Form');
   private composed: CreateDriverInput | null = null;
 
-  // Step 2: documents queued client-side (add-to-list, like the old wizard)
+  // Step 2: driver documents queued client-side. The editor lives in the
+  // `app-document-draft-modal` dialog; the wizard only holds the list.
   readonly docs = signal<DocDraft[]>([]);
-  docRequirementId: number | null = null;
-  docExpiresAt = '';
-  docFile: File | null = null;
-  private readonly docFileInput = viewChild<ElementRef<HTMLInputElement>>('docFileInput');
+  readonly docModalOpen = signal(false);
+  /** Index being edited in the dialog; null = adding a new document. */
+  readonly editingDocIndex = signal<number | null>(null);
+  /** The draft the dialog is seeded with (edit mode), or null when adding. */
+  readonly editingDocDraft = computed(() => {
+    const i = this.editingDocIndex();
+    return i === null ? null : this.docs()[i] ?? null;
+  });
+  /** Requirement ids used by the OTHER queued documents (excludes the edited one). */
+  readonly docTakenIds = computed(() => {
+    const editing = this.editingDocIndex();
+    return this.docs().filter((_, i) => i !== editing).map((d) => d.requirementId);
+  });
 
-  // Step 3: vehicles queued client-side
+  // Step 3: vehicles queued client-side (each with its photos + documents).
+  // The editor lives in the `app-vehicle-draft-modal` dialog; the wizard only
+  // holds the accumulated list and never persists a vehicle before register().
   readonly vehicles = signal<VehicleDraft[]>([]);
-  vehicleForm: VehicleDraft = this.emptyVehicle();
+  readonly vehicleModalOpen = signal(false);
+  /** Index being edited in the dialog; null = adding a new vehicle. */
+  readonly editingIndex = signal<number | null>(null);
+  /** The draft the dialog is seeded with (edit mode), or null when adding. */
+  readonly editingDraft = computed(() => {
+    const i = this.editingIndex();
+    return i === null ? null : this.vehicles()[i] ?? null;
+  });
+
+  // Step 3: each vehicle's documents are captured from its card, in a separate
+  // app-document-draft-modal (appliesTo="vehicle").
+  readonly vehicleDocModalOpen = signal(false);
+  /** Which vehicle (index) the document dialog is targeting. */
+  readonly docVehicleIndex = signal<number | null>(null);
+  /** Document index being edited within that vehicle; null = adding. */
+  readonly editingVehicleDocIndex = signal<number | null>(null);
+  /** The vehicle document the dialog is seeded with (edit mode), or null. */
+  readonly editingVehicleDoc = computed<DocDraft | null>(() => {
+    const v = this.docVehicleIndex();
+    const d = this.editingVehicleDocIndex();
+    if (v === null || d === null) return null;
+    return this.vehicles()[v]?.documents[d] ?? null;
+  });
+  /** Requirement ids used by the OTHER documents of the targeted vehicle. */
+  readonly vehicleDocTakenIds = computed<number[]>(() => {
+    const v = this.docVehicleIndex();
+    if (v === null) return [];
+    const editing = this.editingVehicleDocIndex();
+    return (this.vehicles()[v]?.documents ?? [])
+      .filter((_, j) => j !== editing)
+      .map((d) => d.requirementId);
+  });
 
   // Step 4: payment
   planId: number | null = null;
@@ -120,16 +146,8 @@ export class DriverWizard {
     return this.driverRequirements().filter((r) => !used.has(r.id));
   });
   readonly activePlans = computed(() => this.plans().filter((p) => p.active));
-  /** app-select options (branded dropdown; native <select> is not used). */
-  readonly docRequirementOptions = computed<SelectOption[]>(() =>
-    this.availableDocRequirements().map((r) => ({
-      value: r.id,
-      label: r.isRequired ? `${r.name} *` : r.name,
-    })),
-  );
-  readonly vehicleTypeOptions = computed<SelectOption[]>(() =>
-    this.vehicleTypes().map((t) => ({ value: t.id, label: t.name })),
-  );
+  /** A single active tariff is preselected and its dropdown locked. */
+  readonly singlePlan = computed(() => this.activePlans().length === 1);
   readonly planOptions = computed<SelectOption[]>(() =>
     this.activePlans().map((p) => ({
       value: p.id,
@@ -139,16 +157,18 @@ export class DriverWizard {
   readonly selectedPlan = computed(
     () => this.activePlans().find((p) => p.id === this.planId) ?? null,
   );
-  readonly total = computed(() => {
+  /**
+   * Total charged = membership + tariff × periods. A method, NOT a computed:
+   * `periods` (and `planId`) are plain ngModel fields, so a computed would cache
+   * the first value and never react to the free "Semanas" input. As a method it
+   * re-evaluates on each change detection with the live period count.
+   */
+  total(): string | null {
     const m = this.membership();
     const p = this.selectedPlan();
     if (!m || !p) return null;
     return (Number(m.priceUsd) + Number(p.priceUsd) * this.periods).toFixed(2);
-  });
-  readonly canAddVehicle = computed(() => {
-    const v = this.vehicleForm;
-    return v.vehicleTypeId !== null || !!v.brand.trim() || !!v.plate.trim();
-  });
+  }
 
   constructor(requirementsApi: RequirementsApi, vehicleTypesApi: VehicleTypesApi) {
     requirementsApi.list().subscribe({ next: (r) => this.requirements.set(r) });
@@ -156,16 +176,18 @@ export class DriverWizard {
       next: (t) => this.vehicleTypes.set(t.filter((v) => v.active)),
     });
     this.http.get<SubscriptionPlan[]>(`${environment.apiUrl}/subscription-plans`).subscribe({
-      next: (p) => this.plans.set(p),
+      next: (p) => {
+        this.plans.set(p);
+        // Preselect the tariff when it is the only active one (the select is then
+        // locked in the template): one less click and the total shows at once.
+        const active = p.filter((x) => x.active);
+        if (active.length === 1) this.planId = active[0]!.id;
+      },
     });
     this.http.get<Membership>(`${environment.apiUrl}/memberships/current`).subscribe({
       next: (m) => this.membership.set(m),
       error: () => this.membership.set(null),
     });
-  }
-
-  private emptyVehicle(): VehicleDraft {
-    return { vehicleTypeId: null, brand: '', model: '', year: null, color: '', plate: '' };
   }
 
   vehicleTypeName(id: number | null): string {
@@ -184,7 +206,8 @@ export class DriverWizard {
    */
   goToStep(target: number): void {
     if (target === this.step()) return;
-    if (target > 1 && !this.validateStep1()) return;
+    // DEV: environment.unlockSteps skips the step-1 gate to ease visual review.
+    if (target > 1 && !environment.unlockSteps && !this.validateStep1()) return;
     this.error.set(null);
     this.step.set(target);
   }
@@ -205,48 +228,32 @@ export class DriverWizard {
     return true;
   }
 
-  // --- Step 2: documents ---
-  onDocFileSelected(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
-    if (!file) {
-      this.docFile = null;
-      return;
-    }
-    const problem = validateFile(file);
-    if (problem) {
-      this.error.set(problem);
-      this.clearDocFileInput();
-      return;
-    }
-    this.error.set(null);
-    this.docFile = file;
+  // --- Step 2: documents (captured in the app-document-draft-modal dialog) ---
+
+  openAddDocument(): void {
+    this.editingDocIndex.set(null);
+    this.docModalOpen.set(true);
   }
 
-  private clearDocFileInput(): void {
-    this.docFile = null;
-    const input = this.docFileInput()?.nativeElement;
-    if (input) input.value = '';
+  editDocument(index: number): void {
+    this.editingDocIndex.set(index);
+    this.docModalOpen.set(true);
   }
 
-  addDocumentDraft(): void {
-    const req = this.driverRequirements().find((r) => r.id === this.docRequirementId);
-    if (!req) {
-      this.error.set('Selecciona un requerimiento.');
-      return;
+  closeDocModal(): void {
+    this.docModalOpen.set(false);
+    this.editingDocIndex.set(null);
+  }
+
+  /** Appends the emitted document draft, or replaces the edited one. */
+  onDocumentSaved(draft: DocDraft): void {
+    const index = this.editingDocIndex();
+    if (index === null) {
+      this.docs.update((list) => [...list, draft]);
+    } else {
+      this.docs.update((list) => list.map((d, i) => (i === index ? draft : d)));
     }
-    this.docs.update((list) => [
-      ...list,
-      {
-        requirementId: req.id,
-        requirementName: req.name,
-        expiresAt: this.docExpiresAt,
-        file: this.docFile,
-        fileName: this.docFile?.name ?? null,
-      },
-    ]);
-    this.docRequirementId = null;
-    this.docExpiresAt = '';
-    this.clearDocFileInput();
+    this.closeDocModal();
     this.error.set(null);
   }
 
@@ -254,16 +261,91 @@ export class DriverWizard {
     this.docs.update((list) => list.filter((_, i) => i !== index));
   }
 
-  // --- Step 3: vehicles ---
-  addVehicleDraft(): void {
-    if (!this.canAddVehicle()) return;
-    this.vehicles.update((list) => [...list, { ...this.vehicleForm }]);
-    this.vehicleForm = this.emptyVehicle();
+  // --- Step 3: vehicles (captured in the app-vehicle-draft-modal dialog) ---
+
+  openAddVehicle(): void {
+    this.editingIndex.set(null);
+    this.vehicleModalOpen.set(true);
+  }
+
+  editVehicleDraft(index: number): void {
+    this.editingIndex.set(index);
+    this.vehicleModalOpen.set(true);
+  }
+
+  closeVehicleModal(): void {
+    this.vehicleModalOpen.set(false);
+    this.editingIndex.set(null);
+  }
+
+  /**
+   * Persists the draft emitted by the modal: appends it (add mode) or replaces
+   * the edited one (revoking the previous version's photo URLs, since the dialog
+   * handed over fresh ones). The wizard owns the URLs from here on.
+   */
+  onVehicleSaved(draft: VehicleDraft): void {
+    const index = this.editingIndex();
+    if (index === null) {
+      this.vehicles.update((list) => [...list, draft]);
+    } else {
+      const previous = this.vehicles()[index];
+      if (previous) for (const p of previous.photos) URL.revokeObjectURL(p.url);
+      this.vehicles.update((list) => list.map((v, i) => (i === index ? draft : v)));
+    }
+    this.closeVehicleModal();
     this.error.set(null);
   }
 
   removeVehicleDraft(index: number): void {
+    const v = this.vehicles()[index];
+    if (v) for (const p of v.photos) URL.revokeObjectURL(p.url);
     this.vehicles.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  // --- Step 3: a vehicle's documents (app-document-draft-modal per card) ---
+
+  openAddVehicleDoc(vehicleIndex: number): void {
+    this.docVehicleIndex.set(vehicleIndex);
+    this.editingVehicleDocIndex.set(null);
+    this.vehicleDocModalOpen.set(true);
+  }
+
+  editVehicleDoc(vehicleIndex: number, docIndex: number): void {
+    this.docVehicleIndex.set(vehicleIndex);
+    this.editingVehicleDocIndex.set(docIndex);
+    this.vehicleDocModalOpen.set(true);
+  }
+
+  closeVehicleDocModal(): void {
+    this.vehicleDocModalOpen.set(false);
+    this.docVehicleIndex.set(null);
+    this.editingVehicleDocIndex.set(null);
+  }
+
+  /** Appends the emitted document to the targeted vehicle, or replaces the edited one. */
+  onVehicleDocSaved(draft: DocDraft): void {
+    const vIndex = this.docVehicleIndex();
+    if (vIndex === null) return;
+    const dIndex = this.editingVehicleDocIndex();
+    this.vehicles.update((list) =>
+      list.map((v, i) => {
+        if (i !== vIndex) return v;
+        const documents =
+          dIndex === null
+            ? [...v.documents, draft]
+            : v.documents.map((d, j) => (j === dIndex ? draft : d));
+        return { ...v, documents };
+      }),
+    );
+    this.closeVehicleDocModal();
+  }
+
+  removeVehicleDoc(vehicleIndex: number, docIndex: number): void {
+    this.vehicles.update((list) =>
+      list.map((v, i) =>
+        i === vehicleIndex ? { ...v, documents: v.documents.filter((_, j) => j !== docIndex) } : v,
+      ),
+    );
   }
 
   /**
@@ -288,19 +370,20 @@ export class DriverWizard {
             payerBank: pay.payerBank,
           }
         : null;
-    const vehicles = this.vehicles().map((v) => ({
+    const vehicleDrafts = this.vehicles();
+    const vehicles = vehicleDrafts.map((v) => ({
       vehicleTypeId: v.vehicleTypeId,
       brand: v.brand.trim() || null,
       model: v.model.trim() || null,
       year: v.year,
       color: v.color.trim() || null,
       plate: v.plate.trim() || null,
+      documents: v.documents.map((d) => ({ requirementId: d.requirementId })),
     }));
     const docDrafts = this.docs();
-    const documents = docDrafts.map((d) => ({
-      requirementId: d.requirementId,
-      expiresAt: d.expiresAt || null,
-    }));
+    // expiresAt is being retired from the UI; always null until the DB column is
+    // dropped (Fase 5). The register contract still carries the field.
+    const documents = docDrafts.map((d) => ({ requirementId: d.requirementId, expiresAt: null }));
 
     this.saving.set(true);
     this.error.set(null);
@@ -309,7 +392,7 @@ export class DriverWizard {
       .register(this.composed!, { payment, vehicles, documents })
       .pipe(
         switchMap((result) => {
-          // Upload each queued document file against its created id (same order).
+          // Upload each queued driver-document file against its created id (same order).
           const uploads = docDrafts
             .map((d, i) => ({ file: d.file, id: result.createdDocumentIds[i] }))
             .filter((x): x is { file: File; id: string } => !!x.file && !!x.id)
@@ -319,6 +402,30 @@ export class DriverWizard {
                 catchError(() => of(false)),
               ),
             );
+          // Vehicle photos + vehicle-document files against the created ids.
+          vehicleDrafts.forEach((v, i) => {
+            const created = result.createdVehicles[i];
+            if (!created) return;
+            for (const photo of v.photos) {
+              uploads.push(
+                this.api.vehicleImageUpload(result.userId, created.id, photo.file).pipe(
+                  map(() => true),
+                  catchError(() => of(false)),
+                ),
+              );
+            }
+            v.documents.forEach((d, j) => {
+              const docId = created.documentIds[j];
+              if (d.file && docId) {
+                uploads.push(
+                  this.documentsApi.uploadFile(docId, d.file).pipe(
+                    map(() => true),
+                    catchError(() => of(false)),
+                  ),
+                );
+              }
+            });
+          });
           // Payment receipt (best-effort, attached to the primary invoice).
           if (payment && pay.file && result.primaryInvoiceId) {
             uploads.push(

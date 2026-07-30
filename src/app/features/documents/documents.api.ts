@@ -42,6 +42,11 @@ export class DocumentsApi {
   fileUrl(documentId: string): Observable<{ url: string; expiresIn: number }> {
     return this.http.get<{ url: string; expiresIn: number }>(`${this.baseUrl}/${documentId}/file`);
   }
+
+  /** Removes a document and its stored file. */
+  delete(documentId: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${documentId}`);
+  }
 }
 
 /** Client-side pre-check; the backend re-validates by content, not by name. */

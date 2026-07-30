@@ -33,6 +33,11 @@ export const routes: Routes = [
           import('./features/drivers/driver-payments').then((m) => m.DriverPayments),
       },
       {
+        path: 'drivers/:id/vehicles/:vehicleId',
+        loadComponent: () =>
+          import('./features/drivers/driver-vehicle-detail').then((m) => m.DriverVehicleDetail),
+      },
+      {
         path: 'dashboard',
         loadComponent: () =>
           import('./features/dashboard/dashboard').then((m) => m.Dashboard),

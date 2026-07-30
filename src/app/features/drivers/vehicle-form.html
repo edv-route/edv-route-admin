@@ -1,0 +1,99 @@
+<div class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/60">
+  <div class="flex min-h-full items-center justify-center p-4">
+    <div class="w-full max-w-2xl rounded-xl bg-white shadow-xl dark:bg-gray-800">
+      <!-- Header -->
+      <div class="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-4 dark:border-gray-700">
+        <div>
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">Agregar vehículo</h2>
+          <p class="mt-0.5 text-xs text-gray-400">Queda aprobado directamente. Sus documentos se cargan en el detalle del vehículo.</p>
+        </div>
+        <button type="button" (click)="close()" aria-label="Cerrar"
+          class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      <!-- Body: vehicle data + photos, single full-width column. Documents live
+           in the vehicle's detail screen, not here. -->
+      <div class="px-6 py-4">
+        <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Datos del vehículo</p>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="sm:col-span-2">
+            <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Tipo</label>
+            <app-select name="vehicleTypeId" [(ngModel)]="vehicleForm.vehicleTypeId" [options]="vehicleTypeOptions()" placeholder="Sin definir" ariaLabel="Tipo de vehículo" />
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Marca</label>
+            <input name="brand" type="text" [(ngModel)]="vehicleForm.brand" placeholder="Toyota"
+              class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm capitalize text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Modelo</label>
+            <input name="model" type="text" [(ngModel)]="vehicleForm.model" placeholder="Corolla"
+              class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm capitalize text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Año</label>
+            <input name="year" type="number" min="1950" max="2100" [(ngModel)]="vehicleForm.year" placeholder="2020"
+              class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Color</label>
+            <input name="color" type="text" [(ngModel)]="vehicleForm.color" placeholder="Gris"
+              class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm capitalize text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Placa</label>
+            <input name="plate" type="text" [(ngModel)]="vehicleForm.plate" placeholder="AB123CD"
+              class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm uppercase text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          </div>
+        </div>
+
+        <!-- Photos: compact thumbnail row + inline "Subir" tile (keeps the modal short) -->
+        <div class="mt-4 border-t border-gray-100 pt-4 dark:border-gray-700">
+          <div class="mb-2 flex items-center justify-between">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Fotos <span class="font-normal normal-case text-gray-400">(opcional)</span>
+            </p>
+            <span class="text-xs text-gray-400">{{ photos().length }}/{{ maxPhotos }}</span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            @for (p of photos(); track p.url) {
+              <div class="group relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                <img [src]="p.url" alt="Foto del vehículo" class="h-full w-full object-cover" />
+                <button type="button" (click)="removePhoto($index)" aria-label="Quitar foto"
+                  class="absolute right-0.5 top-0.5 rounded-full bg-gray-900/70 p-0.5 text-white opacity-0 transition group-hover:opacity-100 hover:bg-red-600">
+                  <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            }
+            @if (photos().length < maxPhotos) {
+              <label class="flex h-20 w-20 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 text-center hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700/40 dark:hover:bg-gray-700">
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" /></svg>
+                <span class="text-[10px] font-semibold text-primary-700 dark:text-primary-300">Subir</span>
+                <input type="file" class="hidden" accept="image/jpeg,image/png" multiple (change)="onPhotosSelected($event)" />
+              </label>
+            }
+          </div>
+          <p class="mt-1.5 text-xs text-gray-400">JPG o PNG · hasta {{ maxPhotos }} · máx 10 MB</p>
+        </div>
+      </div>
+
+      @if (error(); as message) {
+        <p class="mx-6 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-700 dark:text-primary-300">{{ message }}</p>
+      }
+
+      <!-- Footer -->
+      <div class="mt-1 flex justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-700">
+        <button type="button" (click)="close()"
+          class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+          Cancelar
+        </button>
+        <button type="button" (click)="submit()" [disabled]="!canConfirm() || saving()"
+          class="rounded-lg bg-primary-700 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-40">
+          {{ saving() ? 'Registrando…' : 'Registrar vehículo' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

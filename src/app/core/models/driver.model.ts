@@ -33,6 +33,11 @@ export interface DriverList {
   total: number;
 }
 
+export interface VehicleImage {
+  id: string;
+  position: number;
+}
+
 export interface DriverVehicle {
   id: string;
   vehicleTypeId: number | null;
@@ -42,6 +47,7 @@ export interface DriverVehicle {
   color: string | null;
   plate: string | null;
   approvalStatus: 'pending' | 'approved' | 'rejected';
+  images: VehicleImage[];
 }
 
 export interface DriverDocument {
@@ -83,6 +89,8 @@ export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
     startedAt: string | null;
     currentPeriodStart: string | null;
     currentPeriodEnd: string | null;
+    /** End of the LAST prepaid period (advances included) — when coverage runs out. */
+    paidUntil: string | null;
     paidPeriods: number;
   } | null;
   /**
@@ -94,6 +102,8 @@ export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
     totalUsd: string;
     weeksOwed: number;
     penaltyCount: number;
+    /** Debt cap (weeks) before penalization — for the "suspension imminent" warning. */
+    capWeeks: number;
     charges: {
       id: string;
       kind: 'period' | 'penalty';
@@ -103,6 +113,11 @@ export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
       periodEnd: string | null;
     }[];
   };
+  /**
+   * Next weekly charge already emitted but NOT yet due (Friday 18:00 → Sunday
+   * window): the solvent driver's advance-pay prompt. Null when nothing upcoming.
+   */
+  upcoming: { amountUsd: string; periodStart: string; periodEnd: string } | null;
   /** Programmed plan change waiting for the paid coverage to run out. */
   scheduledPlan: {
     planName: string;
