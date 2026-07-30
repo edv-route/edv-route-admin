@@ -91,7 +91,7 @@ export class Dashboard {
     return {
       chart: {
         type: 'area',
-        height: 280,
+        height: 190,
         fontFamily: 'Montserrat, sans-serif',
         toolbar: { show: false },
         zoom: { enabled: false },
@@ -104,7 +104,7 @@ export class Dashboard {
         },
       ],
       colors: [BRAND_RED],
-      stroke: { curve: 'smooth', width: 3 },
+      stroke: { curve: 'smooth', width: 2 },
       fill: {
         type: 'gradient',
         gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.03 },
@@ -118,10 +118,12 @@ export class Dashboard {
         labels: { datetimeUTC: false, format: 'dd/MM' },
         tooltip: { enabled: false },
       },
-      yaxis: {
-        labels: { formatter: (value: number) => `$${value.toFixed(0)}` },
+      yaxis: { show: false },
+      grid: {
+        borderColor: 'rgba(156, 163, 175, 0.15)',
+        strokeDashArray: 4,
+        padding: { top: 0, right: 8, bottom: 0, left: 8 },
       },
-      grid: { borderColor: 'rgba(156, 163, 175, 0.2)', strokeDashArray: 4 },
       tooltip: {
         x: { format: 'dd/MM/yyyy' },
         y: { formatter: (value: number) => `$${value.toFixed(2)} USD` },
