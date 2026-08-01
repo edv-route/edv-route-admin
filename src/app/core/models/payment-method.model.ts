@@ -1,11 +1,5 @@
-export type PaymentMethodType =
-  | 'bank_transfer'
-  | 'pago_movil'
-  | 'zelle'
-  | 'paypal'
-  | 'binance'
-  | 'crypto'
-  | 'contact';
+/** Offered payment method types (decision 2026-07-31): only these 4. */
+export type PaymentMethodType = 'bank_transfer' | 'pago_movil' | 'zelle' | 'binance';
 
 export interface PaymentMethod {
   id: number;
@@ -22,20 +16,49 @@ export const PAYMENT_METHOD_TYPE_LABELS: Record<PaymentMethodType, string> = {
   bank_transfer: 'Transferencia bancaria',
   pago_movil: 'Pago Móvil',
   zelle: 'Zelle',
-  paypal: 'PayPal',
   binance: 'Binance Pay',
-  crypto: 'USDT — Wallet TRC20',
-  contact: 'Contactar al administrador',
 };
 
 export interface PaymentMethodField {
   key: string;
   label: string;
   required: boolean;
-  /** 'select' renders a branded dropdown with `options`; default is a text input. */
-  control?: 'text' | 'select';
+  /**
+   * How to render the field: `select` = branded dropdown with `options`;
+   * `idDocument` = V/E/J type selector + digits (composed as "V-12345678", the
+   * same canonical control the person form uses); default = a text input.
+   */
+  control?: 'text' | 'select' | 'idDocument';
+  /** Live input filter for a text control: digits-only or letters-only. */
+  filter?: 'digits' | 'letters';
+  maxLength?: number;
   options?: { value: string; label: string }[];
   placeholder?: string;
+  /**
+   * Format check (mirrors the backend FIELD_FORMATS): `email` = must be a valid
+   * address; `emailOrText` = validate as email only when it contains '@' (the
+   * field also accepts a phone/pay-id); `idDocument` = canonical V/E/J document.
+   */
+  validate?: 'email' | 'emailOrText' | 'idDocument';
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ID_DOC_RE = /^[VEJ]-?\d{5,9}$/i;
+
+/** Returns a Spanish error for a field value, or null when it is acceptable. */
+export function paymentFieldError(field: PaymentMethodField, value: string): string | null {
+  const v = value.trim();
+  if (!v) return null; // emptiness is handled by the `required` check
+  switch (field.validate) {
+    case 'email':
+      return EMAIL_RE.test(v) ? null : `${field.label}: correo no válido.`;
+    case 'emailOrText':
+      return v.includes('@') && !EMAIL_RE.test(v) ? `${field.label}: el correo no es válido.` : null;
+    case 'idDocument':
+      return ID_DOC_RE.test(v) ? null : `${field.label}: documento no válido (ej. V-12345678).`;
+    default:
+      return null;
+  }
 }
 
 /**
@@ -76,10 +99,18 @@ export const VENEZUELAN_BANKS: { value: string; label: string }[] = [
  * Fields captured (and shown) per payment method type. Must mirror the backend
  * REQUIRED_DETAILS validation in payment-methods.service.ts.
  */
+/**
+ * Fields per method type — the data actually needed to RECEIVE with each one
+ * (researched 2026-07-31). Must mirror the backend REQUIRED_DETAILS/FIELD_FORMATS.
+ *  - Pago Móvil (VE): bank + phone + V/E/J document of the account holder.
+ *  - Transferencia (VE): bank + 20-digit account + type + holder + document.
+ *  - Zelle (US): the enrolled email OR US phone + the holder's name to verify.
+ *  - Binance: email / phone / Binance ID (the old "Pay ID" was retired 2024).
+ */
 export const PAYMENT_METHOD_FIELDS: Record<PaymentMethodType, PaymentMethodField[]> = {
   bank_transfer: [
     { key: 'bank', label: 'Banco', required: true, control: 'select', options: VENEZUELAN_BANKS },
-    { key: 'accountNumber', label: 'Número de cuenta', required: true },
+    { key: 'accountNumber', label: 'Número de cuenta (20 dígitos)', required: true, filter: 'digits', maxLength: 20, placeholder: '01020123456789012345' },
     {
       key: 'accountType', label: 'Tipo de cuenta', required: true, control: 'select',
       options: [
@@ -87,25 +118,20 @@ export const PAYMENT_METHOD_FIELDS: Record<PaymentMethodType, PaymentMethodField
         { value: 'corriente', label: 'Corriente' },
       ],
     },
-    { key: 'accountHolder', label: 'Titular', required: true },
-    { key: 'idDocument', label: 'Cédula / RIF', required: true, placeholder: 'V-12345678' },
+    { key: 'accountHolder', label: 'Titular', required: true, placeholder: 'Nombre o razón social' },
+    { key: 'idDocument', label: 'Cédula / RIF del titular', required: true, control: 'idDocument', validate: 'idDocument' },
   ],
   pago_movil: [
     { key: 'bank', label: 'Banco', required: true, control: 'select', options: VENEZUELAN_BANKS },
-    { key: 'phone', label: 'Teléfono', required: true, placeholder: '0412-1234567' },
-    { key: 'idDocument', label: 'Cédula / RIF', required: true, placeholder: 'V-12345678' },
+    { key: 'phone', label: 'Teléfono', required: true, filter: 'digits', maxLength: 11, placeholder: '04121234567' },
+    { key: 'idDocument', label: 'Cédula / RIF', required: true, control: 'idDocument', validate: 'idDocument' },
   ],
   zelle: [
-    { key: 'email', label: 'Email o teléfono', required: true },
-    { key: 'holder', label: 'Titular', required: false },
+    { key: 'email', label: 'Email o teléfono (EE.UU.)', required: true, validate: 'emailOrText', placeholder: 'correo@ejemplo.com' },
+    { key: 'holder', label: 'Titular', required: true, placeholder: 'Nombre del titular' },
   ],
-  paypal: [{ key: 'email', label: 'Email', required: true }],
-  binance: [{ key: 'identifier', label: 'Email o Pay ID', required: true }],
-  crypto: [
-    { key: 'walletAddress', label: 'Dirección de wallet (TRC20)', required: true, placeholder: 'TXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' },
-  ],
-  contact: [
-    { key: 'phone', label: 'Teléfono / WhatsApp', required: true, placeholder: '0412-1234567' },
-    { key: 'contactMethod', label: 'Método de contacto', required: false, placeholder: 'ej. WhatsApp' },
+  binance: [
+    { key: 'identifier', label: 'Email, teléfono o Binance ID', required: true, validate: 'emailOrText', placeholder: 'correo@ejemplo.com o Binance ID' },
+    { key: 'holder', label: 'Titular', required: false, placeholder: 'Nombre del titular' },
   ],
 };

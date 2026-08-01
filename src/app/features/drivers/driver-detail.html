@@ -41,10 +41,22 @@
         Editar datos
       </button>
       <!-- Charge membership + tariff post-registration (unblocks approval) -->
-      @if (!d.membershipPayment && d.status !== 'rejected') {
+      <!-- Single adaptive payment button (Luis 2026-07-30): settle debt / enroll a
+           legacy pending / advance. The band buttons were removed in favour of this. -->
+      @if (hasDebt()) {
+        <button type="button" (click)="openExternalPay()"
+          class="rounded-lg bg-gold-400 px-4 py-2 text-sm font-semibold text-primary-950 hover:bg-gold-300">
+          Registrar pago
+        </button>
+      } @else if (!d.membershipPayment && d.status !== 'rejected') {
         <button type="button" (click)="openEnroll()"
           class="rounded-lg bg-gold-400 px-4 py-2 text-sm font-semibold text-primary-950 hover:bg-gold-300">
           Registrar pago
+        </button>
+      } @else if (d.status === 'approved' && d.subscription && (d.subscription.status === 'active' || d.subscription.status === 'expired')) {
+        <button type="button" (click)="openRenew()"
+          class="rounded-lg bg-gold-400 px-4 py-2 text-sm font-semibold text-primary-950 hover:bg-gold-300">
+          {{ d.subscription.status === 'expired' ? 'Pagar y reactivar' : 'Generar pago' }}
         </button>
       }
       @if (d.status === 'pending') {
@@ -80,23 +92,11 @@
           Reanudar
         </button>
       }
-      @if (d.status === 'overdue' || d.status === 'penalized') {
-        <button type="button" (click)="openExternalPay()"
-          class="rounded-lg bg-gold-400 px-4 py-2 text-sm font-semibold text-primary-950 hover:bg-gold-300">
-          Registrar pago
-        </button>
-      }
       @if (d.status === 'penalized') {
         <button type="button" [disabled]="saving()"
           (click)="askConfirm({ title: '¿Reactivar a ' + d.fullName + '?', message: 'Vuelve a la calle de inmediato, sin esperar al día de reincorporación automática. Exige deuda 0.', confirmLabel: 'Reactivar', danger: false, action: 'reactivate' })"
           class="rounded-lg border border-green-300 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-50 disabled:opacity-60 dark:border-green-800 dark:text-green-300 dark:hover:bg-gray-700">
           Reactivar ahora
-        </button>
-      }
-      @if (d.status === 'approved' && d.subscription && (d.subscription.status === 'active' || d.subscription.status === 'expired')) {
-        <button type="button" (click)="openRenew()"
-          class="rounded-lg bg-gold-400 px-4 py-2 text-sm font-semibold text-primary-950 hover:bg-gold-300">
-          {{ d.subscription.status === 'expired' ? 'Pagar y reactivar' : 'Generar pago' }}
         </button>
       }
     </div>
@@ -110,20 +110,16 @@
 
   <!-- Deuda vencida (rojo) vs. próximo cobro (ámbar): son EXCLUYENTES — si ya debe,
        manda el rojo; si está solvente y se acerca el cobro, el ámbar (Luis 2026-07-29). -->
-  @if (d.debt.charges.length) {
+  @if (hasDebt()) {
     <section class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30 md:p-5">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 class="font-bold text-red-900 dark:text-red-200">Deuda pendiente</h2>
-          <p class="mt-0.5 text-sm text-red-800 dark:text-red-300">
-            {{ d.debt.weeksOwed }} semana(s) de tarifa@if (d.debt.penaltyCount) { + penalización} ·
-            Total <strong>${{ d.debt.totalUsd }}</strong>
-          </p>
-        </div>
-        <button type="button" (click)="openExternalPay()"
-          class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800">
-          Registrar pago
-        </button>
+      <div>
+        <h2 class="font-bold text-red-900 dark:text-red-200">Deuda pendiente</h2>
+        <p class="mt-0.5 text-sm text-red-800 dark:text-red-300">
+          @if (+d.debt.membershipDue > 0) { Membresía@if (d.debt.weeksOwed) { + } }
+          @if (d.debt.weeksOwed) { {{ d.debt.weeksOwed }} semana(s) de tarifa }
+          @if (d.debt.penaltyCount) { + penalización }
+          · Total <strong>${{ d.debt.totalUsd }}</strong>
+        </p>
       </div>
       <!-- At the debt cap and a new week is coming = next Monday penalizes him. -->
       @if (d.debt.weeksOwed >= d.debt.capWeeks && d.upcoming) {
@@ -132,6 +128,15 @@
         </p>
       }
       <ul class="mt-3 divide-y divide-red-200/70 dark:divide-red-900/40">
+        @if (+d.debt.membershipDue > 0) {
+          <li class="flex items-center justify-between gap-2 py-1.5 text-sm">
+            <span class="text-red-900 dark:text-red-200">Membresía · pago único</span>
+            <span class="flex items-center gap-2 font-semibold text-red-900 dark:text-red-200">
+              ${{ d.debt.membershipDue }}
+              <span class="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">por pagar</span>
+            </span>
+          </li>
+        }
         @for (c of d.debt.charges; track c.id) {
           <li class="flex items-center justify-between gap-2 py-1.5 text-sm">
             <span class="text-red-900 dark:text-red-200">
@@ -154,19 +159,13 @@
   } @else if (d.upcoming; as up) {
     <!-- Próximo cobro: solvente pero el cobro del lunes ya está emitido (viernes 18:00). -->
     <section class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/30 md:p-5">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 class="font-bold text-amber-900 dark:text-amber-200">Próximo cobro</h2>
-          <p class="mt-0.5 text-sm text-amber-800 dark:text-amber-300">
-            Semana {{ up.periodStart | date: 'dd/MM' }}–{{ up.periodEnd | date: 'dd/MM' }} ·
-            vence el lunes {{ up.periodStart | date: 'dd/MM' }} a las 00:00 ·
-            <strong>${{ up.amountUsd }}</strong>
-          </p>
-        </div>
-        <button type="button" (click)="openExternalPay()"
-          class="rounded-lg bg-gold-400 px-4 py-2 text-sm font-semibold text-primary-950 hover:bg-gold-300">
-          Adelantar pago
-        </button>
+      <div>
+        <h2 class="font-bold text-amber-900 dark:text-amber-200">Próximo cobro</h2>
+        <p class="mt-0.5 text-sm text-amber-800 dark:text-amber-300">
+          Semana {{ up.periodStart | date: 'dd/MM' }}–{{ up.periodEnd | date: 'dd/MM' }} ·
+          vence el lunes {{ up.periodStart | date: 'dd/MM' }} a las 00:00 ·
+          <strong>${{ up.amountUsd }}</strong> · usa «Generar pago» para adelantarlo.
+        </p>
       </div>
     </section>
   }
@@ -218,7 +217,12 @@
           }
         </div>
         @let coverDays = daysUntilPaidEnd();
-        @if (coverDays !== null) {
+        @if (tariffStartsAt(); as startsAt) {
+          <!-- Paid but not in force yet: the week bought starts next Monday. -->
+          <p class="mt-1 text-xs font-semibold text-gold-800">
+            Inicia el {{ startsAt | date: 'dd/MM/yyyy' }} · no puede recibir viajes hasta esa fecha
+          </p>
+        } @else if (coverDays !== null) {
           <p class="mt-1 text-xs font-medium"
             [class]="coverDays < 0 ? 'text-primary-700 dark:text-primary-400' : coverDays <= 2 ? 'text-gold-800' : 'text-gray-500 dark:text-gray-400'">
             @if (coverDays > 1) { Próxima factura en {{ coverDays }} días }
@@ -511,15 +515,15 @@
         <h2 class="text-lg font-bold text-gray-900 dark:text-white">Editar datos</h2>
         <form #editForm="ngForm" class="mt-5 space-y-4" (ngSubmit)="saveEdit()">
           <div class="grid grid-cols-2 gap-3">
-            <input name="firstName" type="text" required minlength="2" [(ngModel)]="person.firstName" placeholder="Primer nombre *"
+            <input name="firstName" type="text" required minlength="2" maxlength="80" appLetters [(ngModel)]="person.firstName" placeholder="Primer nombre *"
               class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-            <input name="lastName" type="text" required minlength="2" [(ngModel)]="person.lastName" placeholder="Primer apellido *"
+            <input name="lastName" type="text" required minlength="2" maxlength="80" appLetters [(ngModel)]="person.lastName" placeholder="Primer apellido *"
               class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
           </div>
           <div class="grid grid-cols-2 gap-3">
-            <input name="middleName" type="text" [(ngModel)]="person.middleName" placeholder="Segundo nombre"
+            <input name="middleName" type="text" maxlength="80" appLetters [(ngModel)]="person.middleName" placeholder="Segundo nombre"
               class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-            <input name="secondLastName" type="text" [(ngModel)]="person.secondLastName" placeholder="Segundo apellido"
+            <input name="secondLastName" type="text" maxlength="80" appLetters [(ngModel)]="person.secondLastName" placeholder="Segundo apellido"
               class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
           </div>
           <div class="grid grid-cols-2 gap-3">
@@ -533,13 +537,16 @@
                 [compact]="true"
                 ariaLabel="Tipo de documento de identidad"
               />
-              <input name="nationalIdNumber" type="text" inputmode="numeric" maxlength="9"
+              <input name="nationalIdNumber" type="text" inputmode="numeric" maxlength="9" appDigits
                 [(ngModel)]="person.nationalIdNumber" placeholder="Documento"
                 class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
             </div>
           </div>
-          <input name="email" type="email" [(ngModel)]="person.email" placeholder="Email"
+          <input name="email" type="email" email #editEmailCtrl="ngModel" [(ngModel)]="person.email" placeholder="Email"
             class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          @if (editEmailCtrl.invalid && editEmailCtrl.touched) {
+            <p class="-mt-2 text-xs font-medium text-primary-700">Correo electrónico no válido.</p>
+          }
           <div class="flex gap-2">
             <app-select
               class="w-20 shrink-0"
@@ -559,11 +566,11 @@
               placeholder="Operadora"
               ariaLabel="Operadora del teléfono"
             />
-            <input name="phoneNumber" type="tel" inputmode="numeric" maxlength="7"
+            <input name="phoneNumber" type="tel" inputmode="numeric" maxlength="7" appDigits
               [(ngModel)]="person.phoneNumber" placeholder="1234567"
               class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
           </div>
-          <textarea name="address" rows="2" maxlength="300" [(ngModel)]="person.address" placeholder="Dirección de domicilio"
+          <textarea name="address" rows="2" maxlength="500" [(ngModel)]="person.address" placeholder="Dirección de domicilio"
             class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
           <div class="space-y-3">
             <app-password-input name="password" [(ngModel)]="person.password" placeholder="Nueva contraseña de app" />
@@ -625,7 +632,7 @@
                 <button type="button" (click)="clearDocFile()" class="shrink-0 text-xs font-medium text-primary-700 hover:underline dark:text-primary-300">Cambiar</button>
               </div>
             } @else {
-              <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-2.5 text-sm text-gray-500 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600">
+              <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 px-3 py-2.5 text-sm text-gray-500 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" /></svg>
                 Adjuntar archivo
                 <input type="file" class="hidden" accept="application/pdf,image/jpeg,image/png" (change)="onDocFileSelected($event)" />
@@ -654,72 +661,83 @@
   @if (renewOpen()) {
     <div class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/60">
       <div class="flex min-h-full items-center justify-center p-4">
-        <div class="w-full max-w-2xl rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800 sm:p-6">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-white">
-          {{ d.subscription?.status === 'expired' ? 'Pagar y reactivar tarifa' : 'Generar pago' }}
-        </h2>
-        <p class="mt-1 text-xs text-gray-400">
-          Se emitirá una factura por cada período. Los períodos vencen a las 00:00.
-          @if (d.subscription?.status === 'expired') {
-            La operación del afiliado se reactiva automáticamente al registrar el pago.
-          }
-        </p>
-
-        <label class="mt-4 block text-sm font-semibold text-gray-900 dark:text-white">
-          Tarifa
-        </label>
-        <app-select
-          class="mt-2 block"
-          [ngModel]="renewPlanId() ?? d.subscription?.planId ?? null"
-          [ngModelOptions]="{ standalone: true }"
-          (ngModelChange)="renewPlanId.set($event === d.subscription?.planId ? null : $event)"
-          [options]="renewPlanOptions()"
-          [disabled]="singleRenewOption()"
-          ariaLabel="Tarifa a renovar o cambiar" />
-        @if (singleRenewOption()) {
-          <p class="mt-1.5 text-xs text-gray-400">Única tarifa disponible.</p>
-        }
-        @if (renewPlanId()) {
-          <p class="mt-2 rounded-lg bg-gold-50 px-3 py-2 text-xs text-gold-800" style="background-color: #fdfaec">
-            @if (d.subscription?.status === 'expired') {
-              La tarifa nueva comienza a correr de inmediato y reactiva la operación.
-            } @else {
-              La tarifa nueva quedará <strong>programada</strong>: comienza cuando se agoten
-              los períodos ya pagados (los adelantos no se reembolsan).
-            }
-          </p>
-        }
-
-        <label for="renew-periods" class="mt-4 block text-sm font-semibold text-gray-900 dark:text-white">
-          Períodos a cobrar
-        </label>
-        <input
-          id="renew-periods" type="number" min="1" max="520"
-          [value]="renewPeriods()"
-          (input)="renewPeriods.set(+$any($event.target).value)"
-          class="mt-2 block w-28 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-        />
-        <label for="renewNote" class="mt-4 block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Motivo / constancia (opcional)
-        </label>
-        <textarea id="renewNote" name="renewNote" rows="2" maxlength="300" [(ngModel)]="renewNote"
-          [ngModelOptions]="{ standalone: true }"
-          placeholder="Ej.: pagó una parte por transferencia y el resto en efectivo"
-          class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
-        <app-payment-capture #renewPc [optional]="false" [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
-        @if (!renewPc.complete()) {
-          <p class="mt-3 text-right text-xs text-gray-400">Completa los datos del pago para poder pagar.</p>
-        }
-        <div class="mt-2 flex justify-end gap-3">
-          <button type="button" (click)="renewOpen.set(false)"
-            class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-            Cancelar
-          </button>
-          <button type="button" (click)="renew()" [disabled]="saving() || renewPeriods() < 1 || !renewPc.complete()"
-            class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
-            {{ saving() ? 'Pagando…' : 'Pagar' }}
-          </button>
-        </div>
+        <div class="w-full max-w-3xl rounded-lg bg-white shadow-lg dark:bg-gray-800">
+          <div class="border-b border-gray-100 px-4 pb-3 pt-4 dark:border-gray-700 sm:px-6 sm:pt-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">
+              {{ d.subscription?.status === 'expired' ? 'Pagar y reactivar tarifa' : 'Generar pago' }}
+            </h2>
+            <p class="mt-1 text-xs text-gray-400">
+              Se emitirá una factura por cada período. Cada semana va de <strong>lunes a lunes</strong>
+              y vence el lunes a las 00:00; se paga por adelantado.
+              @if (d.subscription?.status === 'expired') {
+                La operación del afiliado se reactiva automáticamente al registrar el pago.
+              }
+            </p>
+          </div>
+          <!-- Two columns to keep the modal short: tariff + periods + note · payment -->
+          <div class="grid grid-cols-1 gap-x-6 gap-y-4 px-4 py-4 sm:grid-cols-5 sm:px-6">
+            <div class="space-y-4 sm:col-span-2">
+              <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-900 dark:text-white">Tarifa</label>
+                <app-select
+                  [ngModel]="renewPlanId() ?? d.subscription?.planId ?? null"
+                  [ngModelOptions]="{ standalone: true }"
+                  (ngModelChange)="renewPlanId.set($event === d.subscription?.planId ? null : $event)"
+                  [options]="renewPlanOptions()"
+                  [disabled]="singleRenewOption()"
+                  ariaLabel="Tarifa a renovar o cambiar" />
+                @if (singleRenewOption()) {
+                  <p class="mt-1.5 text-xs text-gray-400">Única tarifa disponible.</p>
+                }
+                @if (renewPlanId()) {
+                  <p class="mt-2 rounded-lg px-3 py-2 text-xs text-gold-800" style="background-color: #fdfaec">
+                    @if (d.subscription?.status === 'expired') {
+                      La tarifa nueva comienza a correr de inmediato y reactiva la operación.
+                    } @else {
+                      La tarifa nueva quedará <strong>programada</strong>: comienza cuando se agoten
+                      los períodos ya pagados (los adelantos no se reembolsan).
+                    }
+                  </p>
+                }
+              </div>
+              <div>
+                <label for="renew-periods" class="mb-1 block text-sm font-semibold text-gray-900 dark:text-white">
+                  Períodos a cobrar
+                </label>
+                <input
+                  id="renew-periods" type="number" min="1" max="520"
+                  [value]="renewPeriods()"
+                  (input)="renewPeriods.set(+$any($event.target).value)"
+                  class="block w-28 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label for="renewNote" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Motivo / constancia (opcional)
+                </label>
+                <textarea id="renewNote" name="renewNote" rows="3" maxlength="1000" [(ngModel)]="renewNote"
+                  [ngModelOptions]="{ standalone: true }"
+                  placeholder="Ej.: pagó una parte por transferencia y el resto en efectivo"
+                  class="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
+              </div>
+            </div>
+            <div class="sm:col-span-3">
+              <app-payment-capture #renewPc [optional]="false" [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
+              @if (!renewPc.complete()) {
+                <p class="mt-3 text-right text-xs text-gray-400">Completa los datos del pago para poder pagar.</p>
+              }
+            </div>
+          </div>
+          <div class="flex justify-end gap-3 border-t border-gray-100 px-4 py-4 dark:border-gray-700 sm:px-6">
+            <button type="button" (click)="renewOpen.set(false)"
+              class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+              Cancelar
+            </button>
+            <button type="button" (click)="renew()" [disabled]="saving() || renewPeriods() < 1 || !renewPc.complete()"
+              class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+              {{ saving() ? 'Pagando…' : 'Pagar' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -752,37 +770,47 @@
   @if (enrollOpen()) {
     <div class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/60">
       <div class="flex min-h-full items-center justify-center p-4">
-        <div class="w-full max-w-2xl rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800 sm:p-6">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-white">Registrar pago</h2>
-        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          Se cobrará la <strong>membresía vigente</strong> (si aún no la pagó) y la
-          <strong>{{ weeklyPlan()?.name }}</strong>. Tras esto podrás <strong>aprobar</strong> al afiliado.
-        </p>
-        @if (weeklyPlan(); as plan) {
-          <label for="enrollWeeks" class="mt-4 block text-sm font-medium text-gray-700 dark:text-gray-300">Semanas a cobrar por adelantado</label>
-          <input id="enrollWeeks" name="enrollWeeks" type="number" min="1" max="520"
-            [ngModel]="enrollPeriods()" (ngModelChange)="enrollPeriods.set(+$event || 1)"
-            class="mt-1 w-28 rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-          <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
-            Total a cobrar: <strong class="text-gray-900 dark:text-white">${{ enrollTotal() }}</strong>
-            <span class="text-xs text-gray-400">
-              (@if (membership() && !d.membershipPayment) { membresía + }{{ enrollPeriods() }} × ${{ plan.priceUsd }})
-            </span>
-          </p>
-        } @else {
-          <p class="mt-4 text-sm text-red-600">No hay una tarifa activa configurada.</p>
-        }
-        <app-payment-capture [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
-        <div class="mt-5 flex justify-end gap-3">
-          <button type="button" (click)="enrollOpen.set(false)"
-            class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-            Cancelar
-          </button>
-          <button type="button" (click)="enroll()" [disabled]="saving() || !weeklyPlan()"
-            class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
-            {{ saving() ? 'Guardando…' : 'Guardar' }}
-          </button>
-        </div>
+        <div class="w-full max-w-3xl rounded-lg bg-white shadow-lg dark:bg-gray-800">
+          <div class="border-b border-gray-100 px-4 pb-3 pt-4 dark:border-gray-700 sm:px-6 sm:pt-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">Registrar pago</h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Se cobrará la <strong>membresía vigente</strong> (si aún no la pagó) y la
+              <strong>{{ weeklyPlan()?.name }}</strong>. Tras esto podrás <strong>aprobar</strong> al afiliado.
+            </p>
+          </div>
+          <div class="grid grid-cols-1 gap-x-6 gap-y-4 px-4 py-4 sm:grid-cols-5 sm:px-6">
+            <div class="space-y-4 sm:col-span-2">
+              @if (weeklyPlan(); as plan) {
+                <div>
+                  <label for="enrollWeeks" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Semanas a cobrar por adelantado</label>
+                  <input id="enrollWeeks" name="enrollWeeks" type="number" min="1" max="520"
+                    [ngModel]="enrollPeriods()" (ngModelChange)="enrollPeriods.set(+$event || 1)"
+                    class="w-28 rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                </div>
+                <p class="text-sm text-gray-600 dark:text-gray-300">
+                  Total a cobrar: <strong class="text-gray-900 dark:text-white">${{ enrollTotal() }}</strong>
+                  <span class="text-xs text-gray-400">
+                    (@if (membership() && !d.membershipPayment) { membresía + }{{ enrollPeriods() }} × ${{ plan.priceUsd }})
+                  </span>
+                </p>
+              } @else {
+                <p class="text-sm text-red-600">No hay una tarifa activa configurada.</p>
+              }
+            </div>
+            <div class="sm:col-span-3">
+              <app-payment-capture [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
+            </div>
+          </div>
+          <div class="flex justify-end gap-3 border-t border-gray-100 px-4 py-4 dark:border-gray-700 sm:px-6">
+            <button type="button" (click)="enrollOpen.set(false)"
+              class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+              Cancelar
+            </button>
+            <button type="button" (click)="enroll()" [disabled]="saving() || !weeklyPlan()"
+              class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+              {{ saving() ? 'Guardando…' : 'Guardar' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -792,56 +820,77 @@
   @if (externalPayOpen()) {
     <div class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/60">
       <div class="flex min-h-full items-center justify-center p-4">
-        <div class="w-full max-w-2xl rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800 sm:p-6">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-white">
-          {{ paySummary()?.isAdvanceOnly ? 'Adelantar pago' : 'Registrar pago' }}
-        </h2>
-        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          @if (paySummary()?.isAdvanceOnly) {
-            Se cobra por adelantado la próxima semana de {{ d.fullName }} y se emite su factura.
-          } @else {
-            Se saldarán <strong>todos los cargos pendientes</strong> de {{ d.fullName }} (deuda y
-            penalización) y se emitirá su factura. El estado se recalcula solo al quedar sin deuda.
-          }
-        </p>
-        @if (paySummary(); as ps) {
-          <div class="mt-4 rounded-lg px-4 py-3" style="background-color: #fdfaec">
-            <div class="flex items-center justify-between gap-4">
-              <div>
-                <p class="text-sm font-bold text-gold-900">Total a pagar</p>
-                <p class="text-xs text-gold-800/80">
-                  {{ ps.weeks }} semana(s) × ${{ ps.pricePerWeek }} = ${{ ps.weeksUsd }}@if (ps.hasPenalty) { · + penalización ${{ ps.penaltyUsd }}}
-                </p>
-              </div>
-              <span class="shrink-0 text-2xl font-extrabold text-gold-900">${{ ps.total }}</span>
-            </div>
-            <ul class="mt-2 space-y-0.5 border-t border-gold-200/60 pt-2 text-xs text-gold-900/90">
-              @for (c of ps.list; track c.id) {
-                <li class="flex justify-between gap-2">
-                  <span>{{ c.kind === 'penalty' ? 'Penalización' : 'Semana de tarifa' }}@if (c.periodStart) { · {{ c.periodStart | date: 'dd/MM' }}–{{ c.periodEnd | date: 'dd/MM' }}}</span>
-                  <span class="font-semibold">${{ c.amountUsd }}</span>
-                </li>
-              }
-            </ul>
+        <div class="w-full max-w-3xl rounded-lg bg-white shadow-lg dark:bg-gray-800">
+          <div class="border-b border-gray-100 px-4 pb-3 pt-4 dark:border-gray-700 sm:px-6 sm:pt-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">Registrar pago</h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Se saldará <strong>toda la deuda</strong> de {{ d.fullName }} (membresía, tarifa y
+              penalización) y se emitirá su factura. El estado se recalcula solo al quedar sin deuda.
+            </p>
           </div>
-        }
-        <label for="extNote" class="mt-4 block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Motivo / constancia (opcional)
-        </label>
-        <textarea id="extNote" name="extNote" rows="2" maxlength="300" [(ngModel)]="externalPayNote"
-          placeholder="Ej.: pago en efectivo recibido por el administrador"
-          class="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
-        <app-payment-capture [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
-        <div class="mt-5 flex justify-end gap-3">
-          <button type="button" (click)="externalPayOpen.set(false)"
-            class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-            Cancelar
-          </button>
-          <button type="button" (click)="registerExternalPayment()" [disabled]="saving()"
-            class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
-            {{ saving() ? 'Registrando…' : 'Registrar pago' }}
-          </button>
-        </div>
+          <!-- Two columns to keep the modal short: summary + note · payment -->
+          <div class="grid grid-cols-1 gap-x-6 gap-y-4 px-4 py-4 sm:grid-cols-5 sm:px-6">
+            <div class="space-y-4 sm:col-span-2">
+              @if (paySummary(); as ps) {
+                <div class="rounded-lg px-4 py-3" style="background-color: #fdfaec">
+                  <div class="flex items-center justify-between gap-4">
+                    <div>
+                      <p class="text-sm font-bold text-gold-900">Total a pagar</p>
+                      <p class="text-xs text-gold-800/80">
+                        @if (ps.hasMembership) { Membresía ${{ ps.membershipDue }}@if (ps.weeks) { · } }
+                        @if (ps.weeks) { {{ ps.weeks }} semana(s) × ${{ ps.pricePerWeek }} = ${{ ps.weeksUsd }} }
+                        @if (ps.hasPenalty) { · + penalización ${{ ps.penaltyUsd }} }
+                      </p>
+                    </div>
+                    <span class="shrink-0 text-2xl font-extrabold text-gold-900">${{ ps.total }}</span>
+                  </div>
+                  <ul class="mt-2 space-y-0.5 border-t border-gold-200/60 pt-2 text-xs text-gold-900/90">
+                    @if (ps.hasMembership) {
+                      <li class="flex justify-between gap-2">
+                        <span>Membresía · pago único</span>
+                        <span class="font-semibold">${{ ps.membershipDue }}</span>
+                      </li>
+                    }
+                    @for (c of ps.list; track c.id) {
+                      <li class="flex justify-between gap-2">
+                        <span>{{ c.kind === 'penalty' ? 'Penalización' : 'Semana de tarifa' }}@if (c.periodStart) { · {{ c.periodStart | date: 'dd/MM' }}–{{ c.periodEnd | date: 'dd/MM' }}}</span>
+                        <span class="font-semibold">${{ c.amountUsd }}</span>
+                      </li>
+                    }
+                  </ul>
+                </div>
+                <!-- Pending driver: the tariff week starts next Monday, not today -->
+                @if (d.status === 'pending' && ps.list[0]?.periodStart; as start) {
+                  <p class="rounded-lg px-3 py-2 text-xs text-gold-900" style="background-color: #fdfaec">
+                    Se paga hoy, pero la <strong>1.ª semana de tarifa</strong> corre del
+                    <strong>{{ start | date: 'dd/MM/yyyy' }}</strong> al {{ ps.list[0]?.periodEnd | date: 'dd/MM/yyyy' }}:
+                    tras aprobarlo, el afiliado <strong>opera desde el lunes {{ start | date: 'dd/MM' }}</strong>, no hoy.
+                  </p>
+                }
+              }
+              <div>
+                <label for="extNote" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Motivo / constancia (opcional)
+                </label>
+                <textarea id="extNote" name="extNote" rows="3" maxlength="1000" [(ngModel)]="externalPayNote"
+                  placeholder="Ej.: pago en efectivo recibido por el administrador"
+                  class="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
+              </div>
+            </div>
+            <div class="sm:col-span-3">
+              <app-payment-capture [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
+            </div>
+          </div>
+          <div class="flex justify-end gap-3 border-t border-gray-100 px-4 py-4 dark:border-gray-700 sm:px-6">
+            <button type="button" (click)="externalPayOpen.set(false)"
+              class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+              Cancelar
+            </button>
+            <button type="button" (click)="registerExternalPayment()" [disabled]="saving()"
+              class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+              {{ saving() ? 'Registrando…' : 'Registrar pago' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>

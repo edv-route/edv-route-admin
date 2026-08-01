@@ -3,6 +3,8 @@ import { FormsModule } from '@angular/forms';
 import type { VehicleType } from '../../core/models/vehicle-type.model';
 import { VehicleTypesApi } from '../vehicle-types/vehicle-types.api';
 import { Select, type SelectOption } from '../../shared/components/select';
+import { INPUT_FILTERS } from '../../shared/directives/input-filters';
+import { vehicleYearOptions } from './vehicle-year';
 import type { DocDraft } from './document-draft-modal';
 
 const MAX_PHOTOS = 3;
@@ -44,7 +46,7 @@ export interface VehicleDraft {
  */
 @Component({
   selector: 'app-vehicle-draft-modal',
-  imports: [FormsModule, Select],
+  imports: [FormsModule, Select, ...INPUT_FILTERS],
   templateUrl: './vehicle-draft-modal.html',
 })
 export class VehicleDraftModal implements OnInit {
@@ -65,6 +67,7 @@ export class VehicleDraftModal implements OnInit {
   private documents: DocDraft[] = [];
 
   readonly maxPhotos = MAX_PHOTOS;
+  readonly yearOptions = vehicleYearOptions();
 
   readonly vehicleTypeOptions = computed<SelectOption[]>(() =>
     this.vehicleTypes().map((t) => ({ value: t.id, label: this.titleCase(t.name) })),

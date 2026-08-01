@@ -20,6 +20,7 @@ import { VehicleTypesApi } from '../vehicle-types/vehicle-types.api';
 import { DatePicker } from '../../shared/components/date-picker';
 import { PasswordInput } from '../../shared/components/password-input';
 import { Select, type SelectOption } from '../../shared/components/select';
+import { INPUT_FILTERS } from '../../shared/directives/input-filters';
 import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
 import { DocumentsApi, validateFile } from '../documents/documents.api';
 import { DriversApi } from './drivers.api';
@@ -52,7 +53,7 @@ interface ConfirmDialog {
 
 @Component({
   selector: 'app-driver-detail',
-  imports: [FormsModule, DatePipe, RouterLink, Select, PasswordInput, DatePicker, PaymentCapture, FileViewer, VehicleForm],
+  imports: [FormsModule, DatePipe, RouterLink, Select, ...INPUT_FILTERS, PasswordInput, DatePicker, PaymentCapture, FileViewer, VehicleForm],
   templateUrl: './driver-detail.html',
 })
 export class DriverDetail {
@@ -132,25 +133,20 @@ export class DriverDetail {
     (this.driver()?.documents ?? []).filter((doc) => doc.appliesTo === 'driver'),
   );
 
+  /** Whether the driver owes money (alta debt, arrears or membership): drives the
+   *  single adaptive payment button and the red debt band. */
+  readonly hasDebt = computed(() => Number(this.driver()?.debt.totalUsd ?? 0) > 0);
+
   /**
-   * What the payment modal settles: overdue debt + penalty + the upcoming (not
-   * yet due) charge, all in one (todo-o-nada). Drives the weeks breakdown, the
-   * per-charge list and the modal heading (advance vs. debt). Null with no driver.
+   * What the debt modal settles: the alta debt (membership + first week), overdue
+   * tariff weeks and the penalty, all in one (todo-o-nada). Drives the breakdown,
+   * the per-line list and the total. Null with no driver.
    */
   readonly paySummary = computed(() => {
     const d = this.driver();
     if (!d) return null;
     const list = [...d.debt.charges];
-    if (d.upcoming) {
-      list.push({
-        id: 'upcoming',
-        kind: 'period' as const,
-        amountUsd: d.upcoming.amountUsd,
-        status: 'pending',
-        periodStart: d.upcoming.periodStart,
-        periodEnd: d.upcoming.periodEnd,
-      });
-    }
+    const membershipDue = Number(d.debt.membershipDue ?? 0);
     const periods = list.filter((c) => c.kind === 'period');
     const weeksUsd = periods.reduce((sum, c) => sum + Number(c.amountUsd), 0);
     const penaltyUsd = list
@@ -159,13 +155,14 @@ export class DriverDetail {
     const pricePerWeek = periods.length ? weeksUsd / periods.length : Number(d.subscription?.priceUsd ?? 0);
     return {
       list,
+      membershipDue: membershipDue.toFixed(2),
+      hasMembership: membershipDue > 0,
       weeks: periods.length,
       pricePerWeek: pricePerWeek.toFixed(2),
       weeksUsd: weeksUsd.toFixed(2),
       penaltyUsd: penaltyUsd.toFixed(2),
       hasPenalty: penaltyUsd > 0,
-      total: (weeksUsd + penaltyUsd).toFixed(2),
-      isAdvanceOnly: d.debt.charges.length === 0 && !!d.upcoming,
+      total: (weeksUsd + penaltyUsd + membershipDue).toFixed(2),
     };
   });
 
@@ -176,6 +173,18 @@ export class DriverDetail {
   readonly isActive = computed(() => {
     const d = this.driver();
     return !!d && d.isAvailable && (d.status === 'approved' || d.status === 'overdue');
+  });
+
+  /**
+   * Start date of a tariff that is paid but NOT in force yet (null otherwise):
+   * an alta paid on any day but Monday buys the week starting NEXT Monday, and
+   * the driver does not operate until then (decision 2026-07-30). The scheduler
+   * flips the subscription to `active` at that moment.
+   */
+  readonly tariffStartsAt = computed<string | null>(() => {
+    const s = this.driver()?.subscription;
+    if (!s || s.status !== 'scheduled' || !s.currentPeriodStart) return null;
+    return new Date(s.currentPeriodStart).getTime() > Date.now() ? s.currentPeriodStart : null;
   });
 
   /** Whole days from today until the prepaid coverage ends; negative = overdue,
@@ -448,7 +457,15 @@ export class DriverDetail {
 
   private paymentMeta() {
     const p = this.payment();
-    return { paymentMethodId: p.paymentMethodId, reference: p.reference, payerBank: p.payerBank };
+    return {
+      paymentMethodId: p.paymentMethodId,
+      reference: p.reference,
+      payerBank: p.payerBank,
+      paidOn: p.paidOn,
+      payerPhone: p.payerPhone,
+      payerId: p.payerId,
+      payerAccount: p.payerAccount,
+    };
   }
 
   /** After a cobro: attach the receipt (if any) to the primary invoice, then finish. */

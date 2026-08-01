@@ -36,11 +36,18 @@ export interface DocumentInput {
   expiresAt?: string | null;
 }
 
-/** Payment details captured at cobro time (v8, Pieza 2); stamped on the invoice. */
+/** Payment details captured at cobro time (v8, Pieza 2 + payer details); stamped on the invoice. */
 export interface PaymentMeta {
   paymentMethodId?: number | null;
   reference?: string | null;
   payerBank?: string | null;
+  /** Date the payer paid (ISO yyyy-MM-dd). */
+  paidOn?: string | null;
+  /** Pago Móvil only: E.164 phone and V/E/J document the payment came from. */
+  payerPhone?: string | null;
+  payerId?: string | null;
+  /** Zelle/Binance only: email or name the payment came from. */
+  payerAccount?: string | null;
 }
 
 /** Response of the transactional registration. */

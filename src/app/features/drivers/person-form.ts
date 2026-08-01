@@ -8,6 +8,16 @@ import type { CreateDriverInput } from './drivers.api';
 /** V = venezolano, E = extranjero, J = jurídico (RIF de empresa). */
 export type NationalIdType = 'V' | 'E' | 'J';
 
+/** Max length of each name part (matches the backend NAME_PATTERN maxLength). */
+export const NAME_MAX_LENGTH = 80;
+/**
+ * Letters (accents/ñ) with single space/hyphen/apostrophe separators between
+ * them — real compound names, never a doubled or edge separator ("Ana--", "-Ana").
+ */
+const NAME_VALID = /^\p{L}+(?:[ '-]\p{L}+)*$/u;
+/** Lenient email shape; the backend re-validates with `format: email`. */
+const EMAIL_VALID = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export const NATIONAL_ID_OPTIONS: SelectOption[] = [
   { value: 'V', label: 'V' },
   { value: 'E', label: 'E' },
@@ -81,11 +91,14 @@ export function maxBirthDate(): string {
   return limit.toISOString().slice(0, 10);
 }
 
-/** "V-12345678" -> parts for editing; null -> defaults. */
+/**
+ * "V-12345678" -> parts for editing. Tolerates a missing type prefix (bare
+ * digits default to V, e.g. a legacy "22198958") and null -> defaults.
+ */
 export function parseNationalId(value: string | null): { type: NationalIdType; number: string } {
-  const match = value?.match(/^([VEJ])-?(\d+)$/i);
+  const match = value?.match(/^([VEJ])?-?(\d+)$/i);
   return match
-    ? { type: match[1]!.toUpperCase() as NationalIdType, number: match[2]! }
+    ? { type: (match[1]?.toUpperCase() as NationalIdType) ?? 'V', number: match[2]! }
     : { type: 'V', number: '' };
 }
 
@@ -116,6 +129,28 @@ export interface ComposeOptions {
 export function composePerson(f: PersonFormFields, opts: ComposeOptions = {}): ComposeResult {
   if (f.firstName.trim().length < 2 || f.lastName.trim().length < 2) {
     return { ok: false, error: 'Primer nombre y primer apellido son obligatorios (mínimo 2 letras).' };
+  }
+
+  // Names: only letters (accents/ñ), space, hyphen and apostrophe, max 80.
+  const names: [string, string][] = [
+    ['Primer nombre', f.firstName],
+    ['Segundo nombre', f.middleName],
+    ['Primer apellido', f.lastName],
+    ['Segundo apellido', f.secondLastName],
+  ];
+  for (const [label, raw] of names) {
+    const value = raw.trim();
+    if (!value) continue; // optional parts may be empty; required ones checked above
+    if (value.length > NAME_MAX_LENGTH) {
+      return { ok: false, error: `${label}: máximo ${NAME_MAX_LENGTH} caracteres.` };
+    }
+    if (!NAME_VALID.test(value)) {
+      return { ok: false, error: `${label}: solo letras, espacios, guion y apóstrofo (sin números ni símbolos).` };
+    }
+  }
+
+  if (f.email.trim() && !EMAIL_VALID.test(f.email.trim())) {
+    return { ok: false, error: 'El correo electrónico no es válido.' };
   }
 
   if (f.birthDate && f.birthDate > maxBirthDate()) {

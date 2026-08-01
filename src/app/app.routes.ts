@@ -78,10 +78,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/trainings/trainings').then((m) => m.Trainings),
       },
       {
-        path: 'audit',
-        loadComponent: () => import('./features/audit/audit-logs').then((m) => m.AuditLogs),
-      },
-      {
         path: 'subscription-plans',
         loadComponent: () =>
           import('./features/subscription-plans/subscription-plans').then(

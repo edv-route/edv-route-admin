@@ -70,7 +70,7 @@
 
   @if (tab() === 'invoices') {
     <div class="flex rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-600 dark:bg-gray-700">
-      @for (opt of [['', 'Todas'], ['issued', 'Emitidas'], ['voided', 'Anuladas']]; track opt[0]) {
+      @for (opt of [['', 'Todas'], ['issued', 'Por cobrar'], ['paid', 'Pagadas'], ['voided', 'Anuladas']]; track opt[0]) {
         <button
           type="button"
           (click)="setInvoiceStatus($any(opt[0]))"
@@ -124,12 +124,13 @@
           <th class="px-4 py-3 font-semibold">Monto</th>
           <th class="px-4 py-3 font-semibold">Estado</th>
           <th class="px-4 py-3 font-semibold">Emitida</th>
+          <th class="px-4 py-3 font-semibold">Pagada</th>
           <th class="px-4 py-3 font-semibold">Pago</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
-          <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Cargando…</td></tr>
+          <tr><td colspan="7" class="px-6 py-8 text-center text-gray-400">Cargando…</td></tr>
         } @else {
           @for (item of invoices(); track item.id) {
             <tr class="border-b border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
@@ -141,22 +142,39 @@
               </td>
               <td class="px-4 py-3 font-medium">${{ item.totalUsd }}</td>
               <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                @if (item.status === 'voided') {
-                  <div class="flex items-center">
-                    <div class="mr-2 h-2.5 w-2.5 rounded-full bg-primary-700 dark:bg-primary-400"></div>
-                    Anulada
-                  </div>
-                  <p class="mt-1 text-xs font-normal text-gray-400">
-                    {{ item.voidedAt | date: 'dd/MM/yyyy' }}@if (item.voidedByName) { · {{ item.voidedByName }}}
-                  </p>
-                } @else {
-                  <div class="flex items-center">
-                    <div class="mr-2 h-2.5 w-2.5 rounded-full bg-green-500"></div>
-                    Emitida
-                  </div>
+                @switch (item.status) {
+                  @case ('voided') {
+                    <div class="flex items-center">
+                      <div class="mr-2 h-2.5 w-2.5 rounded-full bg-primary-700 dark:bg-primary-400"></div>
+                      {{ invoiceStatusLabels.voided }}
+                    </div>
+                    <p class="mt-1 text-xs font-normal text-gray-400">
+                      {{ item.voidedAt | date: 'dd/MM/yyyy' }}@if (item.voidedByName) { · {{ item.voidedByName }}}
+                    </p>
+                  }
+                  @case ('paid') {
+                    <div class="flex items-center">
+                      <div class="mr-2 h-2.5 w-2.5 rounded-full bg-green-500"></div>
+                      {{ invoiceStatusLabels.paid }}
+                    </div>
+                  }
+                  @default {
+                    <div class="flex items-center">
+                      <div class="mr-2 h-2.5 w-2.5 rounded-full bg-gold-500"></div>
+                      {{ invoiceStatusLabels.issued }}
+                    </div>
+                    <p class="mt-1 text-xs font-normal text-gray-400">Por cobrar</p>
+                  }
                 }
               </td>
-              <td class="px-4 py-3">{{ item.issuedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+              <td class="whitespace-nowrap px-4 py-3">{{ item.issuedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+              <td class="whitespace-nowrap px-4 py-3">
+                @if (item.paidAt) {
+                  {{ item.paidAt | date: 'dd/MM/yyyy HH:mm' }}
+                } @else {
+                  <span class="text-gray-300">—</span>
+                }
+              </td>
               <td class="px-4 py-3">
                 @if (item.paymentMethodName) {
                   <p class="text-xs font-medium text-gray-700 dark:text-gray-200">{{ item.paymentMethodName }}</p>
@@ -175,7 +193,7 @@
               </td>
             </tr>
           } @empty {
-            <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Sin resultados.</td></tr>
+            <tr><td colspan="7" class="px-6 py-8 text-center text-gray-400">Sin resultados.</td></tr>
           }
         }
       </tbody>

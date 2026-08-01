@@ -102,6 +102,8 @@ export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
     totalUsd: string;
     weeksOwed: number;
     penaltyCount: number;
+    /** Unpaid membership (alta debt), 0 when none — part of totalUsd. */
+    membershipDue: string;
     /** Debt cap (weeks) before penalization — for the "suspension imminent" warning. */
     capWeeks: number;
     charges: {

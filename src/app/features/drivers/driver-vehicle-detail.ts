@@ -14,8 +14,10 @@ import type { VehicleType } from '../../core/models/vehicle-type.model';
 import { RequirementsApi } from '../requirements/requirements.api';
 import { VehicleTypesApi } from '../vehicle-types/vehicle-types.api';
 import { Select, type SelectOption } from '../../shared/components/select';
+import { INPUT_FILTERS } from '../../shared/directives/input-filters';
 import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
 import { DocumentsApi, validateFile } from '../documents/documents.api';
+import { vehicleYearOptions } from './vehicle-year';
 import { DriversApi } from './drivers.api';
 
 /**
@@ -26,7 +28,7 @@ import { DriversApi } from './drivers.api';
  */
 @Component({
   selector: 'app-driver-vehicle-detail',
-  imports: [FormsModule, RouterLink, Select, FileViewer],
+  imports: [FormsModule, RouterLink, Select, ...INPUT_FILTERS, FileViewer],
   templateUrl: './driver-vehicle-detail.html',
 })
 export class DriverVehicleDetail {
@@ -54,6 +56,7 @@ export class DriverVehicleDetail {
   docRequirementId: number | null = null;
   readonly editOpen = signal(false);
   editForm = { vehicleTypeId: null as number | null, brand: '', model: '', year: null as number | null, color: '', plate: '' };
+  readonly yearOptions = vehicleYearOptions();
   readonly vehicleTypeOptions = computed<SelectOption[]>(() =>
     this.vehicleTypes().map((t) => ({ value: t.id, label: t.name })),
   );

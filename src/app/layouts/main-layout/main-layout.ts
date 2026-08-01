@@ -70,7 +70,6 @@ export class MainLayout {
         { label: 'Requerimientos', route: '/requirements', icon: 'clipboard' },
         { label: 'Documentos', route: '/documents', icon: 'document' },
         { label: 'Capacitaciones', route: '/trainings', icon: 'academic' },
-        { label: 'Auditoría', route: '/audit', icon: 'shield' },
       ],
     },
     {

@@ -146,6 +146,8 @@
             type="text"
             required
             minlength="3"
+            maxlength="80"
+            appLetters
             [(ngModel)]="fullName"
             class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
           />
@@ -159,9 +161,14 @@
             id="ad-email"
             name="email"
             type="email"
+            email
+            #adEmailCtrl="ngModel"
             [(ngModel)]="email"
             class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
           />
+          @if (adEmailCtrl.invalid && adEmailCtrl.touched) {
+            <p class="mt-1 text-xs font-medium text-primary-700">Correo electrónico no válido.</p>
+          }
         </div>
 
         <div>

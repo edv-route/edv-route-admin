@@ -86,12 +86,14 @@
       <form #step1Form="ngForm" class="mt-6 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2" (ngSubmit)="goToStep(2)">
         <div>
           <label for="w-first" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Primer nombre *</label>
-          <input id="w-first" name="firstName" type="text" required minlength="2" #firstNameCtrl="ngModel"
+          <input id="w-first" name="firstName" type="text" required minlength="2" maxlength="80" appLetters
+            #firstNameCtrl="ngModel"
             [(ngModel)]="person.firstName"
             class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
           @if (firstNameCtrl.invalid && firstNameCtrl.touched) {
             <p class="mt-1 text-xs font-medium text-primary-700">
-              {{ firstNameCtrl.errors?.['required'] ? 'El primer nombre es obligatorio.' : 'Mínimo 2 letras.' }}
+              {{ firstNameCtrl.errors?.['required'] ? 'El primer nombre es obligatorio.'
+                : firstNameCtrl.errors?.['letters'] ? 'Solo letras, sin números ni símbolos.' : 'Mínimo 2 letras.' }}
             </p>
           }
         </div>
@@ -99,17 +101,23 @@
           <label for="w-middle" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
             Segundo nombre <span class="font-normal text-gray-400">(opcional)</span>
           </label>
-          <input id="w-middle" name="middleName" type="text" [(ngModel)]="person.middleName"
+          <input id="w-middle" name="middleName" type="text" maxlength="80" appLetters #middleNameCtrl="ngModel"
+            [(ngModel)]="person.middleName"
             class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          @if (middleNameCtrl.invalid && middleNameCtrl.touched) {
+            <p class="mt-1 text-xs font-medium text-primary-700">Solo letras, sin números ni símbolos.</p>
+          }
         </div>
         <div>
           <label for="w-last" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Primer apellido *</label>
-          <input id="w-last" name="lastName" type="text" required minlength="2" #lastNameCtrl="ngModel"
+          <input id="w-last" name="lastName" type="text" required minlength="2" maxlength="80" appLetters
+            #lastNameCtrl="ngModel"
             [(ngModel)]="person.lastName"
             class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
           @if (lastNameCtrl.invalid && lastNameCtrl.touched) {
             <p class="mt-1 text-xs font-medium text-primary-700">
-              {{ lastNameCtrl.errors?.['required'] ? 'El primer apellido es obligatorio.' : 'Mínimo 2 letras.' }}
+              {{ lastNameCtrl.errors?.['required'] ? 'El primer apellido es obligatorio.'
+                : lastNameCtrl.errors?.['letters'] ? 'Solo letras, sin números ni símbolos.' : 'Mínimo 2 letras.' }}
             </p>
           }
         </div>
@@ -117,8 +125,12 @@
           <label for="w-second-last" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
             Segundo apellido <span class="font-normal text-gray-400">(opcional)</span>
           </label>
-          <input id="w-second-last" name="secondLastName" type="text" [(ngModel)]="person.secondLastName"
+          <input id="w-second-last" name="secondLastName" type="text" maxlength="80" appLetters
+            #secondLastCtrl="ngModel" [(ngModel)]="person.secondLastName"
             class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          @if (secondLastCtrl.invalid && secondLastCtrl.touched) {
+            <p class="mt-1 text-xs font-medium text-primary-700">Solo letras, sin números ni símbolos.</p>
+          }
         </div>
 
         <div>
@@ -142,7 +154,7 @@
               ariaLabel="Tipo de documento de identidad (solo V por ahora)"
             />
             <input id="w-ci-number" name="nationalIdNumber" type="text" inputmode="numeric" maxlength="9"
-              required #ciCtrl="ngModel"
+              required appDigits #ciCtrl="ngModel"
               [(ngModel)]="person.nationalIdNumber" placeholder="12345678"
               class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
           </div>
@@ -175,23 +187,30 @@
               ariaLabel="Operadora del teléfono"
             />
             <input id="w-phone-number" name="phoneNumber" type="tel" inputmode="numeric" maxlength="7"
+              appDigits #phoneCtrl="ngModel"
               [(ngModel)]="person.phoneNumber" placeholder="1234567"
               class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
           </div>
+          @if (phoneCtrl.invalid && phoneCtrl.touched) {
+            <p class="mt-1 text-xs font-medium text-primary-700">Solo números.</p>
+          }
         </div>
         <div>
           <label for="w-email" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
             Email <span class="font-normal text-gray-400">(opcional)</span>
           </label>
-          <input id="w-email" name="email" type="email" [(ngModel)]="person.email"
+          <input id="w-email" name="email" type="email" email #emailCtrl="ngModel" [(ngModel)]="person.email"
             class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+          @if (emailCtrl.invalid && emailCtrl.touched) {
+            <p class="mt-1 text-xs font-medium text-primary-700">Correo electrónico no válido.</p>
+          }
         </div>
 
         <div class="sm:col-span-2">
           <label for="w-address" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
             Dirección de domicilio <span class="font-normal text-gray-400">(opcional)</span>
           </label>
-          <textarea id="w-address" name="address" rows="2" maxlength="300" [(ngModel)]="person.address"
+          <textarea id="w-address" name="address" rows="2" maxlength="500" [(ngModel)]="person.address"
             class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
         </div>
 
@@ -292,7 +311,7 @@
            the modal only emits a DocDraft the wizard accumulates. -->
       @if (availableDocRequirements().length > 0) {
         <button type="button" (click)="openAddDocument()"
-          class="mt-5 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-5 text-sm font-semibold text-primary-700 hover:border-primary-400 hover:bg-primary-50 dark:border-gray-600 dark:bg-gray-700/40 dark:text-primary-300 dark:hover:bg-gray-700">
+          class="mt-5 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-gray-300 bg-gray-50 py-5 text-sm font-semibold text-primary-700 hover:border-primary-400 hover:bg-primary-50 dark:border-gray-600 dark:bg-gray-700/40 dark:text-primary-300 dark:hover:bg-gray-700">
           <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
           Agregar documento
         </button>
@@ -370,7 +389,7 @@
                   </ul>
                 }
                 <button type="button" (click)="openAddVehicleDoc(vIdx)"
-                  class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-gray-300 py-2 text-xs font-semibold text-primary-700 hover:border-primary-400 hover:bg-primary-50 dark:border-gray-600 dark:text-primary-300 dark:hover:bg-gray-700">
+                  class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-300 py-2 text-xs font-semibold text-primary-700 hover:border-primary-400 hover:bg-primary-50 dark:border-gray-600 dark:text-primary-300 dark:hover:bg-gray-700">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                   Agregar documento
                 </button>
@@ -383,7 +402,7 @@
       <!-- Add-vehicle tile: opens the draft dialog. Nothing is persisted here;
            the modal only emits a VehicleDraft the wizard accumulates. -->
       <button type="button" (click)="openAddVehicle()"
-        class="mt-5 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-5 text-sm font-semibold text-primary-700 hover:border-primary-400 hover:bg-primary-50 dark:border-gray-600 dark:bg-gray-700/40 dark:text-primary-300 dark:hover:bg-gray-700">
+        class="mt-5 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-gray-300 bg-gray-50 py-5 text-sm font-semibold text-primary-700 hover:border-primary-400 hover:bg-primary-50 dark:border-gray-600 dark:bg-gray-700/40 dark:text-primary-300 dark:hover:bg-gray-700">
         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
         Agregar vehículo
       </button>
@@ -423,7 +442,7 @@
           </button>
         </div>
       } @else {
-        <form class="mt-4 space-y-5" (ngSubmit)="register(true)">
+        <div class="mt-4 space-y-5">
           <!-- Resumen de cobro: membresía + tarifa destacadas y total prominente -->
           <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
             <div class="border-b border-gray-100 bg-gray-50 px-4 py-2.5 dark:border-gray-700 dark:bg-gray-700/30">
@@ -450,18 +469,24 @@
                 </div>
                 <div class="mt-2 flex flex-wrap items-center gap-3">
                   <div class="min-w-[12rem] flex-1">
-                    <app-select name="planId" required [(ngModel)]="planId" [options]="planOptions()"
-                      [disabled]="singlePlan()" placeholder="Selecciona…" ariaLabel="Tarifa" />
+                    <app-select name="planId" required [(ngModel)]="planId" [ngModelOptions]="{ standalone: true }"
+                      [options]="planOptions()" [disabled]="hasPayment()" placeholder="Selecciona…" ariaLabel="Tarifa" />
                   </div>
                   <div class="flex items-center gap-2">
                     <label for="w-periods" class="whitespace-nowrap text-xs font-medium text-gray-500 dark:text-gray-400">Semanas</label>
-                    <input id="w-periods" name="periods" type="number" min="1" max="520" required [(ngModel)]="periods"
-                      class="block w-20 rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                    <input id="w-periods" name="periods" type="text" inputmode="numeric" maxlength="3"
+                      [value]="periodsText" [disabled]="hasPayment()" (focus)="$any($event.target).select()"
+                      (input)="onPeriodsInput($event)" (blur)="onPeriodsBlur()"
+                      class="block w-20 rounded-lg border border-gray-300 bg-gray-50 p-2 text-center text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
                   </div>
                 </div>
                 <p class="mt-1.5 text-xs text-gray-400">
-                  @if (singlePlan()) { Única tarifa disponible. } @else { Elige la tarifa. }
-                  1 semana = tarifa básica; más = adelanto (no reembolsable para operativos).
+                  @if (hasPayment()) {
+                    La tarifa y las semanas quedan fijas: ya agregaste el pago. Quítalo para cambiarlas.
+                  } @else {
+                    @if (singlePlan()) { Única tarifa disponible. } @else { Elige la tarifa. }
+                    1 semana = tarifa básica; más = adelanto (no reembolsable para operativos).
+                  }
                 </p>
               </div>
               <!-- Total -->
@@ -479,25 +504,60 @@
             </div>
           </div>
 
-          <app-payment-capture #pc [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
+          <!-- Payment: captured in the app-payment-draft-modal (nothing persisted here) -->
+          @if (paymentDraft(); as pd) {
+            <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex min-w-0 items-center gap-3">
+                  <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-700 dark:bg-gray-700 dark:text-gold-400">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" /></svg>
+                  </span>
+                  <div class="min-w-0">
+                    <p class="truncate font-semibold text-gray-900 dark:text-white">{{ pd.methodLabel ?? 'Pago registrado' }}</p>
+                    <p class="truncate text-xs text-gray-500 dark:text-gray-400">
+                      @if (pd.reference) { Ref. {{ pd.reference }} }
+                      @if (pd.bankLabel) { · {{ pd.bankLabel }} }
+                      @if (pd.file) { · {{ pd.file.name }} }
+                      @if (!pd.reference && !pd.bankLabel && !pd.file) { Comprobante adjunto }
+                    </p>
+                  </div>
+                </div>
+                <div class="flex shrink-0 items-center gap-3">
+                  <button type="button" (click)="openAddPayment()" class="text-xs font-medium text-primary-700 hover:underline dark:text-primary-300">Editar</button>
+                  <button type="button" (click)="removePayment()" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Quitar</button>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <button type="button" (click)="openAddPayment()" [disabled]="!planId || !periods || periods < 1"
+              class="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-gray-300 bg-gray-50 py-5 text-sm font-semibold text-primary-700 hover:border-primary-400 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-300 disabled:hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700/40 dark:text-primary-300 dark:hover:bg-gray-700">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+              Agregar pago
+            </button>
+          }
 
           <div class="flex flex-wrap items-center justify-between gap-3">
             <button type="button" (click)="goToStep(3)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
             <div class="flex flex-wrap gap-3">
-              <button type="button" (click)="register(false)" [disabled]="saving()"
-                class="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+              <button type="button" (click)="register(false)" [disabled]="saving() || hasPayment()"
+                class="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                 Finalizar sin pago
               </button>
-              <button type="submit" [disabled]="!planId || !pc.complete() || saving()"
-                class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+              <button type="button" (click)="register(true)" [disabled]="!planId || !hasPayment() || saving()"
+                class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-40">
                 {{ saving() ? 'Registrando…' : 'Registrar y facturar' }}
               </button>
             </div>
           </div>
-          @if (!pc.complete()) {
-            <p class="text-right text-xs text-gray-400">Completa los datos del pago para facturar, o usa «Finalizar sin pago».</p>
+          @if (!hasPayment()) {
+            <p class="text-right text-xs text-gray-400">Agrega el pago para facturar, o usa «Finalizar sin pago».</p>
           }
-        </form>
+        </div>
+
+        @if (paymentModalOpen()) {
+          <app-payment-draft-modal [totalUsd]="total()" [initial]="paymentDraft()"
+            (saved)="onPaymentSaved($event)" (cancel)="closePaymentModal()" />
+        }
       }
     }
     @case (5) {

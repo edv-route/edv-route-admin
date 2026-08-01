@@ -56,7 +56,7 @@ export class Billing {
   readonly error = signal<string | null>(null);
   readonly driverName = signal<string | null>(null);
 
-  readonly invoiceStatus = signal<'' | 'issued' | 'voided'>('');
+  readonly invoiceStatus = signal<'' | 'issued' | 'paid' | 'voided'>('');
   readonly paymentKind = signal<'' | 'membership' | 'subscription'>('');
 
   search = '';
@@ -180,7 +180,7 @@ export class Billing {
     this.applyFilters();
   }
 
-  setInvoiceStatus(status: '' | 'issued' | 'voided'): void {
+  setInvoiceStatus(status: '' | 'issued' | 'paid' | 'voided'): void {
     this.invoiceStatus.set(status);
     this.applyFilters();
   }

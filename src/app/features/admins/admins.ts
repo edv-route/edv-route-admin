@@ -3,6 +3,7 @@ import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { concatMap, of } from 'rxjs';
+import { INPUT_FILTERS } from '../../shared/directives/input-filters';
 import type { Admin } from '../../core/models/admin.model';
 import { AuthService } from '../../core/services/auth.service';
 import { AdminsApi } from './admins.api';
@@ -11,7 +12,7 @@ type ModalState = { mode: 'create' } | { mode: 'edit'; item: Admin } | null;
 
 @Component({
   selector: 'app-admins',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, ...INPUT_FILTERS],
   templateUrl: './admins.html',
 })
 export class Admins {

@@ -136,10 +136,35 @@
                 placeholder="Elegir…"
                 [ariaLabel]="field.label"
               />
+            } @else if (field.control === 'idDocument') {
+              <!-- Canonical document control: V/E/J selector + digits, composed as "V-12345678" -->
+              <div class="flex gap-2">
+                <app-select class="w-20 shrink-0"
+                  [name]="field.key + '_type'"
+                  [ngModel]="idType(field.key)"
+                  (ngModelChange)="setIdType(field.key, $event)"
+                  [options]="nationalIdOptions" [compact]="true" [ariaLabel]="field.label + ' — tipo'" />
+                <input type="text" inputmode="numeric" maxlength="9" appDigits
+                  [name]="field.key + '_num'"
+                  [ngModel]="idNumber(field.key)"
+                  (ngModelChange)="setIdNumber(field.key, $event)"
+                  placeholder="12345678"
+                  class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+              </div>
+            } @else if (field.filter === 'digits') {
+              <input
+                type="text" inputmode="numeric" appDigits
+                [name]="field.key"
+                [attr.maxlength]="field.maxLength ?? null"
+                [(ngModel)]="details[field.key]"
+                [placeholder]="field.placeholder ?? ''"
+                class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              />
             } @else {
               <input
                 type="text"
                 [name]="field.key"
+                [attr.maxlength]="field.maxLength ?? null"
                 [(ngModel)]="details[field.key]"
                 [placeholder]="field.placeholder ?? ''"
                 class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"

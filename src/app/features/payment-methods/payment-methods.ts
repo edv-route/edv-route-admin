@@ -2,9 +2,16 @@ import { Component, computed, inject, signal } from '@angular/core';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Select, type SelectOption } from '../../shared/components/select';
+import { INPUT_FILTERS } from '../../shared/directives/input-filters';
+import {
+  NATIONAL_ID_OPTIONS,
+  parseNationalId,
+  type NationalIdType,
+} from '../drivers/person-form';
 import {
   PAYMENT_METHOD_FIELDS,
   PAYMENT_METHOD_TYPE_LABELS,
+  paymentFieldError,
   type PaymentMethod,
   type PaymentMethodField,
   type PaymentMethodType,
@@ -15,11 +22,20 @@ type ModalState = { mode: 'create' } | { mode: 'edit'; item: PaymentMethod } | n
 
 @Component({
   selector: 'app-payment-methods',
-  imports: [FormsModule, Select],
+  imports: [FormsModule, Select, ...INPUT_FILTERS],
   templateUrl: './payment-methods.html',
 })
 export class PaymentMethods {
   private readonly api = inject(PaymentMethodsApi);
+
+  readonly nationalIdOptions = NATIONAL_ID_OPTIONS;
+  /**
+   * Local V/E/J + number parts for each `idDocument` field, kept apart from
+   * `details` (which stores the composed "V-12345678") so the selected type
+   * survives while the number is being typed. Re-seeded from `details` whenever
+   * the modal opens or the type changes.
+   */
+  private idParts: Record<string, { type: NationalIdType; number: string }> = {};
 
   readonly items = signal<PaymentMethod[]>([]);
   readonly loading = signal(true);
@@ -71,6 +87,7 @@ export class PaymentMethods {
     this.name = '';
     this.type.set('');
     this.details = {};
+    this.seedIdParts();
     this.error.set(null);
     this.modal.set({ mode: 'create' });
   }
@@ -79,6 +96,7 @@ export class PaymentMethods {
     this.name = item.name;
     this.type.set(item.type);
     this.details = { ...item.details };
+    this.seedIdParts();
     this.error.set(null);
     this.modal.set({ mode: 'edit', item });
   }
@@ -86,6 +104,43 @@ export class PaymentMethods {
   onTypeChange(value: string | number | null): void {
     this.type.set((value as PaymentMethodType) || '');
     this.details = {}; // fields differ per type: start clean
+    this.seedIdParts();
+  }
+
+  /** (Re)builds the V/E/J + number parts of every idDocument field from `details`. */
+  private seedIdParts(): void {
+    this.idParts = {};
+    for (const field of this.currentFields()) {
+      if (field.control === 'idDocument') {
+        this.idParts[field.key] = parseNationalId(this.details[field.key] ?? null);
+      }
+    }
+  }
+
+  idType(key: string): NationalIdType {
+    return this.idParts[key]?.type ?? 'V';
+  }
+
+  idNumber(key: string): string {
+    return this.idParts[key]?.number ?? '';
+  }
+
+  setIdType(key: string, type: NationalIdType): void {
+    const part = (this.idParts[key] ??= { type: 'V', number: '' });
+    part.type = type;
+    this.syncId(key);
+  }
+
+  setIdNumber(key: string, num: string): void {
+    const part = (this.idParts[key] ??= { type: 'V', number: '' });
+    part.number = (num ?? '').replace(/\D/g, '');
+    this.syncId(key);
+  }
+
+  /** Composes "V-12345678" into details, or '' while the number is empty. */
+  private syncId(key: string): void {
+    const part = this.idParts[key]!;
+    this.details[key] = part.number ? `${part.type}-${part.number}` : '';
   }
 
   closeModal(): void {
@@ -97,12 +152,19 @@ export class PaymentMethods {
     const type = this.type();
     if (!state || !type || this.saving()) return;
 
-    const missing = PAYMENT_METHOD_FIELDS[type].filter(
-      (f) => f.required && !(this.details[f.key] ?? '').trim(),
-    );
+    const fields = PAYMENT_METHOD_FIELDS[type];
+    const missing = fields.filter((f) => f.required && !(this.details[f.key] ?? '').trim());
     if (!this.name.trim() || missing.length > 0) {
       this.error.set('Completa el nombre y los campos obligatorios.');
       return;
+    }
+    // Format checks (email, cédula) — same rules the backend enforces.
+    for (const field of fields) {
+      const problem = paymentFieldError(field, this.details[field.key] ?? '');
+      if (problem) {
+        this.error.set(problem);
+        return;
+      }
     }
 
     this.saving.set(true);

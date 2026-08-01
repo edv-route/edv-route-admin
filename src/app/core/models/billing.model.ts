@@ -1,4 +1,8 @@
-export type InvoiceStatus = 'issued' | 'voided';
+/**
+ * Derived by the API from the invoice's charges: `issued` = emitted but still
+ * owed (debt invoice), `paid` = every charge settled, `voided` = annulled.
+ */
+export type InvoiceStatus = 'issued' | 'paid' | 'voided';
 export type PaymentKind = 'membership' | 'subscription';
 export type PaymentStatus = 'pending' | 'paid' | 'refunded';
 
@@ -8,6 +12,8 @@ export interface InvoiceListItem {
   totalUsd: string;
   status: InvoiceStatus;
   issuedAt: string;
+  /** Settlement date (max paid_at of its charges); null unless fully paid. */
+  paidAt: string | null;
   voidedAt: string | null;
   driverId: string;
   driverName: string;
@@ -16,6 +22,11 @@ export interface InvoiceListItem {
   paymentMethodName: string | null;
   paymentReference: string | null;
   payerBank: string | null;
+  /** Payer details (2026-07-31): date paid, phone/id (Pago Móvil), email/name (Zelle/Binance). */
+  paidOn: string | null;
+  payerPhone: string | null;
+  payerId: string | null;
+  payerAccount: string | null;
   hasProof: boolean;
 }
 
@@ -48,6 +59,7 @@ export interface PaymentList {
 
 export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
   issued: 'Emitida',
+  paid: 'Pagada',
   voided: 'Anulada',
 };
 

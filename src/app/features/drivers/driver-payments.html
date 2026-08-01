@@ -119,6 +119,30 @@
                 <dt class="text-gray-500 dark:text-gray-400">Banco emisor</dt>
                 <dd class="break-all text-right text-gray-800 dark:text-gray-200">{{ inv.payerBank ?? '—' }}</dd>
               </div>
+              @if (inv.paidOn) {
+                <div class="flex justify-between gap-3">
+                  <dt class="text-gray-500 dark:text-gray-400">Fecha del pago</dt>
+                  <dd class="text-right text-gray-800 dark:text-gray-200">{{ inv.paidOn | date: 'dd/MM/yyyy' }}</dd>
+                </div>
+              }
+              @if (inv.payerPhone) {
+                <div class="flex justify-between gap-3">
+                  <dt class="text-gray-500 dark:text-gray-400">Teléfono del pagador</dt>
+                  <dd class="break-all text-right text-gray-800 dark:text-gray-200">{{ inv.payerPhone }}</dd>
+                </div>
+              }
+              @if (inv.payerId) {
+                <div class="flex justify-between gap-3">
+                  <dt class="text-gray-500 dark:text-gray-400">Cédula del pagador</dt>
+                  <dd class="break-all text-right text-gray-800 dark:text-gray-200">{{ inv.payerId }}</dd>
+                </div>
+              }
+              @if (inv.payerAccount) {
+                <div class="flex justify-between gap-3">
+                  <dt class="text-gray-500 dark:text-gray-400">Correo / nombre del pagador</dt>
+                  <dd class="break-all text-right text-gray-800 dark:text-gray-200">{{ inv.payerAccount }}</dd>
+                </div>
+              }
             </dl>
 
             @if (inv.hasProof) {

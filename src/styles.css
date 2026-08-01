@@ -165,3 +165,58 @@
     appearance: textfield;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Form-field surfaces. Editable text fields read WHITE so they clearly look
+ * active, no longer washed-out like a disabled control; disabled fields stay
+ * gray; invalid-touched fields keep the brand-red tint (declared last so it
+ * wins over the white). Unlayered on purpose: these must beat the bg-gray-*
+ * utilities on the inputs (@layer utilities), which @layer base cannot. The
+ * `:where()` keeps the editable selector at low specificity so invalid wins.
+ * Applies to every current and future field of the panel.
+ * ------------------------------------------------------------------------- */
+/* Slightly thicker border (1px -> 1.5px) so the fields feel more defined. */
+input:where([type="text"], [type="email"], [type="tel"], [type="number"], [type="password"], [type="search"], [type="date"], [type="url"]),
+textarea,
+app-select button {
+  border-width: 1.5px;
+}
+/* Uniform field height so every row lines up: the canonical 42px on every
+   single-line control (native inputs + the custom select trigger; the
+   date-picker and password-input already render at 42px). Textarea is excluded
+   — it grows with its rows. Applies to every current and future field. */
+input:where([type="text"], [type="email"], [type="tel"], [type="number"], [type="password"], [type="search"], [type="date"], [type="url"]),
+app-select button {
+  height: 42px;
+}
+input:where([type="text"], [type="email"], [type="tel"], [type="number"], [type="password"], [type="search"], [type="date"], [type="url"]):not(:disabled),
+textarea:not(:disabled) {
+  background-color: #ffffff;
+  border-color: #9ca3af; /* gray-400 — a bit darker so the field is well defined */
+}
+.dark input:where([type="text"], [type="email"], [type="tel"], [type="number"], [type="password"], [type="search"], [type="date"], [type="url"]):not(:disabled),
+.dark textarea:not(:disabled) {
+  background-color: #374151; /* gray-700 */
+  border-color: #6b7280; /* gray-500 */
+}
+input:disabled,
+textarea:disabled {
+  background-color: #f3f4f6; /* gray-100 */
+}
+.dark input:disabled,
+.dark textarea:disabled {
+  background-color: #1f2937; /* gray-800 */
+}
+/* Focus keeps the brand-red border (declared after editable so it wins). */
+input:where([type="text"], [type="email"], [type="tel"], [type="number"], [type="password"], [type="search"], [type="date"], [type="url"]):focus,
+textarea:focus {
+  border-color: var(--color-primary-700);
+}
+input.ng-invalid.ng-touched,
+textarea.ng-invalid.ng-touched,
+app-password-input.ng-invalid.ng-touched input,
+app-date-picker.ng-invalid.ng-touched input,
+app-select.ng-invalid.ng-touched button {
+  background-color: var(--color-primary-50);
+  border-color: var(--color-primary-600);
+}

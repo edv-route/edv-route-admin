@@ -6,6 +6,8 @@ import { catchError, map, switchMap } from 'rxjs/operators';
 import type { VehicleType } from '../../core/models/vehicle-type.model';
 import { VehicleTypesApi } from '../vehicle-types/vehicle-types.api';
 import { Select, type SelectOption } from '../../shared/components/select';
+import { INPUT_FILTERS } from '../../shared/directives/input-filters';
+import { vehicleYearOptions } from './vehicle-year';
 import { DriversApi } from './drivers.api';
 
 const MAX_PHOTOS = 3;
@@ -26,7 +28,7 @@ interface PhotoDraft {
  */
 @Component({
   selector: 'app-vehicle-form',
-  imports: [FormsModule, Select],
+  imports: [FormsModule, Select, ...INPUT_FILTERS],
   templateUrl: './vehicle-form.html',
 })
 export class VehicleForm {
@@ -41,6 +43,7 @@ export class VehicleForm {
   readonly error = signal<string | null>(null);
 
   vehicleForm = { vehicleTypeId: null as number | null, brand: '', model: '', year: null as number | null, color: '', plate: '' };
+  readonly yearOptions = vehicleYearOptions();
 
   readonly photos = signal<PhotoDraft[]>([]);
   readonly maxPhotos = MAX_PHOTOS;

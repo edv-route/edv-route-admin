@@ -15,7 +15,6 @@ import { RequirementsApi } from '../requirements/requirements.api';
 import { DocumentsApi } from './documents.api';
 
 const PAGE_SIZE = 20;
-const WARNING_DAYS = 30;
 
 @Component({
   selector: 'app-documents',
@@ -33,7 +32,6 @@ export class Documents {
   readonly error = signal<string | null>(null);
   readonly requirements = signal<Requirement[]>([]);
   readonly statusFilter = signal<DocumentStatus | ''>('');
-  readonly expiringOnly = signal(false);
   /** File shown in the modal viewer (null = closed). */
   readonly viewer = signal<FileViewerState | null>(null);
 
@@ -50,7 +48,6 @@ export class Documents {
   search = '';
 
   readonly pageSize = PAGE_SIZE;
-  readonly warningDays = WARNING_DAYS;
 
   constructor(requirementsApi: RequirementsApi) {
     requirementsApi.list().subscribe((reqs) => this.requirements.set(reqs));
@@ -62,7 +59,7 @@ export class Documents {
   }
 
   get hasActiveFilters(): boolean {
-    return !!(this.statusFilter() || this.expiringOnly() || this.requirementId || this.search);
+    return !!(this.statusFilter() || this.requirementId || this.search);
   }
 
   load(): void {
@@ -72,7 +69,6 @@ export class Documents {
         ...(this.statusFilter() ? { status: this.statusFilter() } : {}),
         ...(this.requirementId ? { requirementId: Number(this.requirementId) } : {}),
         ...(this.search.trim() ? { search: this.search.trim() } : {}),
-        ...(this.expiringOnly() ? { expiringDays: WARNING_DAYS } : {}),
         page: this.page(),
         limit: PAGE_SIZE,
       })
@@ -93,14 +89,6 @@ export class Documents {
 
   setStatus(status: DocumentStatus | ''): void {
     this.statusFilter.set(status);
-    // "Expiring" is a subset of valid documents; a status filter replaces it.
-    if (status) this.expiringOnly.set(false);
-    this.applyFilters();
-  }
-
-  toggleExpiring(): void {
-    this.expiringOnly.set(!this.expiringOnly());
-    if (this.expiringOnly()) this.statusFilter.set('');
     this.applyFilters();
   }
 
@@ -111,7 +99,6 @@ export class Documents {
 
   clearFilters(): void {
     this.statusFilter.set('');
-    this.expiringOnly.set(false);
     this.requirementId = '';
     this.search = '';
     this.applyFilters();
@@ -138,13 +125,5 @@ export class Documents {
             (err.error as { message?: string } | null)?.message ?? 'Error de conexión con la API',
         }),
     });
-  }
-
-  /** Valid document whose expiry falls within the warning window. */
-  isExpiringSoon(item: DocumentListItem): boolean {
-    if (item.status !== 'valid' || !item.expiresAt) return false;
-    const limit = new Date();
-    limit.setDate(limit.getDate() + WARNING_DAYS);
-    return new Date(item.expiresAt) <= limit;
   }
 }

@@ -8,19 +8,11 @@ import {
   viewChild,
 } from '@angular/core';
 import type { HttpErrorResponse } from '@angular/common/http';
-import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import ApexCharts from 'apexcharts';
-import {
-  AUDIT_ENTITY_LABELS,
-  AUDIT_EVENT_LABELS,
-  type AuditLogItem,
-} from '../../core/models/audit-log.model';
 import type { DashboardSummary, StatTrend } from '../../core/models/dashboard.model';
-import { AuditLogsApi } from '../audit/audit-logs.api';
 import { DashboardApi, type RevenueSeriesPoint } from './dashboard.api';
 
-const FEED_SIZE = 8;
 const REVENUE_DAYS = 30;
 /** EDV brand values (styles.css); ApexCharts needs concrete color strings. */
 const BRAND_RED = '#920606';
@@ -28,16 +20,14 @@ const BRAND_GOLD = '#ebca54';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [DatePipe, RouterLink],
+  imports: [RouterLink],
   templateUrl: './dashboard.html',
 })
 export class Dashboard {
   private readonly api = inject(DashboardApi);
-  private readonly auditApi = inject(AuditLogsApi);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly summary = signal<DashboardSummary | null>(null);
-  readonly feed = signal<AuditLogItem[]>([]);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
 
@@ -61,10 +51,6 @@ export class Dashboard {
         );
       },
     });
-    this.auditApi
-      .list({ page: 1, limit: FEED_SIZE })
-      .subscribe((result) => this.feed.set(result.items));
-
     this.api.revenueSeries(REVENUE_DAYS).subscribe({
       next: (points) => {
         this.revenuePoints.set(points);
@@ -91,7 +77,7 @@ export class Dashboard {
     return {
       chart: {
         type: 'area',
-        height: 190,
+        height: 230,
         fontFamily: 'Montserrat, sans-serif',
         toolbar: { show: false },
         zoom: { enabled: false },
@@ -145,24 +131,6 @@ export class Dashboard {
       s.drivers.overdue > 0 ||
       s.drivers.penalized > 0
     );
-  }
-
-  eventLabel(eventType: string): string {
-    return AUDIT_EVENT_LABELS[eventType] ?? eventType;
-  }
-
-  /** Who/what the feed line is about: driver name when resolved, entity otherwise. */
-  feedSubject(item: AuditLogItem): string {
-    if (item.driverName) return item.driverName;
-    const entity = AUDIT_ENTITY_LABELS[item.entity] ?? item.entity;
-    const name = item.data?.['name'];
-    return typeof name === 'string' ? `${entity} «${name}»` : entity;
-  }
-
-  /** Initials for the feed avatar chip (Pro list pattern). */
-  subjectInitials(item: AuditLogItem): string {
-    const parts = this.feedSubject(item).trim().split(/\s+/);
-    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
   }
 
   /**

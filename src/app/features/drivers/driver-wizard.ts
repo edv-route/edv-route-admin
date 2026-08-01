@@ -19,11 +19,12 @@ import {
   PasswordPolicyDirective,
   passwordPolicyErrors,
 } from '../../shared/directives/password-policy.directive';
+import { INPUT_FILTERS } from '../../shared/directives/input-filters';
 import { DocumentsApi } from '../documents/documents.api';
 import { DriversApi, type CreateDriverInput } from './drivers.api';
-import { PaymentCapture, type PaymentCaptureValue, emptyPaymentCapture } from './payment-capture';
 import { VehicleDraftModal, type VehicleDraft } from './vehicle-draft-modal';
 import { DocumentDraftModal, type DocDraft } from './document-draft-modal';
+import { PaymentDraftModal, type PaymentDraft } from './payment-draft-modal';
 import {
   NATIONAL_ID_OPTIONS,
   PHONE_COUNTRY_OPTIONS,
@@ -43,7 +44,7 @@ import {
  */
 @Component({
   selector: 'app-driver-wizard',
-  imports: [FormsModule, RouterLink, Select, PasswordInput, DatePicker, PasswordPolicyDirective, PaymentCapture, VehicleDraftModal, DocumentDraftModal],
+  imports: [FormsModule, RouterLink, Select, PasswordInput, DatePicker, PasswordPolicyDirective, ...INPUT_FILTERS, VehicleDraftModal, DocumentDraftModal, PaymentDraftModal],
   templateUrl: './driver-wizard.html',
 })
 export class DriverWizard {
@@ -132,10 +133,24 @@ export class DriverWizard {
       .map((d) => d.requirementId);
   });
 
-  // Step 4: payment
+  // Step 4: payment (captured in the app-payment-draft-modal dialog; one payment).
   planId: number | null = null;
-  periods = 1;
-  readonly payment = signal<PaymentCaptureValue>(emptyPaymentCapture());
+  /**
+   * The "Semanas" field is text-backed so it can be emptied while typing; the
+   * canonical count is the `periods` getter, which reads blank/invalid as 1.
+   * The field snaps back to "1" on blur (see onPeriodsBlur).
+   */
+  periodsText = '1';
+
+  /** Canonical weeks count: blank or out-of-range reads as 1, capped at 999. */
+  get periods(): number {
+    const n = parseInt(this.periodsText, 10);
+    return Number.isFinite(n) && n >= 1 ? Math.min(999, n) : 1;
+  }
+  readonly paymentModalOpen = signal(false);
+  readonly paymentDraft = signal<PaymentDraft | null>(null);
+  /** Whether a payment was added: gates the two final buttons (mutually exclusive). */
+  readonly hasPayment = computed(() => this.paymentDraft() !== null);
 
   readonly driverRequirements = computed(() =>
     this.requirements().filter((r) => r.active && r.appliesTo === 'driver'),
@@ -168,6 +183,21 @@ export class DriverWizard {
     const p = this.selectedPlan();
     if (!m || !p) return null;
     return (Number(m.priceUsd) + Number(p.priceUsd) * this.periods).toFixed(2);
+  }
+
+  /** Digits-only, up to 3 chars, leading zeros stripped. May be left BLANK while
+   *  typing (so the user can clear it); the canonical `periods` reads blank as 1. */
+  onPeriodsInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const digits = input.value.replace(/\D/g, '').slice(0, 3).replace(/^0+/, '');
+    this.periodsText = digits;
+    if (input.value !== digits) input.value = digits;
+  }
+
+  /** On leaving the field, an empty/invalid value snaps back to "1". */
+  onPeriodsBlur(): void {
+    if (!this.periodsText || this.periods < 1) this.periodsText = '1';
+    else this.periodsText = String(this.periods);
   }
 
   constructor(requirementsApi: RequirementsApi, vehicleTypesApi: VehicleTypesApi) {
@@ -348,6 +378,28 @@ export class DriverWizard {
     );
   }
 
+  // --- Step 4: payment (captured in the app-payment-draft-modal dialog) ---
+
+  openAddPayment(): void {
+    this.error.set(null);
+    this.paymentModalOpen.set(true);
+  }
+
+  closePaymentModal(): void {
+    this.paymentModalOpen.set(false);
+  }
+
+  /** Holds the emitted payment draft (add or edit) and closes the dialog. */
+  onPaymentSaved(draft: PaymentDraft): void {
+    this.paymentDraft.set(draft);
+    this.closePaymentModal();
+    this.error.set(null);
+  }
+
+  removePayment(): void {
+    this.paymentDraft.set(null);
+  }
+
   /**
    * Final submit: creates the driver with its vehicles, documents and (when
    * chosen) the payment in a single transaction, then uploads the document
@@ -359,15 +411,19 @@ export class DriverWizard {
       this.step.set(1);
       return;
     }
-    const pay = this.payment();
+    const draft = this.paymentDraft();
     const payment =
-      withPayment && this.planId
+      withPayment && this.planId && draft
         ? {
             planId: this.planId,
             periods: this.periods,
-            paymentMethodId: pay.paymentMethodId,
-            reference: pay.reference,
-            payerBank: pay.payerBank,
+            paymentMethodId: draft.paymentMethodId,
+            reference: draft.reference,
+            payerBank: draft.payerBank,
+            paidOn: draft.paidOn,
+            payerPhone: draft.payerPhone,
+            payerId: draft.payerId,
+            payerAccount: draft.payerAccount,
           }
         : null;
     const vehicleDrafts = this.vehicles();
@@ -427,9 +483,9 @@ export class DriverWizard {
             });
           });
           // Payment receipt (best-effort, attached to the primary invoice).
-          if (payment && pay.file && result.primaryInvoiceId) {
+          if (payment && draft?.file && result.primaryInvoiceId) {
             uploads.push(
-              this.api.uploadInvoiceProof(result.primaryInvoiceId, pay.file).pipe(
+              this.api.uploadInvoiceProof(result.primaryInvoiceId, draft.file).pipe(
                 map(() => true),
                 catchError(() => of(false)),
               ),

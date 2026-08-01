@@ -24,22 +24,21 @@
           </div>
           <div>
             <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Marca</label>
-            <input name="brand" type="text" [(ngModel)]="vehicleForm.brand" placeholder="Toyota"
+            <input name="brand" type="text" maxlength="60" appAlnumDash [(ngModel)]="vehicleForm.brand" placeholder="Toyota"
               class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm capitalize text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
           </div>
           <div>
             <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Modelo</label>
-            <input name="model" type="text" [(ngModel)]="vehicleForm.model" placeholder="Corolla"
+            <input name="model" type="text" maxlength="60" appAlnumDash [(ngModel)]="vehicleForm.model" placeholder="Corolla"
               class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm capitalize text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
           </div>
           <div>
             <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Año</label>
-            <input name="year" type="number" min="1950" max="2100" [(ngModel)]="vehicleForm.year" placeholder="2020"
-              class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            <app-select name="year" [(ngModel)]="vehicleForm.year" [options]="yearOptions" placeholder="Sin definir" ariaLabel="Año del vehículo" />
           </div>
           <div>
             <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Color</label>
-            <input name="color" type="text" [(ngModel)]="vehicleForm.color" placeholder="Gris"
+            <input name="color" type="text" maxlength="30" appLetters [(ngModel)]="vehicleForm.color" placeholder="Gris"
               class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm capitalize text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
           </div>
           <div class="sm:col-span-2">

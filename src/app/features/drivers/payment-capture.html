@@ -19,16 +19,55 @@
   </div>
   <div>
     <label for="payRef" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Referencia</label>
-    <input id="payRef" type="text" [ngModel]="value().reference" (ngModelChange)="setReference($event)"
+    <input id="payRef" type="text" maxlength="25" appAlnum [ngModel]="value().reference" (ngModelChange)="setReference($event)"
       [ngModelOptions]="{ standalone: true }" placeholder="N° de referencia / confirmación"
       class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
   </div>
   <div>
-    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Banco emisor</label>
-    <app-select [options]="bankOptions" [ngModel]="value().payerBank"
-      (ngModelChange)="setBank($event)" [ngModelOptions]="{ standalone: true }"
-      placeholder="Elegir banco…" ariaLabel="Banco emisor" />
+    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Fecha del pago</label>
+    <app-date-picker [max]="today" [ngModel]="value().paidOn" (ngModelChange)="setPaidOn($event)"
+      [ngModelOptions]="{ standalone: true }" placeholder="dd/mm/aaaa" />
   </div>
+
+  <!-- Zelle / Binance: the email or name the payment came from -->
+  @if (needsPayerAccount()) {
+    <div class="sm:col-span-2">
+      <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Correo o nombre del pagador</label>
+      <input type="text" maxlength="100" [ngModel]="value().payerAccount" (ngModelChange)="setPayerAccount($event)"
+        [ngModelOptions]="{ standalone: true }" placeholder="correo@ejemplo.com o nombre de quien pagó"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+    </div>
+  }
+
+  <!-- Banco emisor: only the local-bank methods (transfer / Pago Móvil) -->
+  @if (needsPayerBank()) {
+    <div>
+      <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Banco emisor</label>
+      <app-select [options]="bankOptions" [ngModel]="value().payerBank"
+        (ngModelChange)="setBank($event)" [ngModelOptions]="{ standalone: true }"
+        placeholder="Elegir banco…" ariaLabel="Banco emisor" />
+    </div>
+  }
+
+  <!-- Pago Móvil only: payer document (beside the bank) + full-width phone -->
+  @if (needsPayerDetails()) {
+    <div>
+      <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Cédula del pagador</label>
+      <div class="flex gap-2">
+        <app-select class="w-16 shrink-0" [(ngModel)]="payerIdType" (ngModelChange)="setPayerId()"
+          [ngModelOptions]="{ standalone: true }" [options]="nationalIdOptions" [compact]="true" ariaLabel="Tipo de documento del pagador" />
+        <input type="text" inputmode="numeric" maxlength="9" appDigits [(ngModel)]="payerIdNumber"
+          (ngModelChange)="setPayerId()" [ngModelOptions]="{ standalone: true }" placeholder="12345678"
+          class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+      </div>
+    </div>
+    <div class="sm:col-span-2">
+      <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Teléfono del pagador</label>
+      <input type="tel" inputmode="numeric" maxlength="11" appDigits [(ngModel)]="payerPhoneNumber"
+        (ngModelChange)="setPayerPhone()" [ngModelOptions]="{ standalone: true }" placeholder="Ej.: 04121234567"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+    </div>
+  }
   <div class="sm:col-span-2">
     <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Comprobante (imagen o PDF)</label>
     <!-- Native input stays hidden; the labels below trigger it via `for` -->

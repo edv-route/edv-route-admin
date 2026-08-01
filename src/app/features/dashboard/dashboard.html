@@ -115,8 +115,8 @@
 </section>
 
 <!-- Revenue (two-thirds: total + trend + compact area chart) beside the alerts -->
-<section class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-  <div class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-5 lg:col-span-2">
+<section class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-5">
+  <div class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-5 lg:col-span-3">
     <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
       <div class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
         <h2 class="text-3xl font-bold leading-none text-primary-700 dark:text-gold-400">${{ revenueTotal() }}</h2>
@@ -156,7 +156,7 @@
     <div #revenueChart class="mt-1"></div>
   </div>
 
-  <div class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-5">
+  <div class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-5 lg:col-span-2">
     <h2 class="mb-4 text-lg font-bold leading-none text-gray-900 dark:text-white">Alertas</h2>
     @if (summary(); as s) {
       @if (hasAlerts) {
@@ -242,57 +242,6 @@
     } @else {
       <div class="flex h-44 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
         <p class="text-sm text-gray-400 dark:text-gray-500">{{ loading() ? 'Cargando…' : 'Sin datos' }}</p>
-      </div>
-    }
-  </div>
-</section>
-
-<!-- Activity feed, full width (Pro list-card pattern) -->
-<section class="mt-4">
-  <div class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-5">
-    <div class="mb-4 flex items-center justify-between">
-      <h2 class="text-lg font-bold leading-none text-gray-900 dark:text-white">Actividad reciente</h2>
-      <a
-        routerLink="/audit"
-        class="inline-flex items-center rounded-lg p-1.5 text-sm font-medium text-primary-700 hover:bg-gray-100 dark:text-primary-300 dark:hover:bg-gray-700"
-      >
-        Ver toda la auditoría
-      </a>
-    </div>
-    @if (feed().length > 0) {
-      <ul role="list" class="divide-y divide-gray-200 dark:divide-gray-700">
-        @for (item of feed(); track item.id) {
-          <li class="py-3 sm:py-3.5">
-            <div class="flex items-center gap-3">
-              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700 dark:bg-gray-700 dark:text-gold-400">
-                {{ subjectInitials(item) }}
-              </span>
-              <div class="min-w-0 flex-1">
-                <p class="truncate text-sm font-medium text-gray-900 dark:text-white">
-                  {{ eventLabel(item.eventType) }}
-                  <span class="font-normal text-gray-400"> · </span>
-                  @if (item.driverId) {
-                    <a [routerLink]="['/drivers', item.driverId]" class="font-medium text-primary-700 hover:underline dark:text-primary-300">
-                      {{ feedSubject(item) }}
-                    </a>
-                  } @else {
-                    <span class="font-normal">{{ feedSubject(item) }}</span>
-                  }
-                </p>
-                <p class="truncate text-sm text-gray-500 dark:text-gray-400">
-                  {{ item.actorType === 'system' ? 'Sistema' : (item.actorName ?? '—') }}
-                </p>
-              </div>
-              <span class="shrink-0 text-sm text-gray-500 dark:text-gray-400">
-                {{ item.createdAt | date: 'dd/MM HH:mm' }}
-              </span>
-            </div>
-          </li>
-        }
-      </ul>
-    } @else {
-      <div class="flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
-        <p class="text-sm text-gray-400 dark:text-gray-500">Aún no hay actividad registrada.</p>
       </div>
     }
   </div>
