@@ -17,17 +17,29 @@
       </dl>
     }
   </div>
-  <div>
-    <label for="payRef" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Referencia</label>
-    <input id="payRef" type="text" maxlength="25" appAlnum [ngModel]="value().reference" (ngModelChange)="setReference($event)"
-      [ngModelOptions]="{ standalone: true }" placeholder="N° de referencia / confirmación"
-      class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-  </div>
+  @if (!isCash()) {
+    <div>
+      <label for="payRef" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Referencia</label>
+      <input id="payRef" type="text" maxlength="25" appAlnum [ngModel]="value().reference" (ngModelChange)="setReference($event)"
+        [ngModelOptions]="{ standalone: true }" placeholder="N° de referencia / confirmación"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+    </div>
+  }
   <div>
     <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Fecha del pago</label>
     <app-date-picker [max]="today" [ngModel]="value().paidOn" (ngModelChange)="setPaidOn($event)"
       [ngModelOptions]="{ standalone: true }" placeholder="dd/mm/aaaa" />
   </div>
+
+  <!-- Efectivo Divisa: captured amount (USD) -->
+  @if (isCash()) {
+    <div>
+      <label for="payAmount" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Monto recibido (USD)</label>
+      <input id="payAmount" type="text" inputmode="decimal" maxlength="12" [ngModel]="value().amountUsd"
+        (ngModelChange)="setAmount($event)" [ngModelOptions]="{ standalone: true }" placeholder="Ej.: 20.00"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+    </div>
+  }
 
   <!-- Zelle / Binance: the email or name the payment came from -->
   @if (needsPayerAccount()) {
@@ -69,31 +81,42 @@
     </div>
   }
   <div class="sm:col-span-2">
-    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Comprobante (imagen o PDF)</label>
+    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+      {{ isCash() ? 'Fotos de los billetes (1 a 5)' : 'Comprobante (imagen o PDF)' }}
+    </label>
     <!-- Native input stays hidden; the labels below trigger it via `for` -->
     <input #fileInput id="payProof" type="file" class="hidden"
-      accept="image/png,image/jpeg,application/pdf" (change)="onFileSelected($event)" />
-    @if (value().file; as file) {
-      <div class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-600 dark:bg-gray-700">
-        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-300">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
-        </span>
-        <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ file.name }}</p>
-          <p class="text-xs text-green-600 dark:text-green-400">Listo para adjuntar</p>
-        </div>
-        <label for="payProof" class="cursor-pointer rounded-md px-2 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-gray-600">Cambiar</label>
-        <button type="button" (click)="clearFile()"
-          class="rounded-md px-2 py-1 text-xs font-semibold text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-600 dark:hover:text-red-400">Quitar</button>
+      [accept]="isCash() ? 'image/png,image/jpeg' : 'image/png,image/jpeg,application/pdf'"
+      [multiple]="isCash()" (change)="onFileSelected($event)" />
+    @if (value().files.length) {
+      <div class="space-y-2">
+        @for (f of value().files; track $index) {
+          <div class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-600 dark:bg-gray-700">
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-300">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ f.name }}</p>
+              <p class="text-xs text-green-600 dark:text-green-400">Listo para adjuntar</p>
+            </div>
+            <button type="button" (click)="removeFile($index)"
+              class="rounded-md px-2 py-1 text-xs font-semibold text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-600 dark:hover:text-red-400">Quitar</button>
+          </div>
+        }
       </div>
+      @if (isCash() && value().files.length < 5) {
+        <label for="payProof" class="mt-2 inline-block cursor-pointer text-xs font-semibold text-primary-700 hover:underline dark:text-primary-300">+ Añadir otra foto</label>
+      } @else if (!isCash()) {
+        <label for="payProof" class="mt-2 inline-block cursor-pointer text-xs font-semibold text-primary-700 hover:underline dark:text-primary-300">Cambiar comprobante</label>
+      }
     } @else {
       <label for="payProof"
         class="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center transition hover:border-primary-400 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700/40 dark:hover:border-primary-500 dark:hover:bg-gray-700">
         <svg class="h-7 w-7 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 7.5L12 3m0 0L7.5 7.5M12 3v13.5" /></svg>
         <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
-          <span class="font-semibold text-primary-700 dark:text-primary-400">Haz clic para subir</span> el comprobante
+          <span class="font-semibold text-primary-700 dark:text-primary-400">Haz clic para subir</span>{{ isCash() ? ' las fotos de los billetes' : ' el comprobante' }}
         </p>
-        <p class="mt-0.5 text-xs text-gray-400">PNG, JPG o PDF · máx. 10 MB</p>
+        <p class="mt-0.5 text-xs text-gray-400">{{ isCash() ? 'JPG o PNG · hasta 5 · máx. 10 MB c/u' : 'PNG, JPG o PDF · máx. 10 MB' }}</p>
       </label>
     }
   </div>

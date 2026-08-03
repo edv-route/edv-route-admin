@@ -1,5 +1,9 @@
-/** Offered payment method types (decision 2026-07-31): only these 4. */
-export type PaymentMethodType = 'bank_transfer' | 'pago_movil' | 'zelle' | 'binance';
+/**
+ * Offered payment method types: the 4 driver-facing ones + `cash_usd` (Efectivo
+ * Divisa, v9) which is ADMIN-ONLY — captured with amount + up to 5 bill photos
+ * and never offered to the driver app.
+ */
+export type PaymentMethodType = 'bank_transfer' | 'pago_movil' | 'zelle' | 'binance' | 'cash_usd';
 
 export interface PaymentMethod {
   id: number;
@@ -8,6 +12,8 @@ export interface PaymentMethod {
   /** Per-type payload (camelCase keys). See PAYMENT_METHOD_FIELDS. */
   details: Record<string, string>;
   isActive: boolean;
+  /** v9: panel-only (never offered to the driver app). Derived from the type. */
+  adminOnly: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -17,6 +23,7 @@ export const PAYMENT_METHOD_TYPE_LABELS: Record<PaymentMethodType, string> = {
   pago_movil: 'Pago Móvil',
   zelle: 'Zelle',
   binance: 'Binance Pay',
+  cash_usd: 'Efectivo Divisa',
 };
 
 export interface PaymentMethodField {
@@ -134,4 +141,7 @@ export const PAYMENT_METHOD_FIELDS: Record<PaymentMethodType, PaymentMethodField
     { key: 'identifier', label: 'Email, teléfono o Binance ID', required: true, validate: 'emailOrText', placeholder: 'correo@ejemplo.com o Binance ID' },
     { key: 'holder', label: 'Titular', required: false, placeholder: 'Nombre del titular' },
   ],
+  // Efectivo Divisa (admin-only): no account data — the cash is captured at cobro
+  // time (amount + bill photos), so there is nothing to configure on the method.
+  cash_usd: [],
 };

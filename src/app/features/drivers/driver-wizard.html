@@ -517,8 +517,8 @@
                     <p class="truncate text-xs text-gray-500 dark:text-gray-400">
                       @if (pd.reference) { Ref. {{ pd.reference }} }
                       @if (pd.bankLabel) { · {{ pd.bankLabel }} }
-                      @if (pd.file) { · {{ pd.file.name }} }
-                      @if (!pd.reference && !pd.bankLabel && !pd.file) { Comprobante adjunto }
+                      @if (pd.files.length) { · {{ pd.files.length }} comprobante(s) }
+                      @if (!pd.reference && !pd.bankLabel && !pd.files.length) { Comprobante adjunto }
                     </p>
                   </div>
                 </div>

@@ -45,7 +45,10 @@ export interface PaymentCaptureValue {
   payerId: string | null;
   /** Email or name the payment came FROM (Zelle/Binance). */
   payerAccount: string | null;
-  file: File | null;
+  /** Captured amount (USD): required for Efectivo Divisa (cash_usd). */
+  amountUsd: string | null;
+  /** Receipt(s): exactly 1 for the standard methods, up to 5 bill photos for cash. */
+  files: File[];
 }
 
 export const emptyPaymentCapture = (): PaymentCaptureValue => ({
@@ -56,9 +59,12 @@ export const emptyPaymentCapture = (): PaymentCaptureValue => ({
   payerPhone: null,
   payerId: null,
   payerAccount: null,
-  file: null,
+  amountUsd: null,
+  files: [],
 });
 
+/** Max bill photos for Efectivo Divisa. */
+const MAX_FILES = 5;
 /** Lenient email shape (payer account looks like an email). */
 const EMAIL_LIKE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -141,8 +147,12 @@ export class PaymentCapture {
   readonly complete = computed<boolean>(() => {
     const v = this.value();
     const method = this.paymentMethods().find((m) => m.id === v.paymentMethodId);
-    if (!method || !v.file) return false;
-    if (!v.paidOn) return false;
+    if (!method || v.files.length === 0 || !v.paidOn) return false;
+    // Efectivo Divisa: amount + bill photo(s); no reference/bank/payer data.
+    if (method.type === 'cash_usd') {
+      const amount = Number(v.amountUsd);
+      return !!v.amountUsd && Number.isFinite(amount) && amount > 0;
+    }
     if (!v.reference?.trim()) return false;
     if ((method.type === 'bank_transfer' || method.type === 'pago_movil') && !v.payerBank) return false;
     // Pago Móvil: the payer's phone (E.164) and document must be complete.
@@ -161,6 +171,9 @@ export class PaymentCapture {
     const method = this.paymentMethods().find((m) => m.id === this.value().paymentMethodId);
     return method?.type ?? null;
   });
+
+  /** Whether the selected method is Efectivo Divisa (amount + up to 5 bill photos). */
+  readonly isCash = computed<boolean>(() => this.selectedMethodType() === 'cash_usd');
 
   /** Whether the payer phone/id fields apply (Pago Móvil only). */
   readonly needsPayerDetails = computed<boolean>(() => this.selectedMethodType() === 'pago_movil');
@@ -204,6 +217,8 @@ export class PaymentCapture {
     this.value.update((v) => ({
       ...v,
       paymentMethodId: id,
+      files: [], // receipts differ per method (1 vs up to 5); start clean
+      ...(type === 'cash_usd' ? {} : { amountUsd: null }),
       ...(clearsBank ? { payerBank: null } : {}),
       ...(clearsPayer ? { payerPhone: null, payerId: null } : {}),
       ...(clearsAccount ? { payerAccount: null } : {}),
@@ -243,23 +258,40 @@ export class PaymentCapture {
     this.value.update((v) => ({ ...v, payerPhone: composed }));
   }
 
-  onFileSelected(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
-    if (file) {
-      const problem = validateFile(file);
-      if (problem) {
-        this.fileError.emit(problem);
-        this.value.update((v) => ({ ...v, file: null }));
-        return;
-      }
-    }
-    this.fileError.emit(null);
-    this.value.update((v) => ({ ...v, file }));
+  setAmount(amount: string): void {
+    this.value.update((v) => ({ ...v, amountUsd: amount.trim() || null }));
   }
 
-  /** Clears the chosen receipt and resets the native input so the same file re-picks. */
-  clearFile(): void {
-    this.value.update((v) => ({ ...v, file: null }));
+  /** Adds receipt(s): replaces the single one for standard methods; appends up
+   *  to 5 bill photos (JPG/PNG) for Efectivo Divisa. */
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const picked = Array.from(input.files ?? []);
+    input.value = '';
+    if (picked.length === 0) return;
+    const cash = this.isCash();
+    const room = (cash ? MAX_FILES : 1) - (cash ? this.value().files.length : 0);
+    const accepted: File[] = [];
+    for (const f of picked.slice(0, Math.max(room, 0))) {
+      const problem = validateFile(f);
+      if (problem) {
+        this.fileError.emit(problem);
+        continue;
+      }
+      if (cash && f.type !== 'image/jpeg' && f.type !== 'image/png') {
+        this.fileError.emit('Las fotos de billetes deben ser JPG o PNG.');
+        continue;
+      }
+      accepted.push(f);
+    }
+    if (accepted.length === 0) return;
+    this.fileError.emit(null);
+    this.value.update((v) => ({ ...v, files: cash ? [...v.files, ...accepted] : accepted }));
+  }
+
+  /** Removes one receipt by index and resets the native input. */
+  removeFile(index: number): void {
+    this.value.update((v) => ({ ...v, files: v.files.filter((_, i) => i !== index) }));
     const input = this.fileInput()?.nativeElement;
     if (input) input.value = '';
   }

@@ -424,45 +424,23 @@ export class DriverDetail {
     // Simple renewal / advance → PENDING submission (purpose=advance), approved
     // later. Plan change still settles directly for now (reroute pending: 2B).
     if (!isPlanChange) {
-      const file = this.payment().file;
-      if (!file) {
+      if (this.payment().files.length === 0) {
         this.error.set('Adjunta el comprobante del pago.');
         return;
       }
-      const form = this.buildSubmissionForm(
-        'advance',
-        this.renewNote.trim() || null,
-        file,
-        this.renewPeriods(),
-      );
+      const form = this.buildSubmissionForm('advance', this.renewNote.trim() || null, this.renewPeriods());
       this.submitPayment(form, () => this.renewOpen.set(false));
       return;
     }
 
-    this.saving.set(true);
-    this.error.set(null);
-    this.api.renewSubscription(this.id(), this.renewPeriods(), planId ?? undefined, this.paymentMeta(), this.renewNote.trim() || null).subscribe({
-      next: (result) => {
-        const invoices = `Factura(s): N° ${result.invoiceNumbers.join(', N° ')}`;
-        let message: string;
-        if (result.planChanged) {
-          const starts = result.startsAt
-            ? new Date(result.startsAt).toLocaleDateString('es-VE')
-            : null;
-          message = result.reactivated
-            ? `Tarifa cambiada y activa desde ahora. ${invoices}`
-            : `Cambio de tarifa programado: comienza el ${starts} al agotarse lo pagado. ${invoices}`;
-        } else {
-          message = `${result.reactivated ? 'Tarifa reactivada. ' : ''}${invoices}`;
-        }
-        // Attaches the receipt (if any) to the primary invoice, then finishes.
-        this.afterCobro(result.primaryInvoiceId, message, () => this.renewOpen.set(false));
-      },
-      error: (err: HttpErrorResponse) => {
-        this.renewOpen.set(false);
-        this.fail(err);
-      },
-    });
+    // Plan change → PENDING submission (purpose=change_plan), approved later.
+    if (this.payment().files.length === 0) {
+      this.error.set('Adjunta el comprobante del pago.');
+      return;
+    }
+    const form = this.buildSubmissionForm('change_plan', this.renewNote.trim() || null, this.renewPeriods());
+    if (planId != null) form.set('planId', String(planId));
+    this.submitPayment(form, () => this.renewOpen.set(false));
   }
 
   openEnroll(): void {
@@ -496,35 +474,15 @@ export class DriverDetail {
     };
   }
 
-  /** After a cobro: attach the receipt (if any) to the primary invoice, then finish. */
-  private afterCobro(primaryInvoiceId: string | null, message: string, close: () => void): void {
-    const finish = (extra = ''): void => {
-      this.saving.set(false);
-      close();
-      this.renewResult.set(message + extra);
-      this.load();
-    };
-    const file = this.payment().file;
-    if (file && primaryInvoiceId) {
-      this.api.uploadInvoiceProof(primaryInvoiceId, file).subscribe({
-        next: () => finish(),
-        error: () => finish(' (⚠️ el comprobante no se pudo subir; adjúntalo luego desde Facturación).'),
-      });
-    } else {
-      finish();
-    }
-  }
-
   /** Charges membership + tariff to a driver registered without payment, so he
    * can then be approved. Advance ×N weeks allowed. Reuses the enroll endpoint. */
   enroll(): void {
     if (this.saving()) return;
-    const file = this.payment().file;
-    if (!file) {
+    if (this.payment().files.length === 0) {
       this.error.set('Adjunta el comprobante del pago.');
       return;
     }
-    const form = this.buildSubmissionForm('enroll', null, file, this.enrollPeriods());
+    const form = this.buildSubmissionForm('enroll', null, this.enrollPeriods());
     this.submitPayment(form, () => this.enrollOpen.set(false));
   }
 
@@ -542,11 +500,11 @@ export class DriverDetail {
     this.runConfirmed(this.api.pause(this.id()));
   }
 
-  /** Builds the multipart body of a submission from the captured payment. */
+  /** Builds the multipart body of a submission from the captured payment
+   *  (1 receipt, or up to 5 bill photos + amount for Efectivo Divisa). */
   private buildSubmissionForm(
-    purpose: 'debt' | 'advance' | 'enroll',
+    purpose: 'debt' | 'advance' | 'enroll' | 'change_plan',
     note: string | null,
-    file: File,
     periods?: number,
   ): FormData {
     const p = this.payment();
@@ -560,8 +518,9 @@ export class DriverDetail {
     if (p.payerPhone) form.set('payerPhone', p.payerPhone);
     if (p.payerId) form.set('payerId', p.payerId);
     if (p.payerAccount) form.set('payerAccount', p.payerAccount);
+    if (p.amountUsd) form.set('amountUsd', p.amountUsd);
     if (note) form.set('note', note);
-    form.append('files', file, file.name);
+    for (const f of p.files) form.append('files', f, f.name);
     return form;
   }
 
@@ -590,12 +549,11 @@ export class DriverDetail {
    */
   registerExternalPayment(): void {
     if (this.saving()) return;
-    const file = this.payment().file;
-    if (!file) {
+    if (this.payment().files.length === 0) {
       this.error.set('Adjunta el comprobante del pago.');
       return;
     }
-    const form = this.buildSubmissionForm('debt', this.externalPayNote.trim() || null, file);
+    const form = this.buildSubmissionForm('debt', this.externalPayNote.trim() || null);
     this.submitPayment(form, () => this.externalPayOpen.set(false));
   }
 

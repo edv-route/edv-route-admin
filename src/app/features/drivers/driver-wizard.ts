@@ -418,7 +418,7 @@ export class DriverWizard {
     if (draft.payerPhone) form.set('payerPhone', draft.payerPhone);
     if (draft.payerId) form.set('payerId', draft.payerId);
     if (draft.payerAccount) form.set('payerAccount', draft.payerAccount);
-    if (draft.file) form.append('files', draft.file, draft.file.name);
+    for (const f of draft.files) form.append('files', f, f.name);
     return form;
   }
 
