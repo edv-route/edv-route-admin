@@ -1,0 +1,170 @@
+<div class="mx-auto max-w-6xl">
+  <button type="button" (click)="back()"
+    class="mb-4 inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-primary-700 dark:text-gray-400">
+    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+    Volver a "Por aprobar"
+  </button>
+
+  @if (loading()) {
+    <p class="text-sm text-gray-400">Cargando…</p>
+  } @else if (submission(); as sub) {
+    <!-- Header -->
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white p-5 shadow-sm dark:bg-gray-800 md:p-6">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Revisión de pago</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ sub.driverName }}</h1>
+        <p class="mt-1 text-xs text-gray-400">
+          {{ purposeLabels[sub.purpose] ?? 'Pago' }} ·
+          {{ sub.source === 'app' ? 'Enviado por el chofer' : 'Registrado por el administrador' }} ·
+          {{ sub.createdAt | date: 'dd/MM/yyyy HH:mm' }}
+        </p>
+      </div>
+      <div class="text-right">
+        @switch (sub.status) {
+          @case ('pending') { <span class="inline-flex items-center gap-2 rounded-full bg-gold-100 px-3 py-1 text-sm font-semibold text-gold-800"><span class="h-2 w-2 rounded-full bg-gold-500"></span>{{ statusLabels.pending }}</span> }
+          @case ('approved') { <span class="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-800 dark:bg-green-900 dark:text-green-300"><span class="h-2 w-2 rounded-full bg-green-500"></span>{{ statusLabels.approved }}</span> }
+          @case ('rejected') { <span class="inline-flex items-center gap-2 rounded-full bg-primary-100 px-3 py-1 text-sm font-semibold text-primary-800 dark:bg-primary-900 dark:text-primary-300"><span class="h-2 w-2 rounded-full bg-primary-600"></span>{{ statusLabels.rejected }}</span> }
+        }
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">${{ sub.amountUsd }}</p>
+      </div>
+    </div>
+
+    @if (error(); as message) {
+      <p class="mb-4 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-700 dark:text-primary-300">{{ message }}</p>
+    }
+
+    <!-- Actions on top (only while pending); each opens a confirmation modal -->
+    @if (sub.status === 'pending') {
+      <div class="mb-4 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:px-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <p class="text-sm text-gray-500 dark:text-gray-400">Verifica el comprobante y los datos, luego decide.</p>
+          <div class="flex gap-3">
+            <button type="button" (click)="openConfirm('reject')" [disabled]="saving()"
+              class="rounded-lg border border-red-200 px-5 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60 dark:hover:bg-gray-700">Rechazar</button>
+            <button type="button" (click)="openConfirm('approve')" [disabled]="saving()"
+              class="rounded-lg bg-primary-700 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">Aprobar pago</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <div class="mb-4 grid gap-4 lg:grid-cols-2">
+      <!-- What the payment covers -->
+      <div class="rounded-lg bg-white p-5 shadow-sm dark:bg-gray-800 md:p-6">
+        <h2 class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">Qué está pagando</h2>
+        <p class="mb-3 text-base font-semibold text-gray-900 dark:text-white">{{ purposeLabels[sub.purpose] ?? 'Pago' }}</p>
+        @if (sub.items.length > 0) {
+          <ul class="divide-y divide-gray-100 text-sm dark:divide-gray-700/60">
+            @for (it of sub.items; track $index) {
+              <li class="flex items-center justify-between gap-4 py-2">
+                <span class="text-gray-700 dark:text-gray-300">{{ it.label }}</span>
+                <span class="font-medium text-gray-900 dark:text-white">${{ it.amountUsd }}</span>
+              </li>
+            }
+          </ul>
+        }
+        <div class="mt-3 flex items-center justify-between border-t border-gray-200 pt-3 dark:border-gray-700">
+          <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Total</span>
+          <span class="text-lg font-bold text-gray-900 dark:text-white">${{ sub.amountUsd }}</span>
+        </div>
+        @if (sub.status === 'approved' && sub.invoiceNumber) {
+          <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+            Factura emitida:
+            <a [routerLink]="['/billing', sub.invoiceId]" class="font-mono font-semibold text-primary-700 hover:underline dark:text-primary-300">#{{ sub.invoiceNumber }}</a>
+          </p>
+        }
+      </div>
+
+      <!-- Payment data -->
+      <div class="rounded-lg bg-white p-5 shadow-sm dark:bg-gray-800 md:p-6">
+        <h2 class="mb-4 text-xs font-semibold uppercase tracking-wide text-gray-400">Datos del pago</h2>
+        <dl class="space-y-3 text-sm">
+          <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Método</dt><dd class="text-gray-800 dark:text-gray-200">{{ sub.paymentMethodName ?? '—' }}</dd></div>
+          @if (sub.paidOn) { <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Fecha del pago</dt><dd class="text-gray-800 dark:text-gray-200">{{ sub.paidOn | date: 'dd/MM/yyyy' }}</dd></div> }
+          @if (sub.paymentReference) { <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Referencia</dt><dd class="font-medium text-gray-800 dark:text-gray-200">{{ sub.paymentReference }}</dd></div> }
+          @if (sub.payerBank) { <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Banco emisor</dt><dd class="text-gray-800 dark:text-gray-200">{{ sub.payerBank }}</dd></div> }
+          @if (sub.payerPhone) { <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Teléfono</dt><dd class="text-gray-800 dark:text-gray-200">{{ sub.payerPhone }}</dd></div> }
+          @if (sub.payerId) { <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Cédula pagador</dt><dd class="text-gray-800 dark:text-gray-200">{{ sub.payerId }}</dd></div> }
+          @if (sub.payerAccount) { <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Cuenta origen</dt><dd class="text-gray-800 dark:text-gray-200">{{ sub.payerAccount }}</dd></div> }
+          @if (sub.note) { <div><dt class="mb-1 text-gray-500 dark:text-gray-400">Nota</dt><dd class="text-gray-800 dark:text-gray-200">{{ sub.note }}</dd></div> }
+        </dl>
+        @if (sub.status === 'rejected') {
+          <div class="mt-4 border-t border-gray-200 pt-3 text-sm dark:border-gray-700">
+            <p class="text-gray-500 dark:text-gray-400">Rechazado por {{ sub.reviewedByName ?? '—' }} · {{ sub.reviewedAt | date: 'dd/MM/yyyy HH:mm' }}</p>
+            @if (sub.rejectionReason) { <p class="mt-1 rounded-lg bg-primary-50 px-3 py-2 text-primary-800 dark:bg-gray-700 dark:text-primary-300">Motivo: {{ sub.rejectionReason }}</p> }
+          </div>
+        } @else if (sub.status === 'approved') {
+          <p class="mt-4 border-t border-gray-200 pt-3 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Aprobado por {{ sub.reviewedByName ?? '—' }} · {{ sub.reviewedAt | date: 'dd/MM/yyyy HH:mm' }}</p>
+        }
+      </div>
+    </div>
+
+    <!-- Receipts, always visible inline -->
+    <div class="rounded-lg bg-white p-5 shadow-sm dark:bg-gray-800 md:p-6">
+      <h2 class="mb-4 text-xs font-semibold uppercase tracking-wide text-gray-400">Comprobantes ({{ sub.files.length }})</h2>
+      @if (sub.files.length > 0) {
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          @for (f of sub.files; track f.id) {
+            <figure class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+              <div class="bg-gray-50 dark:bg-gray-900/40">
+                @if (isPdf(f.url)) {
+                  <iframe [src]="f.url" [title]="'Comprobante ' + f.position" class="h-72 w-full"></iframe>
+                } @else {
+                  <button type="button" (click)="zoom(f.url, 'Comprobante ' + f.position)" class="block w-full" title="Ampliar">
+                    <img [src]="f.url" [alt]="'Comprobante ' + f.position" class="h-72 w-full cursor-zoom-in object-contain" />
+                  </button>
+                }
+              </div>
+              <figcaption class="flex items-center justify-between gap-2 border-t border-gray-200 px-3 py-2 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                Comprobante {{ f.position }}
+                @if (!isPdf(f.url)) { <button type="button" (click)="zoom(f.url, 'Comprobante ' + f.position)" class="font-semibold text-primary-700 hover:underline dark:text-primary-300">Ampliar</button> }
+              </figcaption>
+            </figure>
+          }
+        </div>
+      } @else {
+        <p class="text-sm text-gray-400">Sin imágenes.</p>
+      }
+    </div>
+  }
+</div>
+
+<!-- Confirmation modal for the money actions (approve / reject) -->
+@if (confirmAction(); as action) {
+  @if (submission(); as sub) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4">
+      <div class="w-full max-w-md rounded-lg bg-white p-5 shadow-lg dark:bg-gray-800 sm:p-6">
+        @if (action === 'approve') {
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">¿Aprobar el pago?</h2>
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Se aprobará el pago de <strong>{{ sub.driverName }}</strong> por <strong>${{ sub.amountUsd }}</strong>:
+            se salda la deuda / se acreditan las semanas y se <strong>emite la factura</strong>. Los documentos de dinero no se borran.
+          </p>
+          <div class="mt-5 flex justify-end gap-3">
+            <button type="button" (click)="closeConfirm()" [disabled]="saving()"
+              class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Cancelar</button>
+            <button type="button" (click)="approve()" [disabled]="saving()"
+              class="rounded-lg bg-primary-700 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">{{ saving() ? 'Aprobando…' : 'Aprobar pago' }}</button>
+          </div>
+        } @else {
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">¿Rechazar el pago?</h2>
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            El pago quedará <strong>rechazado</strong> (con rastro) y el chofer verá el aviso para generar uno nuevo. Indica el motivo:
+          </p>
+          <textarea name="rejectReason" [(ngModel)]="rejectReason" rows="2" maxlength="500"
+            placeholder="Ej.: comprobante ilegible / no se encontró el pago en la cuenta"
+            class="mt-3 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
+          @if (error(); as message) { <p class="mt-2 text-xs font-medium text-red-600 dark:text-red-400">{{ message }}</p> }
+          <div class="mt-5 flex justify-end gap-3">
+            <button type="button" (click)="closeConfirm()" [disabled]="saving()"
+              class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Cancelar</button>
+            <button type="button" (click)="reject()" [disabled]="saving()"
+              class="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">{{ saving() ? 'Procesando…' : 'Confirmar rechazo' }}</button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+}
+
+<app-file-viewer [state]="viewer()" (close)="viewer.set(null)" />

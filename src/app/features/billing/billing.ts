@@ -21,15 +21,20 @@ import {
   type InvoiceListItem,
   type PaymentListItem,
 } from '../../core/models/billing.model';
+import {
+  SUBMISSION_STATUS_LABELS,
+  type SubmissionListItem,
+} from '../../core/models/payment-submission.model';
 import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
 import { DriversApi } from '../drivers/drivers.api';
 import { BillingApi, type MonthlyInvoicingPoint } from './billing.api';
+import { PaymentSubmissionsApi } from './payment-submissions.api';
 
 const PAGE_SIZE = 20;
 const MONTHS = 12;
 const BRAND_RED = '#920606';
 
-type BillingTab = 'invoices' | 'payments';
+type BillingTab = 'invoices' | 'payments' | 'review';
 
 @Component({
   selector: 'app-billing',
@@ -38,18 +43,23 @@ type BillingTab = 'invoices' | 'payments';
 })
 export class Billing {
   private readonly api = inject(BillingApi);
+  private readonly submissionsApi = inject(PaymentSubmissionsApi);
   private readonly router = inject(Router);
 
   /** Bound from the query param (withComponentInputBinding) - per-driver history. */
   readonly driverId = input<string>();
+  /** Optional starting tab (e.g. ?tab=review after approving a submission). */
+  readonly initialTab = input<string | undefined>(undefined, { alias: 'tab' });
 
   readonly invoiceStatusLabels = INVOICE_STATUS_LABELS;
   readonly kindLabels = PAYMENT_KIND_LABELS;
   readonly paymentStatusLabels = PAYMENT_STATUS_LABELS;
+  readonly submissionStatusLabels = SUBMISSION_STATUS_LABELS;
 
   readonly tab = signal<BillingTab>('invoices');
   readonly invoices = signal<InvoiceListItem[]>([]);
   readonly payments = signal<PaymentListItem[]>([]);
+  readonly submissions = signal<SubmissionListItem[]>([]);
   readonly total = signal(0);
   readonly page = signal(1);
   readonly loading = signal(true);
@@ -74,7 +84,9 @@ export class Billing {
     // Reload whenever the bound driverId changes (including first binding).
     effect(() => {
       const id = this.driverId();
+      const t = this.initialTab();
       untracked(() => {
+        if (t === 'review' || t === 'payments' || t === 'invoices') this.tab.set(t);
         this.driverName.set(null);
         if (id) driversApi.detail(id).subscribe((d) => this.driverName.set(d.fullName));
         this.page.set(1);
@@ -160,12 +172,29 @@ export class Billing {
           },
           error: onError,
         });
-    } else {
+    } else if (this.tab() === 'payments') {
       this.api
         .payments({ ...common, ...(this.paymentKind() ? { kind: this.paymentKind() } : {}) })
         .subscribe({
           next: (result) => {
             this.payments.set(result.items);
+            this.total.set(result.total);
+            this.loading.set(false);
+          },
+          error: onError,
+        });
+    } else {
+      // Review inbox: pending submissions (search/kind/status filters don't apply).
+      this.submissionsApi
+        .list({
+          status: 'pending',
+          ...(this.driverId() ? { driverId: this.driverId() as string } : {}),
+          page: this.page(),
+          limit: PAGE_SIZE,
+        })
+        .subscribe({
+          next: (result) => {
+            this.submissions.set(result.items);
             this.total.set(result.total);
             this.loading.set(false);
           },
@@ -224,4 +253,5 @@ export class Billing {
         }),
     });
   }
+
 }

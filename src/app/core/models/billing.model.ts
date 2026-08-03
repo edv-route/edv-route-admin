@@ -47,6 +47,11 @@ export interface PaymentListItem {
   createdAt: string;
 }
 
+/** Single invoice (detail screen) + the v9 submission that produced it, if any. */
+export interface InvoiceDetail extends InvoiceListItem {
+  submissionId: string | null;
+}
+
 export interface InvoiceList {
   items: InvoiceListItem[];
   total: number;

@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import type { InvoiceList, PaymentList } from '../../core/models/billing.model';
+import type { InvoiceDetail, InvoiceList, PaymentList } from '../../core/models/billing.model';
 
 export interface InvoiceListOptions {
   status?: string;
@@ -47,6 +47,10 @@ export class BillingApi {
     if (opts.driverId) params = params.set('driverId', opts.driverId);
     if (opts.search) params = params.set('search', opts.search);
     return this.http.get<PaymentList>(`${environment.apiUrl}/payments`, { params });
+  }
+
+  invoiceDetail(id: string): Observable<InvoiceDetail> {
+    return this.http.get<InvoiceDetail>(`${environment.apiUrl}/invoices/${id}`);
   }
 
   monthlySeries(months: number): Observable<MonthlyInvoicingPoint[]> {

@@ -126,6 +126,18 @@ export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
     billingPeriod: string;
     startsAt: string | null;
   } | null;
+  /** v9: a payment awaiting admin review (hides the pay button, shows "en revisión"). */
+  pendingSubmission: {
+    id: string;
+    amountUsd: string;
+    purpose: string;
+    createdAt: string;
+  } | null;
+  /** v9: the most recent submission if it was REJECTED (drives the rejection message). */
+  rejectedSubmission: {
+    rejectionReason: string | null;
+    reviewedAt: string | null;
+  } | null;
 }
 
 export const DRIVER_STATUS_LABELS: Record<DriverStatus, string> = {

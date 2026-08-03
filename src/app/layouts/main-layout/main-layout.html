@@ -13,12 +13,12 @@
 >
   <div class="flex w-full items-center justify-between">
     <div class="flex items-center">
-      <!-- Mobile drawer toggle -->
+      <!-- Mobile drawer toggle (Angular-driven; see MainLayout.sidebarOpen) -->
       <button
-        data-drawer-target="app-sidebar"
-        data-drawer-toggle="app-sidebar"
-        aria-controls="app-sidebar"
         type="button"
+        (click)="toggleSidebar()"
+        aria-controls="app-sidebar"
+        [attr.aria-expanded]="sidebarOpen()"
         class="me-2 rounded-lg p-2 text-gold-400 hover:bg-primary-900 focus:outline-none focus:ring-2 focus:ring-gold-400 lg:hidden"
       >
         <span class="sr-only">Abrir menú</span>
@@ -122,10 +122,20 @@
   </div>
 </nav>
 
+<!-- Mobile backdrop: tap to dismiss the drawer (hidden on desktop) -->
+@if (sidebarOpen()) {
+  <div
+    class="fixed inset-0 z-20 bg-gray-900/50 lg:hidden"
+    aria-hidden="true"
+    (click)="closeSidebar()"
+  ></div>
+}
+
 <!-- Sidebar -->
 <aside
   id="app-sidebar"
-  class="fixed left-0 top-0 z-30 h-screen w-64 -translate-x-full border-r border-primary-900 bg-primary-950 pt-16 transition-transform lg:translate-x-0"
+  class="fixed left-0 top-0 z-30 h-screen w-64 border-r border-primary-900 bg-primary-950 pt-16 transition-transform lg:translate-x-0"
+  [class.-translate-x-full]="!sidebarOpen()"
   aria-label="Menú lateral"
 >
   <div class="flex h-full flex-col justify-between overflow-y-auto px-3 pb-4 pt-5">

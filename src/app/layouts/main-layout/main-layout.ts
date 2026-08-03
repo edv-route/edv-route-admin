@@ -1,6 +1,8 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, HostListener, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgTemplateOutlet } from '@angular/common';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 
 type NavIcon =
@@ -48,6 +50,14 @@ export class MainLayout {
   /** Confirmation modal before logging out. */
   readonly confirmLogout = signal(false);
 
+  /**
+   * Mobile drawer visibility. Angular-driven on purpose: Flowbite's data-drawer
+   * wiring re-binds on every initFlowbite() (one per navigation) and stacks
+   * duplicate listeners on the persistent toggle, which cancel out. On desktop
+   * the sidebar is docked via `lg:` classes and ignores this signal.
+   */
+  readonly sidebarOpen = signal(false);
+
   /** Initials for the avatar chip in the account menu. */
   readonly adminInitials = computed(() => {
     const admin = this.currentAdmin();
@@ -84,6 +94,29 @@ export class MainLayout {
 
   constructor() {
     this.applyTheme(this.isDark());
+
+    // Close the mobile drawer after any navigation so it never covers the page
+    // the user just opened (desktop is unaffected — the sidebar stays docked).
+    this.router.events
+      .pipe(
+        filter((e) => e instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.sidebarOpen.set(false));
+  }
+
+  toggleSidebar(): void {
+    this.sidebarOpen.update((open) => !open);
+  }
+
+  closeSidebar(): void {
+    this.sidebarOpen.set(false);
+  }
+
+  /** Escape closes the mobile drawer (keyboard accessibility). */
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.sidebarOpen.set(false);
   }
 
   toggleTheme(): void {

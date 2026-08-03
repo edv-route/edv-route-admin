@@ -85,6 +85,11 @@ export class DriverVehicleDetail {
   constructor(requirementsApi: RequirementsApi, vehicleTypesApi: VehicleTypesApi) {
     requirementsApi.list().subscribe({ next: (r) => this.requirements.set(r), error: () => {} });
     vehicleTypesApi.list().subscribe({ next: (t) => this.vehicleTypes.set(t), error: () => {} });
+  }
+
+  ngOnInit(): void {
+    // Route inputs (id, vehicleId) are bound AFTER construction: reading the
+    // required `id` input in the constructor throws NG0950 and blanks the page.
     this.load();
   }
 

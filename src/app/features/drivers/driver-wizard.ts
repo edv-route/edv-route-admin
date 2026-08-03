@@ -25,6 +25,7 @@ import { DriversApi, type CreateDriverInput } from './drivers.api';
 import { VehicleDraftModal, type VehicleDraft } from './vehicle-draft-modal';
 import { DocumentDraftModal, type DocDraft } from './document-draft-modal';
 import { PaymentDraftModal, type PaymentDraft } from './payment-draft-modal';
+import { PaymentSubmissionsApi } from '../billing/payment-submissions.api';
 import {
   NATIONAL_ID_OPTIONS,
   PHONE_COUNTRY_OPTIONS,
@@ -50,6 +51,7 @@ import {
 export class DriverWizard {
   private readonly api = inject(DriversApi);
   private readonly documentsApi = inject(DocumentsApi);
+  private readonly submissionsApi = inject(PaymentSubmissionsApi);
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
 
@@ -405,6 +407,21 @@ export class DriverWizard {
    * chosen) the payment in a single transaction, then uploads the document
    * files. `withPayment` false leaves the driver pending.
    */
+  /** Multipart body of the alta's debt submission (the receipt is held pending). */
+  private buildDebtForm(draft: PaymentDraft): FormData {
+    const form = new FormData();
+    form.set('purpose', 'debt');
+    if (draft.paymentMethodId != null) form.set('paymentMethodId', String(draft.paymentMethodId));
+    if (draft.reference) form.set('reference', draft.reference);
+    if (draft.payerBank) form.set('payerBank', draft.payerBank);
+    if (draft.paidOn) form.set('paidOn', draft.paidOn);
+    if (draft.payerPhone) form.set('payerPhone', draft.payerPhone);
+    if (draft.payerId) form.set('payerId', draft.payerId);
+    if (draft.payerAccount) form.set('payerAccount', draft.payerAccount);
+    if (draft.file) form.append('files', draft.file, draft.file.name);
+    return form;
+  }
+
   register(withPayment: boolean): void {
     if (this.saving()) return;
     if (!this.validateStep1()) {
@@ -412,20 +429,7 @@ export class DriverWizard {
       return;
     }
     const draft = this.paymentDraft();
-    const payment =
-      withPayment && this.planId && draft
-        ? {
-            planId: this.planId,
-            periods: this.periods,
-            paymentMethodId: draft.paymentMethodId,
-            reference: draft.reference,
-            payerBank: draft.payerBank,
-            paidOn: draft.paidOn,
-            payerPhone: draft.payerPhone,
-            payerId: draft.payerId,
-            payerAccount: draft.payerAccount,
-          }
-        : null;
+    const sendPayment = withPayment && !!draft;
     const vehicleDrafts = this.vehicles();
     const vehicles = vehicleDrafts.map((v) => ({
       vehicleTypeId: v.vehicleTypeId,
@@ -444,11 +448,13 @@ export class DriverWizard {
     this.saving.set(true);
     this.error.set(null);
     this.fileWarning.set(null);
+    // v9: the alta never settles on the spot. Register the driver WITHOUT payment
+    // (emits the alta debt); the captured payment becomes a PENDING submission an
+    // admin approves in Facturación → "Por aprobar".
     this.api
-      .register(this.composed!, { payment, vehicles, documents })
+      .register(this.composed!, { payment: null, vehicles, documents })
       .pipe(
         switchMap((result) => {
-          // Upload each queued driver-document file against its created id (same order).
           const uploads = docDrafts
             .map((d, i) => ({ file: d.file, id: result.createdDocumentIds[i] }))
             .filter((x): x is { file: File; id: string } => !!x.file && !!x.id)
@@ -458,7 +464,6 @@ export class DriverWizard {
                 catchError(() => of(false)),
               ),
             );
-          // Vehicle photos + vehicle-document files against the created ids.
           vehicleDrafts.forEach((v, i) => {
             const created = result.createdVehicles[i];
             if (!created) return;
@@ -482,30 +487,36 @@ export class DriverWizard {
               }
             });
           });
-          // Payment receipt (best-effort, attached to the primary invoice).
-          if (payment && draft?.file && result.primaryInvoiceId) {
-            uploads.push(
-              this.api.uploadInvoiceProof(result.primaryInvoiceId, draft.file).pipe(
-                map(() => true),
-                catchError(() => of(false)),
-              ),
-            );
-          }
           return (uploads.length ? forkJoin(uploads) : of<boolean[]>([])).pipe(
             map((flags) => ({ result, flags })),
           );
         }),
+        switchMap(({ result, flags }) => {
+          // The captured payment → pending submission (debt of the alta).
+          if (sendPayment && draft) {
+            return this.submissionsApi.create(result.userId, this.buildDebtForm(draft)).pipe(
+              map(() => ({ result, flags, paymentSent: true })),
+              catchError(() => of({ result, flags, paymentSent: false })),
+            );
+          }
+          return of({ result, flags, paymentSent: false });
+        }),
       )
       .subscribe({
-        next: ({ result, flags }) => {
+        next: ({ result, flags, paymentSent }) => {
           this.saving.set(false);
           this.driverId.set(result.userId);
           this.invoiceNumbers.set(result.invoiceNumbers ?? []);
-          this.paidAtRegister.set(payment !== null);
+          this.paidAtRegister.set(paymentSent);
           const failed = flags.filter((ok) => !ok).length;
           if (failed > 0) {
             this.fileWarning.set(
               `${failed} archivo(s) no se pudieron subir. Adjúntalos desde el perfil o Facturación.`,
+            );
+          }
+          if (sendPayment && !paymentSent) {
+            this.fileWarning.set(
+              'El afiliado se registró, pero el pago no se pudo enviar. Regístralo desde el perfil (Registrar pago).',
             );
           }
           this.step.set(5);

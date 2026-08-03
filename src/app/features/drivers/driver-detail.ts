@@ -23,6 +23,7 @@ import { Select, type SelectOption } from '../../shared/components/select';
 import { INPUT_FILTERS } from '../../shared/directives/input-filters';
 import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
 import { DocumentsApi, validateFile } from '../documents/documents.api';
+import { PaymentSubmissionsApi } from '../billing/payment-submissions.api';
 import { DriversApi } from './drivers.api';
 import { PaymentCapture, type PaymentCaptureValue, emptyPaymentCapture } from './payment-capture';
 import { VehicleForm } from './vehicle-form';
@@ -59,6 +60,7 @@ interface ConfirmDialog {
 export class DriverDetail {
   private readonly api = inject(DriversApi);
   private readonly documentsApi = inject(DocumentsApi);
+  private readonly submissionsApi = inject(PaymentSubmissionsApi);
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
 
@@ -136,6 +138,13 @@ export class DriverDetail {
   /** Whether the driver owes money (alta debt, arrears or membership): drives the
    *  single adaptive payment button and the red debt band. */
   readonly hasDebt = computed(() => Number(this.driver()?.debt.totalUsd ?? 0) > 0);
+
+  /** v9: a payment awaiting admin review — hides the pay button, shows "en revisión". */
+  readonly pendingSubmission = computed(() => this.driver()?.pendingSubmission ?? null);
+  /** v9: the last submission was rejected and none newer — drives the rejection message. */
+  readonly rejectedSubmission = computed(() =>
+    this.pendingSubmission() ? null : (this.driver()?.rejectedSubmission ?? null),
+  );
 
   /**
    * What the debt modal settles: the alta debt (membership + first week), overdue
@@ -409,10 +418,29 @@ export class DriverDetail {
 
   renew(): void {
     if (this.saving()) return;
+    const planId = this.renewPlanId();
+    const isPlanChange = planId != null && planId !== this.driver()?.subscription?.planId;
+
+    // Simple renewal / advance → PENDING submission (purpose=advance), approved
+    // later. Plan change still settles directly for now (reroute pending: 2B).
+    if (!isPlanChange) {
+      const file = this.payment().file;
+      if (!file) {
+        this.error.set('Adjunta el comprobante del pago.');
+        return;
+      }
+      const form = this.buildSubmissionForm(
+        'advance',
+        this.renewNote.trim() || null,
+        file,
+        this.renewPeriods(),
+      );
+      this.submitPayment(form, () => this.renewOpen.set(false));
+      return;
+    }
+
     this.saving.set(true);
     this.error.set(null);
-    const planId = this.renewPlanId();
-
     this.api.renewSubscription(this.id(), this.renewPeriods(), planId ?? undefined, this.paymentMeta(), this.renewNote.trim() || null).subscribe({
       next: (result) => {
         const invoices = `Factura(s): N° ${result.invoiceNumbers.join(', N° ')}`;
@@ -490,22 +518,14 @@ export class DriverDetail {
   /** Charges membership + tariff to a driver registered without payment, so he
    * can then be approved. Advance ×N weeks allowed. Reuses the enroll endpoint. */
   enroll(): void {
-    const plan = this.weeklyPlan();
-    if (!plan || this.saving()) return;
-    this.saving.set(true);
-    this.error.set(null);
-    this.api.enroll(this.id(), plan.id, this.enrollPeriods(), this.paymentMeta()).subscribe({
-      next: (r) =>
-        this.afterCobro(
-          r.primaryInvoiceId,
-          `Pago registrado. Factura(s): N° ${r.invoiceNumbers.join(', N° ')}. Ya puedes aprobar al afiliado.`,
-          () => this.enrollOpen.set(false),
-        ),
-      error: (err: HttpErrorResponse) => {
-        this.enrollOpen.set(false);
-        this.fail(err);
-      },
-    });
+    if (this.saving()) return;
+    const file = this.payment().file;
+    if (!file) {
+      this.error.set('Adjunta el comprobante del pago.');
+      return;
+    }
+    const form = this.buildSubmissionForm('enroll', null, file, this.enrollPeriods());
+    this.submitPayment(form, () => this.enrollOpen.set(false));
   }
 
   toggleSuspension(): void {
@@ -522,25 +542,61 @@ export class DriverDetail {
     this.runConfirmed(this.api.pause(this.id()));
   }
 
-  /** Registers money received outside the system: settles arrears + penalty. */
-  registerExternalPayment(): void {
-    if (this.saving()) return;
+  /** Builds the multipart body of a submission from the captured payment. */
+  private buildSubmissionForm(
+    purpose: 'debt' | 'advance' | 'enroll',
+    note: string | null,
+    file: File,
+    periods?: number,
+  ): FormData {
+    const p = this.payment();
+    const form = new FormData();
+    form.set('purpose', purpose);
+    if (periods) form.set('periods', String(periods));
+    if (p.paymentMethodId != null) form.set('paymentMethodId', String(p.paymentMethodId));
+    if (p.reference) form.set('reference', p.reference);
+    if (p.payerBank) form.set('payerBank', p.payerBank);
+    if (p.paidOn) form.set('paidOn', p.paidOn);
+    if (p.payerPhone) form.set('payerPhone', p.payerPhone);
+    if (p.payerId) form.set('payerId', p.payerId);
+    if (p.payerAccount) form.set('payerAccount', p.payerAccount);
+    if (note) form.set('note', note);
+    form.append('files', file, file.name);
+    return form;
+  }
+
+  /** Sends a submission (multipart) and reports it as pending on success. */
+  private submitPayment(form: FormData, close: () => void): void {
     this.saving.set(true);
     this.error.set(null);
-    this.api
-      .registerExternalPayment(this.id(), this.externalPayNote.trim() || null, this.paymentMeta())
-      .subscribe({
-        next: (r) =>
-          this.afterCobro(
-            r.primaryInvoiceId,
-            `Pago externo registrado: ${r.settledCharges} cargo(s) saldado(s) por $${r.totalUsd}. Factura N° ${r.invoiceNumber}.`,
-            () => this.externalPayOpen.set(false),
-          ),
-        error: (err: HttpErrorResponse) => {
-          this.externalPayOpen.set(false);
-          this.fail(err);
-        },
-      });
+    this.submissionsApi.create(this.id(), form).subscribe({
+      next: () => {
+        this.saving.set(false);
+        close();
+        this.renewResult.set('Pago enviado. Queda pendiente de aprobación por un administrador.');
+        this.load();
+      },
+      error: (err: HttpErrorResponse) => {
+        close();
+        this.fail(err);
+      },
+    });
+  }
+
+  /**
+   * Registers a payment against the driver's debt (v9): creates a PENDING
+   * submission (with the receipt) reviewed from Facturación → "Por aprobar",
+   * instead of settling on the spot.
+   */
+  registerExternalPayment(): void {
+    if (this.saving()) return;
+    const file = this.payment().file;
+    if (!file) {
+      this.error.set('Adjunta el comprobante del pago.');
+      return;
+    }
+    const form = this.buildSubmissionForm('debt', this.externalPayNote.trim() || null, file);
+    this.submitPayment(form, () => this.externalPayOpen.set(false));
   }
 
   /** Manual reactivation: back on the road now instead of waiting the anchor day. */

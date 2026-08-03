@@ -1,0 +1,94 @@
+<div class="mx-auto max-w-6xl">
+  <button type="button" (click)="back()"
+    class="mb-4 inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-primary-700 dark:text-gray-400">
+    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+    Volver a Facturación
+  </button>
+
+  @if (error(); as message) {
+    <p class="rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-700 dark:text-primary-300">
+      {{ message }}
+    </p>
+  } @else if (loading()) {
+    <p class="text-sm text-gray-400">Cargando…</p>
+  } @else if (invoice(); as inv) {
+    <!-- Header -->
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white p-5 shadow-sm dark:bg-gray-800 md:p-6">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Factura interna</p>
+        <h1 class="font-mono text-2xl font-bold text-gray-900 dark:text-white">#{{ inv.invoiceNumber }}</h1>
+      </div>
+      <div class="text-right">
+        @switch (inv.status) {
+          @case ('paid') { <span class="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-800 dark:bg-green-900 dark:text-green-300"><span class="h-2 w-2 rounded-full bg-green-500"></span>{{ statusLabels.paid }}</span> }
+          @case ('voided') { <span class="inline-flex items-center gap-2 rounded-full bg-primary-100 px-3 py-1 text-sm font-semibold text-primary-800 dark:bg-primary-900 dark:text-primary-300"><span class="h-2 w-2 rounded-full bg-primary-600"></span>{{ statusLabels.voided }}</span> }
+          @default { <span class="inline-flex items-center gap-2 rounded-full bg-gold-100 px-3 py-1 text-sm font-semibold text-gold-800"><span class="h-2 w-2 rounded-full bg-gold-500"></span>{{ statusLabels.issued }}</span> }
+        }
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">${{ inv.totalUsd }}</p>
+      </div>
+    </div>
+
+    <!-- Data grid -->
+    <div class="mb-4 grid gap-4 lg:grid-cols-2">
+      <div class="rounded-lg bg-white p-5 shadow-sm dark:bg-gray-800 md:p-6">
+        <h2 class="mb-4 text-xs font-semibold uppercase tracking-wide text-gray-400">Factura</h2>
+        <dl class="space-y-3 text-sm">
+          <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Afiliado</dt><dd class="font-semibold text-gray-900 dark:text-white">{{ inv.driverName }}</dd></div>
+          <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Monto</dt><dd class="font-semibold text-gray-900 dark:text-white">${{ inv.totalUsd }}</dd></div>
+          <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Emitida</dt><dd class="text-gray-800 dark:text-gray-200">{{ inv.issuedAt | date: 'dd/MM/yyyy HH:mm' }}</dd></div>
+          <div class="flex justify-between gap-4" [class.border-b]="inv.voidedAt" [class.border-gray-100]="inv.voidedAt" [class.pb-3]="inv.voidedAt"><dt class="text-gray-500 dark:text-gray-400">Pagada</dt><dd class="text-gray-800 dark:text-gray-200">{{ inv.paidAt ? (inv.paidAt | date: 'dd/MM/yyyy HH:mm') : '—' }}</dd></div>
+          @if (inv.voidedAt) {
+            <div class="flex justify-between gap-4"><dt class="text-gray-500 dark:text-gray-400">Anulada</dt><dd class="font-medium text-primary-700 dark:text-primary-400">{{ inv.voidedAt | date: 'dd/MM/yyyy' }}@if (inv.voidedByName) { · {{ inv.voidedByName }} }</dd></div>
+          }
+        </dl>
+      </div>
+
+      <div class="rounded-lg bg-white p-5 shadow-sm dark:bg-gray-800 md:p-6">
+        <h2 class="mb-4 text-xs font-semibold uppercase tracking-wide text-gray-400">Datos del pago</h2>
+        @if (inv.paymentMethodName || inv.paymentReference) {
+          <dl class="space-y-3 text-sm">
+            <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Método</dt><dd class="text-gray-800 dark:text-gray-200">{{ inv.paymentMethodName ?? '—' }}</dd></div>
+            @if (inv.paidOn) { <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Fecha del pago</dt><dd class="text-gray-800 dark:text-gray-200">{{ inv.paidOn | date: 'dd/MM/yyyy' }}</dd></div> }
+            @if (inv.paymentReference) { <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Referencia</dt><dd class="font-medium text-gray-800 dark:text-gray-200">{{ inv.paymentReference }}</dd></div> }
+            @if (inv.payerBank) { <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Banco emisor</dt><dd class="text-gray-800 dark:text-gray-200">{{ inv.payerBank }}</dd></div> }
+            @if (inv.payerPhone) { <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Teléfono</dt><dd class="text-gray-800 dark:text-gray-200">{{ inv.payerPhone }}</dd></div> }
+            @if (inv.payerId) { <div class="flex justify-between gap-4 border-b border-gray-100 pb-3 dark:border-gray-700/60"><dt class="text-gray-500 dark:text-gray-400">Cédula pagador</dt><dd class="text-gray-800 dark:text-gray-200">{{ inv.payerId }}</dd></div> }
+            @if (inv.payerAccount) { <div class="flex justify-between gap-4"><dt class="text-gray-500 dark:text-gray-400">Cuenta origen</dt><dd class="text-gray-800 dark:text-gray-200">{{ inv.payerAccount }}</dd></div> }
+          </dl>
+        } @else {
+          <p class="text-sm text-gray-400">Esta factura no registra datos de pago.</p>
+        }
+      </div>
+    </div>
+
+    <!-- Receipts, always visible inline -->
+    <div class="rounded-lg bg-white p-5 shadow-sm dark:bg-gray-800 md:p-6">
+      <h2 class="mb-4 text-xs font-semibold uppercase tracking-wide text-gray-400">Comprobantes</h2>
+      @if (proofs().length > 0) {
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          @for (p of proofs(); track p.url) {
+            <figure class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+              <div class="bg-gray-50 dark:bg-gray-900/40">
+                @if (isPdf(p.url)) {
+                  <iframe [src]="p.url" [title]="p.label" class="h-72 w-full"></iframe>
+                } @else {
+                  <button type="button" (click)="zoom(p)" class="block w-full" title="Ampliar">
+                    <img [src]="p.url" [alt]="p.label" class="h-72 w-full cursor-zoom-in object-contain" />
+                  </button>
+                }
+              </div>
+              <figcaption class="flex items-center justify-between gap-2 border-t border-gray-200 px-3 py-2 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                {{ p.label }}
+                @if (!isPdf(p.url)) { <button type="button" (click)="zoom(p)" class="font-semibold text-primary-700 hover:underline dark:text-primary-300">Ampliar</button> }
+              </figcaption>
+            </figure>
+          }
+        </div>
+      } @else {
+        <p class="text-sm text-gray-400">Sin comprobante adjunto.</p>
+      }
+    </div>
+  }
+</div>
+
+<app-file-viewer [state]="viewer()" (close)="viewer.set(null)" />
