@@ -412,6 +412,9 @@ export class DriverWizard {
     const form = new FormData();
     form.set('purpose', 'debt');
     if (draft.paymentMethodId != null) form.set('paymentMethodId', String(draft.paymentMethodId));
+    // Efectivo Divisa (cash_usd): the backend requires the captured amount; without
+    // it the submission is rejected ("Indica el monto") and the payment is lost.
+    if (draft.amountUsd) form.set('amountUsd', draft.amountUsd);
     if (draft.reference) form.set('reference', draft.reference);
     if (draft.payerBank) form.set('payerBank', draft.payerBank);
     if (draft.paidOn) form.set('paidOn', draft.paidOn);
