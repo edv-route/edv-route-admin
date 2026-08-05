@@ -365,10 +365,12 @@
                     <p class="mt-0.5 text-xs text-gray-400">{{ v.photos.length }} foto(s) · {{ v.documents.length }} documento(s)</p>
                   </div>
                 </div>
-                <div class="flex shrink-0 items-center gap-3">
-                  <button type="button" (click)="editVehicleDraft(vIdx)" class="text-xs font-medium text-primary-700 hover:underline dark:text-primary-300">Editar</button>
-                  <button type="button" (click)="removeVehicleDraft(vIdx)" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Quitar</button>
-                </div>
+                <app-action-menu
+                  class="shrink-0"
+                  ariaLabel="Acciones del vehículo"
+                  [items]="vehicleMenu"
+                  (select)="onVehicleAction($event, vIdx)"
+                />
               </div>
 
               <!-- Documents of this vehicle -->
@@ -582,7 +584,7 @@
         <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">
           El afiliado está <strong>pendiente</strong>.
           @if (paidAtRegister()) {
-            El pago quedó <strong>pendiente de aprobación</strong> en Facturación → «Por aprobar». Al aprobarlo se salda la deuda del alta y podrás aprobar al afiliado.
+            El pago quedó <strong>pendiente de aprobación</strong> en Facturación → «Por aprobar». Al aprobarlo se emite la factura del alta (membresía + semanas) y podrás aprobar al afiliado.
           } @else {
             Cóbrale la membresía y la tarifa desde su perfil; la aprobación exige esos pagos.
           }

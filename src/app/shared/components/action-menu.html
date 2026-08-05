@@ -1,0 +1,45 @@
+<button
+  type="button"
+  (click)="toggle()"
+  [attr.aria-label]="ariaLabel()"
+  aria-haspopup="menu"
+  [attr.aria-expanded]="isOpen()"
+  class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+>
+  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <circle cx="12" cy="5" r="1.6" />
+    <circle cx="12" cy="12" r="1.6" />
+    <circle cx="12" cy="19" r="1.6" />
+  </svg>
+</button>
+
+@if (isOpen()) {
+  <div
+    role="menu"
+    class="absolute right-0 z-20 mt-1 min-w-40 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+  >
+    @for (item of items(); track item.key) {
+      <button
+        type="button"
+        role="menuitem"
+        (click)="run(item)"
+        class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium transition hover:bg-gray-50 dark:hover:bg-gray-700"
+        [class]="item.danger ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-200'"
+      >
+        @if (item.iconPath) {
+          <svg
+            class="h-4 w-4 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="item.iconPath" />
+          </svg>
+        }
+        {{ item.label }}
+      </button>
+    }
+  </div>
+}

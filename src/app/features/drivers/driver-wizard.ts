@@ -14,6 +14,7 @@ import { VehicleTypesApi } from '../vehicle-types/vehicle-types.api';
 import { DatePicker } from '../../shared/components/date-picker';
 import { PasswordInput } from '../../shared/components/password-input';
 import { Select, type SelectOption } from '../../shared/components/select';
+import { ActionMenu, type ActionMenuItem } from '../../shared/components/action-menu';
 import {
   PASSWORD_MIN_LENGTH,
   PasswordPolicyDirective,
@@ -45,7 +46,7 @@ import {
  */
 @Component({
   selector: 'app-driver-wizard',
-  imports: [FormsModule, RouterLink, Select, PasswordInput, DatePicker, PasswordPolicyDirective, ...INPUT_FILTERS, VehicleDraftModal, DocumentDraftModal, PaymentDraftModal],
+  imports: [FormsModule, RouterLink, Select, PasswordInput, DatePicker, PasswordPolicyDirective, ...INPUT_FILTERS, VehicleDraftModal, DocumentDraftModal, PaymentDraftModal, ActionMenu],
   templateUrl: './driver-wizard.html',
 })
 export class DriverWizard {
@@ -334,6 +335,28 @@ export class DriverWizard {
     this.vehicles.update((list) => list.filter((_, i) => i !== index));
   }
 
+  /** Card-level actions for a vehicle draft, rendered as a ⋮ menu on its row. */
+  readonly vehicleMenu: ActionMenuItem[] = [
+    {
+      key: 'edit',
+      label: 'Editar vehículo',
+      iconPath:
+        'm16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125',
+    },
+    {
+      key: 'remove',
+      label: 'Quitar vehículo',
+      danger: true,
+      iconPath:
+        'm14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.02-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0',
+    },
+  ];
+
+  onVehicleAction(key: string, index: number): void {
+    if (key === 'edit') this.editVehicleDraft(index);
+    else if (key === 'remove') this.removeVehicleDraft(index);
+  }
+
   // --- Step 3: a vehicle's documents (app-document-draft-modal per card) ---
 
   openAddVehicleDoc(vehicleIndex: number): void {
@@ -407,14 +430,17 @@ export class DriverWizard {
    * chosen) the payment in a single transaction, then uploads the document
    * files. `withPayment` false leaves the driver pending.
    */
-  /** Multipart body of the alta's debt submission (the receipt is held pending). */
-  private buildDebtForm(draft: PaymentDraft): FormData {
+  /**
+   * Multipart body of the alta's ENROLL submission (v9, 2026-08-04): membership +
+   * N weeks in ONE invoice on approval. The amount is derived by the backend from
+   * `periods` × tariff + membership (the total shown in the summary), so no captured
+   * cash amount is sent — the weeks are the source of truth.
+   */
+  private buildEnrollForm(draft: PaymentDraft): FormData {
     const form = new FormData();
-    form.set('purpose', 'debt');
+    form.set('purpose', 'enroll');
+    form.set('periods', String(this.periods));
     if (draft.paymentMethodId != null) form.set('paymentMethodId', String(draft.paymentMethodId));
-    // Efectivo Divisa (cash_usd): the backend requires the captured amount; without
-    // it the submission is rejected ("Indica el monto") and the payment is lost.
-    if (draft.amountUsd) form.set('amountUsd', draft.amountUsd);
     if (draft.reference) form.set('reference', draft.reference);
     if (draft.payerBank) form.set('payerBank', draft.payerBank);
     if (draft.paidOn) form.set('paidOn', draft.paidOn);
@@ -451,11 +477,13 @@ export class DriverWizard {
     this.saving.set(true);
     this.error.set(null);
     this.fileWarning.set(null);
-    // v9: the alta never settles on the spot. Register the driver WITHOUT payment
-    // (emits the alta debt); the captured payment becomes a PENDING submission an
-    // admin approves in Facturación → "Por aprobar".
+    // v9: the alta never settles on the spot. With a payment, the alta is deferred
+    // (no base debt is emitted) and the captured payment becomes a PENDING `enroll`
+    // submission = membership + N weeks in ONE invoice, approved in Facturación →
+    // "Por aprobar". Without a payment, the driver is registered owing the base
+    // alta debt (membership + 1 week) to settle later.
     this.api
-      .register(this.composed!, { payment: null, vehicles, documents })
+      .register(this.composed!, { payment: null, deferredEnrollment: sendPayment, vehicles, documents })
       .pipe(
         switchMap((result) => {
           const uploads = docDrafts
@@ -495,9 +523,9 @@ export class DriverWizard {
           );
         }),
         switchMap(({ result, flags }) => {
-          // The captured payment → pending submission (debt of the alta).
+          // The captured payment → pending ENROLL submission (membership + N weeks).
           if (sendPayment && draft) {
-            return this.submissionsApi.create(result.userId, this.buildDebtForm(draft)).pipe(
+            return this.submissionsApi.create(result.userId, this.buildEnrollForm(draft)).pipe(
               map(() => ({ result, flags, paymentSent: true })),
               catchError(() => of({ result, flags, paymentSent: false })),
             );
