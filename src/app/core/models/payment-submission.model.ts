@@ -3,11 +3,14 @@
  * behalf) that stays `pending` until an admin approves it (debt settled / weeks
  * prepaid, invoice emitted) or rejects it (trace kept, driver told to resend).
  */
-export type SubmissionStatus = 'pending' | 'approved' | 'rejected';
-export type SubmissionPurpose = 'debt' | 'advance';
+export type SubmissionStatus = 'pending' | 'approved' | 'rejected' | 'reverted';
+export type SubmissionPurpose = 'debt' | 'advance' | 'enroll' | 'change_plan';
 
 export interface SubmissionListItem {
   id: string;
+  /** Continuous receipt number (the "N° de pago"). */
+  submissionNumber: string;
+  purpose: string;
   driverId: string;
   driverName: string;
   status: SubmissionStatus;
@@ -30,6 +33,10 @@ export interface SubmissionFileView {
 export interface SubmissionItem {
   label: string;
   amountUsd: string;
+  /** N° of the invoice this line bills (null while the receipt is pending). */
+  invoiceNumber: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
 }
 
 export interface SubmissionDetail extends SubmissionListItem {
@@ -42,6 +49,11 @@ export interface SubmissionDetail extends SubmissionListItem {
   note: string | null;
   rejectionReason: string | null;
   reviewedByName: string | null;
+  /** Reversal trace (refund/correction), when the receipt was reverted. */
+  reversalType: string | null;
+  reversalReason: string | null;
+  revertedByName: string | null;
+  revertedAt: string | null;
   invoiceId: string | null;
   invoiceNumber: string | null;
   /** What the payment covers (breakdown). */
@@ -64,4 +76,5 @@ export const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
   pending: 'Pendiente',
   approved: 'Aprobado',
   rejected: 'Rechazado',
+  reverted: 'Revertido',
 };

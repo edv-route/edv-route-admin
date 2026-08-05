@@ -18,13 +18,13 @@
   </section>
 }
 
-<!-- Billing history. Pro list-card chassis; EDV colors; logic untouched. -->
+<!-- Billing history. Pro list-card chassis; EDV colors. -->
 <div class="rounded-lg bg-white shadow-sm dark:bg-gray-800">
   <div class="px-4 pt-4 md:px-6 md:pt-6">
     <h1 class="text-xl font-bold text-gray-900 dark:text-white">Facturación</h1>
     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-      Historial de facturas y pagos del gremio. Los documentos de dinero nunca se borran:
-      los reembolsos anulan la factura conservando su número.
+      Un <strong>pago</strong> (recibo) cancela una o varias <strong>facturas</strong>; cada factura
+      es un concepto (membresía o semana). Los documentos de dinero nunca se borran.
     </p>
   </div>
 
@@ -48,38 +48,22 @@
 
 <div class="flex flex-wrap items-center gap-3 px-4 py-4 md:px-6">
   <div class="flex rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-600 dark:bg-gray-700">
-    <button
-      type="button"
-      (click)="setTab('invoices')"
-      [class]="tab() === 'invoices'
-        ? 'rounded-md bg-primary-700 px-4 py-1.5 text-xs font-semibold text-white'
-        : 'rounded-md px-4 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'"
-    >
-      Facturas
-    </button>
-    <button
-      type="button"
-      (click)="setTab('payments')"
-      [class]="tab() === 'payments'
-        ? 'rounded-md bg-primary-700 px-4 py-1.5 text-xs font-semibold text-white'
-        : 'rounded-md px-4 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'"
-    >
-      Pagos
-    </button>
-    <button
-      type="button"
-      (click)="setTab('review')"
-      [class]="tab() === 'review'
-        ? 'rounded-md bg-primary-700 px-4 py-1.5 text-xs font-semibold text-white'
-        : 'rounded-md px-4 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'"
-    >
-      Por aprobar
-    </button>
+    @for (t of [['receipts', 'Pagos'], ['invoices', 'Facturas'], ['review', 'Por aprobar']]; track t[0]) {
+      <button
+        type="button"
+        (click)="setTab($any(t[0]))"
+        [class]="tab() === t[0]
+          ? 'rounded-md bg-primary-700 px-4 py-1.5 text-xs font-semibold text-white'
+          : 'rounded-md px-4 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'"
+      >
+        {{ t[1] }}
+      </button>
+    }
   </div>
 
   @if (tab() === 'invoices') {
-    <div class="flex rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-600 dark:bg-gray-700">
-      @for (opt of [['', 'Todas'], ['issued', 'Por cobrar'], ['paid', 'Pagadas'], ['voided', 'Anuladas']]; track opt[0]) {
+    <div class="flex flex-wrap rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-600 dark:bg-gray-700">
+      @for (opt of [['', 'Todas'], ['issued', 'Por cobrar'], ['overdue', 'En mora'], ['paid', 'Pagadas'], ['voided', 'Anuladas']]; track opt[0]) {
         <button
           type="button"
           (click)="setInvoiceStatus($any(opt[0]))"
@@ -91,23 +75,9 @@
         </button>
       }
     </div>
-  } @else if (tab() === 'payments') {
-    <div class="flex rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-600 dark:bg-gray-700">
-      @for (opt of [['', 'Todos'], ['membership', 'Membresía'], ['subscription', 'Tarifas']]; track opt[0]) {
-        <button
-          type="button"
-          (click)="setPaymentKind($any(opt[0]))"
-          [class]="paymentKind() === opt[0]
-            ? 'rounded-md bg-primary-700 px-3 py-1.5 text-xs font-semibold text-white'
-            : 'rounded-md px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'"
-        >
-          {{ opt[1] }}
-        </button>
-      }
-    </div>
   }
 
-  @if (tab() !== 'review') {
+  @if (tab() === 'invoices') {
     <form class="relative w-full sm:max-w-xs" (ngSubmit)="applyFilters()">
       <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
         <svg class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -118,7 +88,7 @@
         type="search"
         name="search"
         [(ngModel)]="search"
-        [placeholder]="tab() === 'invoices' ? 'Afiliado o Nº de factura…' : 'Afiliado…'"
+        placeholder="Afiliado o Nº de factura…"
         class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 pl-9 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400"
       />
     </form>
@@ -126,152 +96,103 @@
 </div>
 
 <div class="overflow-x-auto">
-  @if (tab() === 'invoices') {
+  @if (tab() === 'receipts') {
+    <!-- Pagos = receipts (payment_submissions), one row per payment. -->
     <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
       <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-400">
         <tr>
-          <th class="px-4 py-3 font-semibold">Nº</th>
-          <th class="px-4 py-3 font-semibold">Afiliado</th>
+          <th class="px-4 py-3 font-semibold">N° pago</th>
+          <th class="px-4 py-3 font-semibold">Pagador</th>
           <th class="px-4 py-3 font-semibold">Monto</th>
           <th class="px-4 py-3 font-semibold">Estado</th>
-          <th class="px-4 py-3 font-semibold">Emitida</th>
-          <th class="px-4 py-3 font-semibold">Pagada</th>
-          <th class="px-4 py-3 font-semibold">Pago</th>
-        </tr>
-      </thead>
-      <tbody>
-        @if (loading()) {
-          <tr><td colspan="7" class="px-6 py-8 text-center text-gray-400">Cargando…</td></tr>
-        } @else {
-          @for (item of invoices(); track item.id) {
-            <tr class="border-b border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
-              <td class="px-4 py-3">
-                <a [routerLink]="['/billing', item.id]"
-                  class="font-mono font-semibold text-primary-700 hover:underline dark:text-primary-300">
-                  #{{ item.invoiceNumber }}
-                </a>
-              </td>
-              <td class="px-4 py-3">
-                <span class="font-semibold text-gray-800 dark:text-gray-100">{{ item.driverName }}</span>
-              </td>
-              <td class="px-4 py-3 font-medium">${{ item.totalUsd }}</td>
-              <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                @switch (item.status) {
-                  @case ('voided') {
-                    <div class="flex items-center">
-                      <div class="mr-2 h-2.5 w-2.5 rounded-full bg-primary-700 dark:bg-primary-400"></div>
-                      {{ invoiceStatusLabels.voided }}
-                    </div>
-                    <p class="mt-1 text-xs font-normal text-gray-400">
-                      {{ item.voidedAt | date: 'dd/MM/yyyy' }}@if (item.voidedByName) { · {{ item.voidedByName }}}
-                    </p>
-                  }
-                  @case ('paid') {
-                    <div class="flex items-center">
-                      <div class="mr-2 h-2.5 w-2.5 rounded-full bg-green-500"></div>
-                      {{ invoiceStatusLabels.paid }}
-                    </div>
-                  }
-                  @default {
-                    <div class="flex items-center">
-                      <div class="mr-2 h-2.5 w-2.5 rounded-full bg-gold-500"></div>
-                      {{ invoiceStatusLabels.issued }}
-                    </div>
-                    <p class="mt-1 text-xs font-normal text-gray-400">Por cobrar</p>
-                  }
-                }
-              </td>
-              <td class="whitespace-nowrap px-4 py-3">{{ item.issuedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
-              <td class="whitespace-nowrap px-4 py-3">
-                @if (item.paidAt) {
-                  {{ item.paidAt | date: 'dd/MM/yyyy HH:mm' }}
-                } @else {
-                  <span class="text-gray-300">—</span>
-                }
-              </td>
-              <td class="px-4 py-3">
-                @if (item.paymentMethodName) {
-                  <p class="text-xs font-medium text-gray-700 dark:text-gray-200">{{ item.paymentMethodName }}</p>
-                }
-                @if (item.paymentReference) {
-                  <p class="text-xs text-gray-400">Ref: {{ item.paymentReference }}</p>
-                }
-                @if (item.hasProof) {
-                  <button type="button" (click)="openInvoiceProof(item.id)"
-                    class="mt-0.5 text-xs font-semibold text-primary-700 hover:underline dark:text-primary-300">
-                    Ver comprobante
-                  </button>
-                } @else if (!item.paymentMethodName) {
-                  <span class="text-xs text-gray-300">—</span>
-                }
-              </td>
-            </tr>
-          } @empty {
-            <tr><td colspan="7" class="px-6 py-8 text-center text-gray-400">Sin resultados.</td></tr>
-          }
-        }
-      </tbody>
-    </table>
-  } @else if (tab() === 'payments') {
-    <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
-      <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-400">
-        <tr>
-          <th class="px-4 py-3 font-semibold">Concepto</th>
-          <th class="px-4 py-3 font-semibold">Afiliado</th>
-          <th class="px-4 py-3 font-semibold">Período</th>
-          <th class="px-4 py-3 font-semibold">Monto</th>
-          <th class="px-4 py-3 font-semibold">Estado</th>
-          <th class="px-4 py-3 font-semibold">Factura</th>
+          <th class="px-4 py-3 font-semibold">Fecha</th>
+          <th class="px-4 py-3 font-semibold">Método</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Cargando…</td></tr>
         } @else {
-          @for (item of payments(); track item.id) {
+          @for (r of receipts(); track r.id) {
+            <tr class="border-b border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">
+              <td class="px-4 py-3">
+                <span class="font-mono font-semibold text-primary-700 dark:text-primary-300">#{{ r.submissionNumber }}</span>
+              </td>
+              <td class="px-4 py-3"><span class="font-semibold text-gray-800 dark:text-gray-100">{{ r.driverName }}</span></td>
+              <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">${{ r.amountUsd }}</td>
+              <td class="px-4 py-3">
+                @switch (r.status) {
+                  @case ('approved') { <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-green-500"></span>Aprobado</span> }
+                  @case ('rejected') { <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-primary-600"></span>Rechazado</span> }
+                  @case ('reverted') { <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-gray-400"></span>Revertido</span> }
+                  @default { <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-gold-500"></span>Pendiente</span> }
+                }
+              </td>
+              <td class="whitespace-nowrap px-4 py-3">{{ r.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+              <td class="px-4 py-3">
+                @if (r.paymentMethodName) {
+                  <p class="text-xs font-medium text-gray-700 dark:text-gray-200">{{ r.paymentMethodName }}</p>
+                }
+                <a [routerLink]="['/billing/submissions', r.id]"
+                  class="text-xs font-semibold text-primary-700 hover:underline dark:text-primary-300">Ver detalle del pago</a>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Sin pagos registrados.</td></tr>
+          }
+        }
+      </tbody>
+    </table>
+  } @else if (tab() === 'invoices') {
+    <!-- Facturas = one invoice per concept, linked to the receipt that paid it. -->
+    <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+      <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+        <tr>
+          <th class="px-4 py-3 font-semibold">Nº</th>
+          <th class="px-4 py-3 font-semibold">Afiliado</th>
+          <th class="px-4 py-3 font-semibold">Concepto · período</th>
+          <th class="px-4 py-3 font-semibold">Monto</th>
+          <th class="px-4 py-3 font-semibold">Estado</th>
+          <th class="px-4 py-3 font-semibold">Pago</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Cargando…</td></tr>
+        } @else {
+          @for (item of invoices(); track item.id) {
             <tr class="border-b border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
               <td class="px-4 py-3">
-                <p class="font-medium text-gray-800 dark:text-gray-100">{{ item.concept }}</p>
-                <p class="text-xs text-gray-400">{{ kindLabels[item.kind] }}</p>
+                <a [routerLink]="['/billing', item.id]"
+                  class="font-mono font-semibold text-primary-700 hover:underline dark:text-primary-300">#{{ item.invoiceNumber }}</a>
               </td>
-              <td class="px-4 py-3">
-                <span class="font-semibold text-gray-800 dark:text-gray-100">{{ item.driverName }}</span>
-              </td>
+              <td class="px-4 py-3"><span class="font-semibold text-gray-800 dark:text-gray-100">{{ item.driverName }}</span></td>
               <td class="whitespace-nowrap px-4 py-3">
+                <span class="text-gray-700 dark:text-gray-200">{{ item.concept }}</span>
                 @if (item.periodStart) {
-                  {{ item.periodStart | date: 'dd/MM/yy' }} → {{ item.periodEnd | date: 'dd/MM/yy' }}
-                } @else {
-                  <span class="text-gray-400">Pago único</span>
+                  <span class="text-xs text-gray-400"> · {{ item.periodStart | date: 'dd/MM/yy' }}–{{ item.periodEnd | date: 'dd/MM/yy' }}</span>
                 }
               </td>
-              <td class="px-4 py-3 font-medium">${{ item.amountUsd }}</td>
+              <td class="px-4 py-3 font-medium">${{ item.totalUsd }}</td>
               <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
                 @switch (item.status) {
-                  @case ('paid') {
-                    <div class="flex items-center">
-                      <div class="mr-2 h-2.5 w-2.5 rounded-full bg-green-500"></div>
-                      Pagado
-                    </div>
+                  @case ('voided') {
+                    <div class="flex items-center"><span class="mr-2 h-2.5 w-2.5 rounded-full bg-primary-700 dark:bg-primary-400"></span>{{ invoiceStatusLabels.voided }}</div>
+                    <p class="mt-1 text-xs font-normal text-gray-400">{{ item.voidedAt | date: 'dd/MM/yyyy' }}@if (item.voidedByName) { · {{ item.voidedByName }}}</p>
                   }
-                  @case ('refunded') {
-                    <div class="flex items-center">
-                      <div class="mr-2 h-2.5 w-2.5 rounded-full bg-primary-700 dark:bg-primary-400"></div>
-                      Reembolsado
-                    </div>
-                    @if (item.refundedAt) {
-                      <p class="mt-1 text-xs font-normal text-gray-400">{{ item.refundedAt | date: 'dd/MM/yyyy' }}</p>
-                    }
-                  }
-                  @default {
-                    <div class="flex items-center">
-                      <div class="mr-2 h-2.5 w-2.5 rounded-full bg-gray-400"></div>
-                      Pendiente
-                    </div>
-                  }
+                  @case ('paid') { <div class="flex items-center"><span class="mr-2 h-2.5 w-2.5 rounded-full bg-green-500"></span>{{ invoiceStatusLabels.paid }}</div> }
+                  @case ('overdue') { <div class="flex items-center"><span class="mr-2 h-2.5 w-2.5 rounded-full bg-amber-500"></span>{{ invoiceStatusLabels.overdue }}</div> }
+                  @default { <div class="flex items-center"><span class="mr-2 h-2.5 w-2.5 rounded-full bg-gold-500"></span>{{ invoiceStatusLabels.issued }}</div><p class="mt-1 text-xs font-normal text-gray-400">Por cobrar</p> }
                 }
               </td>
-              <td class="px-4 py-3 font-mono">
-                @if (item.invoiceNumber) { #{{ item.invoiceNumber }} } @else { — }
+              <td class="px-4 py-3">
+                @if (item.submissionId) {
+                  @if (item.paymentMethodName) { <p class="text-xs font-medium text-gray-700 dark:text-gray-200">{{ item.paymentMethodName }}</p> }
+                  <a [routerLink]="['/billing/submissions', item.submissionId]"
+                    class="text-xs font-semibold text-primary-700 hover:underline dark:text-primary-300">Ver detalle del pago</a>
+                } @else {
+                  <span class="text-xs text-gray-300">Sin pago</span>
+                }
               </td>
             </tr>
           } @empty {
@@ -281,12 +202,13 @@
       </tbody>
     </table>
   } @else {
-    <!-- Review inbox: pending payment submissions awaiting approval. -->
+    <!-- Por aprobar: pending receipts awaiting approval. -->
     <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
       <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-400">
         <tr>
+          <th class="px-4 py-3 font-semibold">N° pago</th>
           <th class="px-4 py-3 font-semibold">Afiliado</th>
-          <th class="px-4 py-3 font-semibold">Concepto</th>
+          <th class="px-4 py-3 font-semibold">Origen</th>
           <th class="px-4 py-3 font-semibold">Monto</th>
           <th class="px-4 py-3 font-semibold">Método</th>
           <th class="px-4 py-3 font-semibold">Enviado</th>
@@ -295,26 +217,28 @@
       </thead>
       <tbody>
         @if (loading()) {
-          <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Cargando…</td></tr>
+          <tr><td colspan="7" class="px-6 py-8 text-center text-gray-400">Cargando…</td></tr>
         } @else {
           @for (item of submissions(); track item.id) {
-            <tr [routerLink]="['/billing/submissions', item.id]"
-              class="cursor-pointer border-b border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
-              <td class="px-4 py-3">
-                <span class="font-semibold text-gray-800 dark:text-gray-100">{{ item.driverName }}</span>
-              </td>
+            <tr class="border-b border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">
+              <td class="px-4 py-3"><span class="font-mono font-semibold text-primary-700 dark:text-primary-300">#{{ item.submissionNumber }}</span></td>
+              <td class="px-4 py-3"><span class="font-semibold text-gray-800 dark:text-gray-100">{{ item.driverName }}</span></td>
               <td class="px-4 py-3">
                 <span class="rounded-full bg-gold-100 px-2 py-0.5 text-[11px] font-semibold text-gold-800">
-                  {{ item.source === 'app' ? 'Enviado por el chofer' : 'Registrado por admin' }}
+                  {{ item.source === 'app' ? 'Chofer' : 'Admin' }}
                 </span>
               </td>
               <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">${{ item.amountUsd }}</td>
               <td class="px-4 py-3">{{ item.paymentMethodName ?? '—' }}</td>
               <td class="whitespace-nowrap px-4 py-3">{{ item.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
-              <td class="px-4 py-3">{{ item.fileCount }} img.</td>
+              <td class="px-4 py-3">
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ item.fileCount }} img.</p>
+                <a [routerLink]="['/billing/submissions', item.id]"
+                  class="text-xs font-semibold text-primary-700 hover:underline dark:text-primary-300">Ver detalle del pago</a>
+              </td>
             </tr>
           } @empty {
-            <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">No hay pagos por aprobar.</td></tr>
+            <tr><td colspan="7" class="px-6 py-8 text-center text-gray-400">No hay pagos por aprobar.</td></tr>
           }
         }
       </tbody>
@@ -332,25 +256,15 @@
   </p>
   @if (totalPages > 1) {
     <div class="flex gap-2">
-      <button
-        type="button"
-        (click)="goToPage(page() - 1)"
-        [disabled]="page() === 1"
-        class="flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:outline-none focus:ring-4 focus:ring-gray-100 disabled:opacity-40 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-700"
-      >
+      <button type="button" (click)="goToPage(page() - 1)" [disabled]="page() === 1"
+        class="flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 hover:text-primary-700 disabled:opacity-40 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
         Anterior
       </button>
-      <button
-        type="button"
-        (click)="goToPage(page() + 1)"
-        [disabled]="page() === totalPages"
-        class="flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:outline-none focus:ring-4 focus:ring-gray-100 disabled:opacity-40 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-700"
-      >
+      <button type="button" (click)="goToPage(page() + 1)" [disabled]="page() === totalPages"
+        class="flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 hover:text-primary-700 disabled:opacity-40 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
         Siguiente
       </button>
     </div>
   }
 </nav>
 </div>
-
-<app-file-viewer [state]="viewer()" (close)="viewer.set(null)" />

@@ -1,8 +1,8 @@
 import { Component, inject, input, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import type { HttpErrorResponse } from '@angular/common/http';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import {
   SUBMISSION_PURPOSE_LABELS,
   SUBMISSION_STATUS_LABELS,
@@ -24,7 +24,7 @@ import { PaymentSubmissionsApi } from './payment-submissions.api';
 })
 export class PaymentSubmissionDetail {
   private readonly api = inject(PaymentSubmissionsApi);
-  private readonly router = inject(Router);
+  private readonly location = inject(Location);
 
   readonly id = input.required<string>();
   readonly statusLabels = SUBMISSION_STATUS_LABELS;
@@ -35,8 +35,10 @@ export class PaymentSubmissionDetail {
   readonly error = signal<string | null>(null);
   readonly saving = signal(false);
   /** Which confirmation modal is open (null = none). */
-  readonly confirmAction = signal<'approve' | 'reject' | null>(null);
+  readonly confirmAction = signal<'approve' | 'reject' | 'reverse' | null>(null);
   rejectReason = '';
+  /** For a reversal: refund (money returned) vs correction (re-charge corrected). */
+  reversalType: 'refund' | 'correction' = 'correction';
   readonly viewer = signal<FileViewerState | null>(null);
 
   private static msg(err: HttpErrorResponse, fallback: string): string {
@@ -64,14 +66,17 @@ export class PaymentSubmissionDetail {
     this.viewer.set({ title: label, url, loading: false, error: null });
   }
 
+  /** Returns to wherever the user came from (review inbox, receipts list, or the
+   *  driver's payment history) instead of a fixed page. */
   back(): void {
-    void this.router.navigate(['/billing'], { queryParams: { tab: 'review' } });
+    this.location.back();
   }
 
-  /** Opens the approve/reject confirmation modal. */
-  openConfirm(action: 'approve' | 'reject'): void {
+  /** Opens the approve/reject/reverse confirmation modal. */
+  openConfirm(action: 'approve' | 'reject' | 'reverse'): void {
     this.error.set(null);
-    if (action === 'reject') this.rejectReason = '';
+    if (action === 'reject' || action === 'reverse') this.rejectReason = '';
+    if (action === 'reverse') this.reversalType = 'correction';
     this.confirmAction.set(action);
   }
 
@@ -112,6 +117,27 @@ export class PaymentSubmissionDetail {
         this.saving.set(false);
         this.confirmAction.set(null);
         this.error.set(PaymentSubmissionDetail.msg(err, 'No se pudo rechazar el pago'));
+      },
+    });
+  }
+
+  /** Reverses an approved receipt (refund or correction), with a reason. */
+  reverse(): void {
+    const sub = this.submission();
+    if (!sub || this.saving()) return;
+    const reason = this.rejectReason.trim();
+    if (!reason) {
+      this.error.set('Indica el motivo de la reversión.');
+      return;
+    }
+    this.saving.set(true);
+    this.error.set(null);
+    this.api.reverse(sub.id, this.reversalType, reason).subscribe({
+      next: () => this.back(),
+      error: (err: HttpErrorResponse) => {
+        this.saving.set(false);
+        this.confirmAction.set(null);
+        this.error.set(PaymentSubmissionDetail.msg(err, 'No se pudo revertir el pago'));
       },
     });
   }

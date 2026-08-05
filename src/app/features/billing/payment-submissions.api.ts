@@ -41,6 +41,14 @@ export class PaymentSubmissionsApi {
     return this.http.post<void>(`${environment.apiUrl}/payment-submissions/${id}/reject`, { reason });
   }
 
+  /** Reverses an approved receipt: refund (voids its invoices) or correction. */
+  reverse(id: string, reversalType: 'refund' | 'correction', reason: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/payment-submissions/${id}/reverse`, {
+      reversalType,
+      reason,
+    });
+  }
+
   /** Creates a submission (multipart: payment meta + 1..5 receipt/bill images). */
   create(driverId: string, form: FormData): Observable<{ id: string }> {
     return this.http.post<{ id: string }>(

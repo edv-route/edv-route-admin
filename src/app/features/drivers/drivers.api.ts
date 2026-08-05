@@ -91,6 +91,8 @@ export class DriversApi {
       payment: ({ planId: number; periods: number } & PaymentMeta) | null;
       vehicles: (VehicleInput & { documents?: { requirementId: number }[] })[];
       documents: { requirementId: number; expiresAt: string | null }[];
+      /** v9: the alta is paid via a pending `enroll` submission → no base debt emitted. */
+      deferredEnrollment?: boolean;
     },
   ): Observable<RegisterResult> {
     return this.http.post<RegisterResult>(`${this.baseUrl}/register`, { ...data, ...extras });

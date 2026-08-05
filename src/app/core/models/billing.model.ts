@@ -2,7 +2,7 @@
  * Derived by the API from the invoice's charges: `issued` = emitted but still
  * owed (debt invoice), `paid` = every charge settled, `voided` = annulled.
  */
-export type InvoiceStatus = 'issued' | 'paid' | 'voided';
+export type InvoiceStatus = 'issued' | 'overdue' | 'paid' | 'voided';
 export type PaymentKind = 'membership' | 'subscription';
 export type PaymentStatus = 'pending' | 'paid' | 'refunded';
 
@@ -12,17 +12,25 @@ export interface InvoiceListItem {
   totalUsd: string;
   status: InvoiceStatus;
   issuedAt: string;
-  /** Settlement date (max paid_at of its charges); null unless fully paid. */
+  /** Settlement date (its single charge's paid_at); null unless paid. */
   paidAt: string | null;
   voidedAt: string | null;
   driverId: string;
   driverName: string;
   voidedByName: string | null;
-  /** Payment details (v8, Pieza 2). */
+  /** Billing redesign (2026-08-04): each invoice bills ONE concept. */
+  concept: string;
+  kind: PaymentKind;
+  periodStart: string | null;
+  periodEnd: string | null;
+  /** Receipt (payment) that settled/generated this invoice, if any. */
+  submissionId: string | null;
+  submissionNumber: string | null;
+  /** Payment details — read from the RECEIPT now, not the invoice. */
   paymentMethodName: string | null;
   paymentReference: string | null;
   payerBank: string | null;
-  /** Payer details (2026-07-31): date paid, phone/id (Pago Móvil), email/name (Zelle/Binance). */
+  /** Payer details: date paid, phone/id (Pago Móvil), email/name (Zelle/Binance). */
   paidOn: string | null;
   payerPhone: string | null;
   payerId: string | null;
@@ -64,6 +72,7 @@ export interface PaymentList {
 
 export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
   issued: 'Emitida',
+  overdue: 'En mora',
   paid: 'Pagada',
   voided: 'Anulada',
 };

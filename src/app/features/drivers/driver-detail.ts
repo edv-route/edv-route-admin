@@ -24,6 +24,8 @@ import { INPUT_FILTERS } from '../../shared/directives/input-filters';
 import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
 import { DocumentsApi, validateFile } from '../documents/documents.api';
 import { PaymentSubmissionsApi } from '../billing/payment-submissions.api';
+import { BillingApi } from '../billing/billing.api';
+import type { InvoiceListItem } from '../../core/models/billing.model';
 import { DriversApi } from './drivers.api';
 import { PaymentCapture, type PaymentCaptureValue, emptyPaymentCapture } from './payment-capture';
 import { VehicleForm } from './vehicle-form';
@@ -61,6 +63,7 @@ export class DriverDetail {
   private readonly api = inject(DriversApi);
   private readonly documentsApi = inject(DocumentsApi);
   private readonly submissionsApi = inject(PaymentSubmissionsApi);
+  private readonly billingApi = inject(BillingApi);
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
 
@@ -95,6 +98,9 @@ export class DriverDetail {
   /** External payment (v8): the note leaves the reason on the record. */
   readonly externalPayOpen = signal(false);
   externalPayNote = '';
+  /** Debt invoices of the driver + which are selected for a partial payment. */
+  readonly debtInvoices = signal<InvoiceListItem[]>([]);
+  readonly selectedInvoiceIds = signal<Set<string>>(new Set());
   /** Optional note (constancia) for the "Generar pago" modal, e.g. part in cash. */
   renewNote = '';
   /** Post-registration charge (membership + tariff) for a driver without payment. */
@@ -421,23 +427,15 @@ export class DriverDetail {
     const planId = this.renewPlanId();
     const isPlanChange = planId != null && planId !== this.driver()?.subscription?.planId;
 
-    // Simple renewal / advance → PENDING submission (purpose=advance), approved
-    // later. Plan change still settles directly for now (reroute pending: 2B).
+    // The modal button already gates on the capture's `complete()` (which makes the
+    // receipt optional for Efectivo Divisa). Simple renewal / advance → PENDING
+    // submission (purpose=advance); a different plan → purpose=change_plan.
     if (!isPlanChange) {
-      if (this.payment().files.length === 0) {
-        this.error.set('Adjunta el comprobante del pago.');
-        return;
-      }
       const form = this.buildSubmissionForm('advance', this.renewNote.trim() || null, this.renewPeriods());
       this.submitPayment(form, () => this.renewOpen.set(false));
       return;
     }
 
-    // Plan change → PENDING submission (purpose=change_plan), approved later.
-    if (this.payment().files.length === 0) {
-      this.error.set('Adjunta el comprobante del pago.');
-      return;
-    }
     const form = this.buildSubmissionForm('change_plan', this.renewNote.trim() || null, this.renewPeriods());
     if (planId != null) form.set('planId', String(planId));
     this.submitPayment(form, () => this.renewOpen.set(false));
@@ -454,8 +452,39 @@ export class DriverDetail {
     this.externalPayNote = '';
     this.resetPaymentCapture();
     this.error.set(null);
+    // Load the driver's debt invoices (issued/overdue) for the partial-payment
+    // selection; all are selected by default (settle everything).
+    this.billingApi.invoices({ driverId: this.id(), page: 1, limit: 100 }).subscribe({
+      next: (result) => {
+        const owed = result.items.filter((i) => i.status === 'issued' || i.status === 'overdue');
+        this.debtInvoices.set(owed);
+        this.selectedInvoiceIds.set(new Set(owed.map((i) => i.id)));
+      },
+      error: () => {
+        this.debtInvoices.set([]);
+        this.selectedInvoiceIds.set(new Set());
+      },
+    });
     this.externalPayOpen.set(true);
   }
+
+  /** Toggles a debt invoice in/out of the partial-payment selection. */
+  toggleInvoice(id: string): void {
+    this.selectedInvoiceIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  /** Total of the selected debt invoices (each paid in full). */
+  readonly selectedDebtTotal = computed(() =>
+    this.debtInvoices()
+      .filter((i) => this.selectedInvoiceIds().has(i.id))
+      .reduce((sum, i) => sum + Number(i.totalUsd), 0)
+      .toFixed(2),
+  );
 
   private resetPaymentCapture(): void {
     this.payment.set(emptyPaymentCapture());
@@ -478,10 +507,8 @@ export class DriverDetail {
    * can then be approved. Advance ×N weeks allowed. Reuses the enroll endpoint. */
   enroll(): void {
     if (this.saving()) return;
-    if (this.payment().files.length === 0) {
-      this.error.set('Adjunta el comprobante del pago.');
-      return;
-    }
+    // The modal button gates on the capture's `complete()` (receipt optional for
+    // Efectivo Divisa). Enroll = membership + N weeks in ONE invoice on approval.
     const form = this.buildSubmissionForm('enroll', null, this.enrollPeriods());
     this.submitPayment(form, () => this.enrollOpen.set(false));
   }
@@ -549,11 +576,15 @@ export class DriverDetail {
    */
   registerExternalPayment(): void {
     if (this.saving()) return;
-    if (this.payment().files.length === 0) {
-      this.error.set('Adjunta el comprobante del pago.');
+    const selected = [...this.selectedInvoiceIds()];
+    if (selected.length === 0) {
+      this.error.set('Selecciona al menos una factura por pagar.');
       return;
     }
+    // Partial payment: the receipt settles exactly the selected debt invoices
+    // (each in full); the button gates on the capture's `complete()`.
     const form = this.buildSubmissionForm('debt', this.externalPayNote.trim() || null);
+    form.set('invoiceIds', selected.join(','));
     this.submitPayment(form, () => this.externalPayOpen.set(false));
   }
 

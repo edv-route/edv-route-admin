@@ -1,9 +1,5 @@
-<div class="mx-auto max-w-6xl">
-  <button type="button" (click)="back()"
-    class="mb-4 inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-primary-700 dark:text-gray-400">
-    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
-    Volver a Facturación
-  </button>
+<div>
+  <button type="button" (click)="back()" class="text-sm text-gray-400 hover:text-primary-700">← Volver</button>
 
   @if (error(); as message) {
     <p class="rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-700 dark:text-primary-300">

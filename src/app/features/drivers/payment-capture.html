@@ -31,8 +31,8 @@
       [ngModelOptions]="{ standalone: true }" placeholder="dd/mm/aaaa" />
   </div>
 
-  <!-- Efectivo Divisa: captured amount (USD) -->
-  @if (isCash()) {
+  <!-- Efectivo Divisa: captured amount (USD) — only when the total is settled here -->
+  @if (isCash() && captureAmount()) {
     <div>
       <label for="payAmount" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Monto recibido (USD)</label>
       <input id="payAmount" type="text" inputmode="decimal" maxlength="12" [ngModel]="value().amountUsd"
@@ -82,7 +82,7 @@
   }
   <div class="sm:col-span-2">
     <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-      {{ isCash() ? 'Fotos de los billetes (1 a 5)' : 'Comprobante (imagen o PDF)' }}
+      {{ isCash() ? 'Fotos de los billetes (opcional, hasta 5)' : 'Comprobante (imagen o PDF)' }}
     </label>
     <!-- Native input stays hidden; the labels below trigger it via `for` -->
     <input #fileInput id="payProof" type="file" class="hidden"

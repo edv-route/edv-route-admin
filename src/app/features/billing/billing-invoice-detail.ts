@@ -1,7 +1,6 @@
 import { Component, inject, input, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, Location } from '@angular/common';
 import type { HttpErrorResponse } from '@angular/common/http';
-import { Router } from '@angular/router';
 import { INVOICE_STATUS_LABELS, type InvoiceDetail } from '../../core/models/billing.model';
 import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
 import { BillingApi } from './billing.api';
@@ -27,7 +26,7 @@ interface Proof {
 export class BillingInvoiceDetail {
   private readonly api = inject(BillingApi);
   private readonly submissionsApi = inject(PaymentSubmissionsApi);
-  private readonly router = inject(Router);
+  private readonly location = inject(Location);
 
   readonly id = input.required<string>();
   readonly statusLabels = INVOICE_STATUS_LABELS;
@@ -75,6 +74,6 @@ export class BillingInvoiceDetail {
   }
 
   back(): void {
-    void this.router.navigate(['/billing']);
+    this.location.back();
   }
 }

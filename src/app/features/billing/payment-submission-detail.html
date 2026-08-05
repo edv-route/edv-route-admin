@@ -1,9 +1,5 @@
-<div class="mx-auto max-w-6xl">
-  <button type="button" (click)="back()"
-    class="mb-4 inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-primary-700 dark:text-gray-400">
-    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
-    Volver a "Por aprobar"
-  </button>
+<div>
+  <button type="button" (click)="back()" class="text-sm text-gray-400 hover:text-primary-700">← Volver</button>
 
   @if (loading()) {
     <p class="text-sm text-gray-400">Cargando…</p>
@@ -11,7 +7,7 @@
     <!-- Header -->
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white p-5 shadow-sm dark:bg-gray-800 md:p-6">
       <div>
-        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Revisión de pago</p>
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Pago N° {{ sub.submissionNumber }}</p>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ sub.driverName }}</h1>
         <p class="mt-1 text-xs text-gray-400">
           {{ purposeLabels[sub.purpose] ?? 'Pago' }} ·
@@ -46,6 +42,14 @@
           </div>
         </div>
       </div>
+    } @else if (sub.status === 'approved') {
+      <div class="mb-4 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:px-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <p class="text-sm text-gray-500 dark:text-gray-400">¿Aprobado por error o reembolsado? Puedes revertir este pago con rastro.</p>
+          <button type="button" (click)="openConfirm('reverse')" [disabled]="saving()"
+            class="rounded-lg border border-red-200 px-5 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60 dark:hover:bg-gray-700">Revertir pago</button>
+        </div>
+      </div>
     }
 
     <div class="mb-4 grid gap-4 lg:grid-cols-2">
@@ -54,11 +58,24 @@
         <h2 class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">Qué está pagando</h2>
         <p class="mb-3 text-base font-semibold text-gray-900 dark:text-white">{{ purposeLabels[sub.purpose] ?? 'Pago' }}</p>
         @if (sub.items.length > 0) {
+          <p class="mb-2 text-xs text-gray-400">Cada línea es una factura generada por este pago.</p>
           <ul class="divide-y divide-gray-100 text-sm dark:divide-gray-700/60">
             @for (it of sub.items; track $index) {
               <li class="flex items-center justify-between gap-4 py-2">
-                <span class="text-gray-700 dark:text-gray-300">{{ it.label }}</span>
-                <span class="font-medium text-gray-900 dark:text-white">${{ it.amountUsd }}</span>
+                <span class="flex min-w-0 items-center gap-2.5 text-gray-700 dark:text-gray-300">
+                  @if (it.invoiceNumber) {
+                    <span class="inline-block min-w-[4.75rem] shrink-0 rounded bg-primary-50 px-1.5 py-0.5 text-center font-mono text-[10px] font-semibold text-primary-700 dark:bg-gray-700 dark:text-primary-300">Factura #{{ it.invoiceNumber }}</span>
+                  } @else {
+                    <span class="inline-block min-w-[4.75rem] shrink-0 text-center text-[10px] text-gray-300">—</span>
+                  }
+                  <span class="min-w-0 truncate">
+                    {{ it.label }}
+                    @if (it.periodStart) {
+                      <span class="text-xs text-gray-400"> · {{ it.periodStart | date: 'dd/MM/yy' }}–{{ it.periodEnd | date: 'dd/MM/yy' }}</span>
+                    }
+                  </span>
+                </span>
+                <span class="shrink-0 font-medium text-gray-900 dark:text-white">${{ it.amountUsd }}</span>
               </li>
             }
           </ul>
@@ -95,6 +112,16 @@
           </div>
         } @else if (sub.status === 'approved') {
           <p class="mt-4 border-t border-gray-200 pt-3 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Aprobado por {{ sub.reviewedByName ?? '—' }} · {{ sub.reviewedAt | date: 'dd/MM/yyyy HH:mm' }}</p>
+        } @else if (sub.status === 'reverted') {
+          <div class="mt-4 border-t border-gray-200 pt-3 text-sm dark:border-gray-700">
+            <p class="text-gray-500 dark:text-gray-400">
+              Revertido por {{ sub.revertedByName ?? '—' }} · {{ sub.revertedAt | date: 'dd/MM/yyyy HH:mm' }}
+              · {{ sub.reversalType === 'refund' ? 'Reembolso' : 'Corrección' }}
+            </p>
+            @if (sub.reversalReason) {
+              <p class="mt-1 rounded-lg bg-gray-100 px-3 py-2 text-gray-700 dark:bg-gray-700 dark:text-gray-300">Motivo: {{ sub.reversalReason }}</p>
+            }
+          </div>
         }
       </div>
     </div>
@@ -146,7 +173,7 @@
             <button type="button" (click)="approve()" [disabled]="saving()"
               class="rounded-lg bg-primary-700 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">{{ saving() ? 'Aprobando…' : 'Aprobar pago' }}</button>
           </div>
-        } @else {
+        } @else if (action === 'reject') {
           <h2 class="text-lg font-bold text-gray-900 dark:text-white">¿Rechazar el pago?</h2>
           <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
             El pago quedará <strong>rechazado</strong> (con rastro) y el chofer verá el aviso para generar uno nuevo. Indica el motivo:
@@ -160,6 +187,31 @@
               class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Cancelar</button>
             <button type="button" (click)="reject()" [disabled]="saving()"
               class="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">{{ saving() ? 'Procesando…' : 'Confirmar rechazo' }}</button>
+          </div>
+        } @else {
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">¿Revertir el pago?</h2>
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Se revertirá el pago de <strong>{{ sub.driverName }}</strong> por <strong>${{ sub.amountUsd }}</strong>, con rastro. Elige el motivo:
+          </p>
+          <div class="mt-3 space-y-2">
+            <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-600">
+              <input type="radio" name="reversalType" value="correction" [(ngModel)]="reversalType" class="mt-0.5" />
+              <span><span class="font-semibold text-gray-800 dark:text-gray-100">Corrección</span> — las facturas vuelven a deuda para registrar un pago corregido.</span>
+            </label>
+            <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-600">
+              <input type="radio" name="reversalType" value="refund" [(ngModel)]="reversalType" class="mt-0.5" />
+              <span><span class="font-semibold text-gray-800 dark:text-gray-100">Reembolso</span> — se devuelve el dinero; las facturas quedan anuladas.</span>
+            </label>
+          </div>
+          <textarea name="reversalReason" [(ngModel)]="rejectReason" rows="2" maxlength="500"
+            placeholder="Motivo de la reversión"
+            class="mt-3 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
+          @if (error(); as message) { <p class="mt-2 text-xs font-medium text-red-600 dark:text-red-400">{{ message }}</p> }
+          <div class="mt-5 flex justify-end gap-3">
+            <button type="button" (click)="closeConfirm()" [disabled]="saving()"
+              class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Cancelar</button>
+            <button type="button" (click)="reverse()" [disabled]="saving()"
+              class="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">{{ saving() ? 'Procesando…' : 'Confirmar reversión' }}</button>
           </div>
         }
       </div>

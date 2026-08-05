@@ -97,6 +97,13 @@ export class PaymentCapture {
   /** Whether the payment block is optional. Only labelling — consumers still gate
    *  their submit on `complete`. Set false when the cobro must not be left blank. */
   readonly optional = input(true);
+  /**
+   * Whether Efectivo Divisa captures a free amount here. True for cobros that
+   * settle a variable amount (debt); false for enroll/advance, where the total is
+   * derived from the weeks selected outside this block (2026-08-04). When false the
+   * amount field is hidden and not required.
+   */
+  readonly captureAmount = input(true);
   /** A human message when the chosen file is rejected (size/type), or null when cleared. */
   readonly fileError = output<string | null>();
 
@@ -147,12 +154,17 @@ export class PaymentCapture {
   readonly complete = computed<boolean>(() => {
     const v = this.value();
     const method = this.paymentMethods().find((m) => m.id === v.paymentMethodId);
-    if (!method || v.files.length === 0 || !v.paidOn) return false;
-    // Efectivo Divisa: amount + bill photo(s); no reference/bank/payer data.
+    if (!method || !v.paidOn) return false;
+    // Efectivo Divisa: the bill photo is OPTIONAL (cash in hand). The amount is
+    // required only when captured here (debt); for enroll/advance the total is the
+    // weeks selected outside this block.
     if (method.type === 'cash_usd') {
+      if (!this.captureAmount()) return true;
       const amount = Number(v.amountUsd);
       return !!v.amountUsd && Number.isFinite(amount) && amount > 0;
     }
+    // Every other method requires a receipt.
+    if (v.files.length === 0) return false;
     if (!v.reference?.trim()) return false;
     if ((method.type === 'bank_transfer' || method.type === 'pago_movil') && !v.payerBank) return false;
     // Pago Móvil: the payer's phone (E.164) and document must be complete.

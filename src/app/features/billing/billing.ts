@@ -14,18 +14,11 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import ApexCharts from 'apexcharts';
-import {
-  INVOICE_STATUS_LABELS,
-  PAYMENT_KIND_LABELS,
-  PAYMENT_STATUS_LABELS,
-  type InvoiceListItem,
-  type PaymentListItem,
-} from '../../core/models/billing.model';
+import { INVOICE_STATUS_LABELS, type InvoiceListItem } from '../../core/models/billing.model';
 import {
   SUBMISSION_STATUS_LABELS,
   type SubmissionListItem,
 } from '../../core/models/payment-submission.model';
-import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
 import { DriversApi } from '../drivers/drivers.api';
 import { BillingApi, type MonthlyInvoicingPoint } from './billing.api';
 import { PaymentSubmissionsApi } from './payment-submissions.api';
@@ -34,11 +27,21 @@ const PAGE_SIZE = 20;
 const MONTHS = 12;
 const BRAND_RED = '#920606';
 
-type BillingTab = 'invoices' | 'payments' | 'review';
+/**
+ * Billing redesign (2026-08-04): a payment RECEIPT covers N invoices (one per
+ * concept). The screen has three tabs:
+ *  - `receipts` ("Pagos"): the receipts (payment_submissions) — N° pago, pagador,
+ *    monto, estado, fecha, detalle.
+ *  - `invoices` ("Facturas"): individual per-concept invoices — N°, afiliado,
+ *    período, monto, estado, and the receipt that paid them.
+ *  - `review` ("Por aprobar"): pending receipts awaiting approval.
+ */
+type BillingTab = 'receipts' | 'invoices' | 'review';
+type InvoiceStatusFilter = '' | 'issued' | 'overdue' | 'paid' | 'voided';
 
 @Component({
   selector: 'app-billing',
-  imports: [FormsModule, DatePipe, RouterLink, FileViewer],
+  imports: [FormsModule, DatePipe, RouterLink],
   templateUrl: './billing.html',
 })
 export class Billing {
@@ -48,17 +51,15 @@ export class Billing {
 
   /** Bound from the query param (withComponentInputBinding) - per-driver history. */
   readonly driverId = input<string>();
-  /** Optional starting tab (e.g. ?tab=review after approving a submission). */
+  /** Optional starting tab (e.g. ?tab=review after approving a receipt). */
   readonly initialTab = input<string | undefined>(undefined, { alias: 'tab' });
 
   readonly invoiceStatusLabels = INVOICE_STATUS_LABELS;
-  readonly kindLabels = PAYMENT_KIND_LABELS;
-  readonly paymentStatusLabels = PAYMENT_STATUS_LABELS;
   readonly submissionStatusLabels = SUBMISSION_STATUS_LABELS;
 
-  readonly tab = signal<BillingTab>('invoices');
+  readonly tab = signal<BillingTab>('receipts');
   readonly invoices = signal<InvoiceListItem[]>([]);
-  readonly payments = signal<PaymentListItem[]>([]);
+  readonly receipts = signal<SubmissionListItem[]>([]);
   readonly submissions = signal<SubmissionListItem[]>([]);
   readonly total = signal(0);
   readonly page = signal(1);
@@ -66,8 +67,7 @@ export class Billing {
   readonly error = signal<string | null>(null);
   readonly driverName = signal<string | null>(null);
 
-  readonly invoiceStatus = signal<'' | 'issued' | 'paid' | 'voided'>('');
-  readonly paymentKind = signal<'' | 'membership' | 'subscription'>('');
+  readonly invoiceStatus = signal<InvoiceStatusFilter>('');
 
   search = '';
 
@@ -86,7 +86,7 @@ export class Billing {
       const id = this.driverId();
       const t = this.initialTab();
       untracked(() => {
-        if (t === 'review' || t === 'payments' || t === 'invoices') this.tab.set(t);
+        if (t === 'review' || t === 'invoices' || t === 'receipts') this.tab.set(t);
         this.driverName.set(null);
         if (id) driversApi.detail(id).subscribe((d) => this.driverName.set(d.fullName));
         this.page.set(1);
@@ -172,29 +172,19 @@ export class Billing {
           },
           error: onError,
         });
-    } else if (this.tab() === 'payments') {
-      this.api
-        .payments({ ...common, ...(this.paymentKind() ? { kind: this.paymentKind() } : {}) })
-        .subscribe({
-          next: (result) => {
-            this.payments.set(result.items);
-            this.total.set(result.total);
-            this.loading.set(false);
-          },
-          error: onError,
-        });
     } else {
-      // Review inbox: pending submissions (search/kind/status filters don't apply).
+      // `receipts` = all receipts; `review` = pending only. (Search not wired yet.)
       this.submissionsApi
         .list({
-          status: 'pending',
+          ...(this.tab() === 'review' ? { status: 'pending' as const } : {}),
           ...(this.driverId() ? { driverId: this.driverId() as string } : {}),
           page: this.page(),
           limit: PAGE_SIZE,
         })
         .subscribe({
           next: (result) => {
-            this.submissions.set(result.items);
+            if (this.tab() === 'review') this.submissions.set(result.items);
+            else this.receipts.set(result.items);
             this.total.set(result.total);
             this.loading.set(false);
           },
@@ -209,13 +199,8 @@ export class Billing {
     this.applyFilters();
   }
 
-  setInvoiceStatus(status: '' | 'issued' | 'paid' | 'voided'): void {
+  setInvoiceStatus(status: InvoiceStatusFilter): void {
     this.invoiceStatus.set(status);
-    this.applyFilters();
-  }
-
-  setPaymentKind(kind: '' | 'membership' | 'subscription'): void {
-    this.paymentKind.set(kind);
     this.applyFilters();
   }
 
@@ -233,25 +218,4 @@ export class Billing {
     this.page.set(page);
     this.load();
   }
-
-  /** Receipt shown in the modal viewer (null = closed). */
-  readonly viewer = signal<FileViewerState | null>(null);
-
-  /** Opens the receipt in the modal viewer via a short-lived signed URL. */
-  openInvoiceProof(invoiceId: string): void {
-    const title = 'Comprobante de pago';
-    this.viewer.set({ title, url: null, loading: true, error: null });
-    this.api.invoiceProofUrl(invoiceId).subscribe({
-      next: ({ url }) => this.viewer.set({ title, url, loading: false, error: null }),
-      error: (err: HttpErrorResponse) =>
-        this.viewer.set({
-          title,
-          url: null,
-          loading: false,
-          error:
-            (err.error as { message?: string } | null)?.message ?? 'No se pudo abrir el comprobante',
-        }),
-    });
-  }
-
 }
