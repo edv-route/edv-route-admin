@@ -111,7 +111,7 @@
       </thead>
       <tbody>
         @if (loading()) {
-          <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Cargando…</td></tr>
+          <app-skeleton-rows [cols]="6" />
         } @else {
           @for (r of receipts(); track r.id) {
             <tr class="border-b border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">
@@ -158,7 +158,7 @@
       </thead>
       <tbody>
         @if (loading()) {
-          <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Cargando…</td></tr>
+          <app-skeleton-rows [cols]="6" />
         } @else {
           @for (item of invoices(); track item.id) {
             <tr class="border-b border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
@@ -217,7 +217,7 @@
       </thead>
       <tbody>
         @if (loading()) {
-          <tr><td colspan="7" class="px-6 py-8 text-center text-gray-400">Cargando…</td></tr>
+          <app-skeleton-rows [cols]="7" />
         } @else {
           @for (item of submissions(); track item.id) {
             <tr class="border-b border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">

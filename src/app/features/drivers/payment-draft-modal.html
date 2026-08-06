@@ -18,7 +18,7 @@
           }
         </div>
         <div class="sm:col-span-3">
-          <app-payment-capture #pc [optional]="false" [captureAmount]="false" [value]="value()"
+          <app-payment-capture #pc [optional]="false" [value]="value()"
             (valueChange)="value.set($event)" (fileError)="error.set($event)" />
           @if (error(); as e) {
             <p class="mt-2 text-sm font-medium text-primary-700">{{ e }}</p>

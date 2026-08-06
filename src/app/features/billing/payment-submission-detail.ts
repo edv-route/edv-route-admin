@@ -37,8 +37,6 @@ export class PaymentSubmissionDetail {
   /** Which confirmation modal is open (null = none). */
   readonly confirmAction = signal<'approve' | 'reject' | 'reverse' | null>(null);
   rejectReason = '';
-  /** For a reversal: refund (money returned) vs correction (re-charge corrected). */
-  reversalType: 'refund' | 'correction' = 'correction';
   readonly viewer = signal<FileViewerState | null>(null);
 
   private static msg(err: HttpErrorResponse, fallback: string): string {
@@ -76,7 +74,6 @@ export class PaymentSubmissionDetail {
   openConfirm(action: 'approve' | 'reject' | 'reverse'): void {
     this.error.set(null);
     if (action === 'reject' || action === 'reverse') this.rejectReason = '';
-    if (action === 'reverse') this.reversalType = 'correction';
     this.confirmAction.set(action);
   }
 
@@ -121,7 +118,7 @@ export class PaymentSubmissionDetail {
     });
   }
 
-  /** Reverses an approved receipt (refund or correction), with a reason. */
+  /** Reverses an approved receipt with a reason (single action, 2026-08-06). */
   reverse(): void {
     const sub = this.submission();
     if (!sub || this.saving()) return;
@@ -132,7 +129,7 @@ export class PaymentSubmissionDetail {
     }
     this.saving.set(true);
     this.error.set(null);
-    this.api.reverse(sub.id, this.reversalType, reason).subscribe({
+    this.api.reverse(sub.id, reason).subscribe({
       next: () => this.back(),
       error: (err: HttpErrorResponse) => {
         this.saving.set(false);

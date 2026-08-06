@@ -2,6 +2,7 @@ import { Component, inject, output, signal } from '@angular/core';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import type { Benefit } from '../../core/models/benefit.model';
+import { SkeletonRows } from '../../shared/components/skeleton-rows';
 import { BenefitsApi } from './benefits.api';
 
 type ModalState = { mode: 'create' } | { mode: 'edit'; item: Benefit } | null;
@@ -13,7 +14,7 @@ type ModalState = { mode: 'create' } | { mode: 'edit'; item: Benefit } | null;
  */
 @Component({
   selector: 'app-benefits-catalog',
-  imports: [FormsModule],
+  imports: [FormsModule, SkeletonRows],
   templateUrl: './benefits-catalog.html',
 })
 export class BenefitsCatalog {

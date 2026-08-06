@@ -1,0 +1,67 @@
+@let d = driver();
+<div class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-5">
+  <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Tarifa</p>
+  @if (d.subscription; as s) {
+    <div class="mt-2 flex flex-wrap items-center gap-2">
+      <span class="text-sm font-bold text-gray-900 dark:text-white">{{ s.planName }}</span>
+      @if (badge(); as b) {
+        <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" [class]="toneClasses[b.tone]">{{ b.label }}</span>
+      }
+    </div>
+    <p class="mt-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200">
+      ${{ s.priceUsd }} <span class="text-xs font-normal text-gray-400">/ {{ periodUnit() }}</span>
+    </p>
+
+    @let cover = coverDays();
+    <dl class="mt-3 space-y-1.5 border-t border-gray-100 pt-3 text-xs dark:border-gray-700">
+      <div class="flex items-center justify-between gap-3">
+        <dt class="text-gray-400">Cobertura pagada</dt>
+        @if (s.paidUntil) {
+          <dd class="font-semibold" [class]="cover !== null && cover < 0 ? 'text-primary-700 dark:text-primary-400' : 'text-gray-700 dark:text-gray-200'">
+            hasta {{ s.paidUntil | date: 'dd/MM/yyyy' }}
+          </dd>
+        } @else {
+          <dd class="font-medium text-gray-500 dark:text-gray-400">Sin cobertura pagada</dd>
+        }
+      </div>
+
+      @if (s.paidPeriods > 0) {
+        <div class="flex items-center justify-between gap-3">
+          <dt class="text-gray-400">{{ periodUnit() === 'semana' ? 'Semanas pagadas' : 'Períodos pagados' }}</dt>
+          <dd class="font-medium text-gray-700 dark:text-gray-200">{{ s.paidPeriods }}</dd>
+        </div>
+      }
+
+      <div class="flex items-center justify-between gap-3">
+        @if (startsAt(); as start) {
+          <dt class="text-gray-400">Inicia</dt>
+          <dd class="text-right font-semibold text-gold-800">{{ start | date: 'dd/MM/yyyy' }} · no opera antes</dd>
+        } @else if (cover !== null) {
+          <dt class="text-gray-400">Próximo cobro</dt>
+          <dd class="font-medium"
+            [class]="cover < 0 ? 'text-primary-700 dark:text-primary-400' : cover <= 2 ? 'text-gold-800' : 'text-gray-700 dark:text-gray-200'">
+            @if (cover > 1) { en {{ cover }} días · {{ s.paidUntil | date: 'dd/MM' }} }
+            @else if (cover === 1) { mañana }
+            @else if (cover === 0) { hoy }
+            @else { vencido · en deuda }
+          </dd>
+        } @else {
+          <dt class="text-gray-400">Cobro</dt>
+          <dd class="font-medium text-gray-500 dark:text-gray-400">Al registrar el pago</dd>
+        }
+      </div>
+
+      @if (d.scheduledPlan; as next) {
+        <div class="flex items-start justify-between gap-3 border-t border-gray-100 pt-1.5 dark:border-gray-700">
+          <dt class="text-gray-400">Cambio programado</dt>
+          <dd class="text-right">
+            <span class="font-semibold text-gold-800">{{ next.planName }}</span>@if (next.startsAt) { <span class="text-gray-400"> · {{ next.startsAt | date: 'dd/MM' }}</span> }
+            <button type="button" (click)="cancelChange.emit()" class="ml-1 font-semibold text-primary-700 underline hover:no-underline dark:text-primary-300">Cancelar</button>
+          </dd>
+        </div>
+      }
+    </dl>
+  } @else {
+    <p class="mt-2 text-sm text-gray-400">Sin tarifa contratada</p>
+  }
+</div>

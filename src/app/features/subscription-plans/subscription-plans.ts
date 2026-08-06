@@ -8,13 +8,14 @@ import {
   type BillingPeriod,
   type SubscriptionPlan,
 } from '../../core/models/membership.model';
+import { SkeletonRows } from '../../shared/components/skeleton-rows';
 import { VehicleTypesApi } from '../vehicle-types/vehicle-types.api';
 
 type ModalState = { mode: 'create' } | { mode: 'edit'; item: SubscriptionPlan } | null;
 
 @Component({
   selector: 'app-subscription-plans',
-  imports: [FormsModule],
+  imports: [FormsModule, SkeletonRows],
   templateUrl: './subscription-plans.html',
 })
 export class SubscriptionPlans {

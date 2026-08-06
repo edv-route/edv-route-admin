@@ -20,6 +20,7 @@ import { VehicleTypesApi } from '../vehicle-types/vehicle-types.api';
 import { DatePicker } from '../../shared/components/date-picker';
 import { PasswordInput } from '../../shared/components/password-input';
 import { Select, type SelectOption } from '../../shared/components/select';
+import { Toggle } from '../../shared/components/toggle';
 import { INPUT_FILTERS } from '../../shared/directives/input-filters';
 import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
 import { DocumentsApi, validateFile } from '../documents/documents.api';
@@ -29,6 +30,8 @@ import type { InvoiceListItem } from '../../core/models/billing.model';
 import { DriversApi } from './drivers.api';
 import { PaymentCapture, type PaymentCaptureValue, emptyPaymentCapture } from './payment-capture';
 import { VehicleForm } from './vehicle-form';
+import { DriverStatusCard } from './driver-status-card';
+import { DriverTariffCard } from './driver-tariff-card';
 import {
   NATIONAL_ID_OPTIONS,
   PHONE_COUNTRY_OPTIONS,
@@ -56,7 +59,7 @@ interface ConfirmDialog {
 
 @Component({
   selector: 'app-driver-detail',
-  imports: [FormsModule, DatePipe, RouterLink, Select, ...INPUT_FILTERS, PasswordInput, DatePicker, PaymentCapture, FileViewer, VehicleForm],
+  imports: [FormsModule, DatePipe, RouterLink, Select, ...INPUT_FILTERS, PasswordInput, DatePicker, PaymentCapture, FileViewer, VehicleForm, Toggle, DriverStatusCard, DriverTariffCard],
   templateUrl: './driver-detail.html',
 })
 export class DriverDetail {
@@ -109,6 +112,9 @@ export class DriverDetail {
   readonly membership = signal<{ id: number; name: string; priceUsd: string } | null>(null);
   /** Payment capture shared by the enroll, renewal and external-payment modals (Pieza 2). */
   readonly payment = signal<PaymentCaptureValue>(emptyPaymentCapture());
+  /** Admin toggle: approve the payment on the spot instead of leaving it pending.
+   *  Shared by the enroll / renew / external-payment modals; reset on each open. */
+  readonly autoApprove = signal(false);
   readonly periodLabels = BILLING_PERIOD_LABELS;
 
   // Fleet + documents are living data managed here (moved out of the alta,
@@ -152,6 +158,44 @@ export class DriverDetail {
     this.pendingSubmission() ? null : (this.driver()?.rejectedSubmission ?? null),
   );
 
+  /** v9 partial-payment split — the debt invoices the pending payment covers.
+   *  Empty when it covers the whole debt (or is not a partial debt payment). */
+  readonly coveredInvoiceIds = computed(() => new Set(this.pendingSubmission()?.invoiceIds ?? []));
+  /** The pending payment covers the WHOLE debt: single "en revisión" band, no red one. */
+  readonly pendingCoversAll = computed(
+    () => !!this.pendingSubmission() && this.coveredInvoiceIds().size === 0,
+  );
+  /** Tariff/penalty charges NOT covered by the pending payment (still owed). When
+   *  the pending payment covers the whole debt there is no remainder. */
+  readonly owedCharges = computed(() => {
+    const d = this.driver();
+    if (!d || this.pendingCoversAll()) return [];
+    const covered = this.coveredInvoiceIds();
+    return d.debt.charges.filter((c) => !(c.invoiceId && covered.has(c.invoiceId)));
+  });
+  /** Membership debt still owed (0 when the pending payment already covers it). */
+  readonly owedMembershipDue = computed(() => {
+    const d = this.driver();
+    if (!d || this.pendingCoversAll() || Number(d.debt.membershipDue) <= 0) return '0';
+    const id = d.debt.membershipInvoiceId;
+    return id && this.coveredInvoiceIds().has(id) ? '0' : d.debt.membershipDue;
+  });
+  /** Total still owed once the pending payment settles what it covers. */
+  readonly owedTotal = computed(() =>
+    (
+      this.owedCharges().reduce((sum, c) => sum + Number(c.amountUsd), 0) +
+      Number(this.owedMembershipDue())
+    ).toFixed(2),
+  );
+  /** Whether any debt remains after the pending payment is approved. */
+  readonly hasRemainingDebt = computed(
+    () => this.owedCharges().length > 0 || Number(this.owedMembershipDue()) > 0,
+  );
+  /** The membership debt invoice in the external-pay picker (always first + locked). */
+  readonly membershipInvoice = computed(
+    () => this.debtInvoices().find((i) => i.kind === 'membership') ?? null,
+  );
+
   /**
    * What the debt modal settles: the alta debt (membership + first week), overdue
    * tariff weeks and the penalty, all in one (todo-o-nada). Drives the breakdown,
@@ -189,26 +233,6 @@ export class DriverDetail {
     const d = this.driver();
     return !!d && d.isAvailable && (d.status === 'approved' || d.status === 'overdue');
   });
-
-  /**
-   * Start date of a tariff that is paid but NOT in force yet (null otherwise):
-   * an alta paid on any day but Monday buys the week starting NEXT Monday, and
-   * the driver does not operate until then (decision 2026-07-30). The scheduler
-   * flips the subscription to `active` at that moment.
-   */
-  readonly tariffStartsAt = computed<string | null>(() => {
-    const s = this.driver()?.subscription;
-    if (!s || s.status !== 'scheduled' || !s.currentPeriodStart) return null;
-    return new Date(s.currentPeriodStart).getTime() > Date.now() ? s.currentPeriodStart : null;
-  });
-
-  /** Whole days from today until the prepaid coverage ends; negative = overdue,
-   *  null when there is no paid coverage. Drives the "next invoice in X days". */
-  daysUntilPaidEnd(): number | null {
-    const until = this.driver()?.subscription?.paidUntil;
-    if (!until) return null;
-    return Math.ceil((new Date(until).getTime() - Date.now()) / 86_400_000);
-  }
 
   /** Active catalog for the plan-change picker (archived ones are excluded). */
   readonly activePlans = computed(() => this.plans().filter((p) => p.active));
@@ -249,6 +273,17 @@ export class DriverDetail {
   readonly selectedPlan = computed(() =>
     this.plans().find((p) => p.id === this.renewPlanId()) ?? null,
   );
+
+  /** Dynamic charge summary of the renew/advance modal: the plan being charged
+   *  (the current one, or the chosen change), its unit price and total × periods. */
+  readonly renewCharge = computed(() => {
+    const sub = this.driver()?.subscription;
+    const changed = this.selectedPlan(); // null when renewing the current plan
+    const name = changed?.name ?? sub?.planName ?? 'Tarifa';
+    const price = Number(changed?.priceUsd ?? sub?.priceUsd ?? 0);
+    const periods = this.renewPeriods();
+    return { name, price: price.toFixed(2), periods, total: (price * periods).toFixed(2) };
+  });
 
   /** The single active tariff (weekly) used to enroll a driver post-registration. */
   readonly weeklyPlan = computed(() =>
@@ -418,6 +453,7 @@ export class DriverDetail {
     this.renewResult.set(null);
     this.renewNote = '';
     this.resetPaymentCapture();
+    this.autoApprove.set(false);
     this.error.set(null);
     this.renewOpen.set(true);
   }
@@ -444,6 +480,7 @@ export class DriverDetail {
   openEnroll(): void {
     this.enrollPeriods.set(1);
     this.resetPaymentCapture();
+    this.autoApprove.set(false);
     this.error.set(null);
     this.enrollOpen.set(true);
   }
@@ -451,12 +488,16 @@ export class DriverDetail {
   openExternalPay(): void {
     this.externalPayNote = '';
     this.resetPaymentCapture();
+    this.autoApprove.set(false);
     this.error.set(null);
     // Load the driver's debt invoices (issued/overdue) for the partial-payment
-    // selection; all are selected by default (settle everything).
+    // selection; all are selected by default (settle everything). The membership
+    // invoice is forced first and stays selected (it cannot be unchecked).
     this.billingApi.invoices({ driverId: this.id(), page: 1, limit: 100 }).subscribe({
       next: (result) => {
-        const owed = result.items.filter((i) => i.status === 'issued' || i.status === 'overdue');
+        const owed = result.items
+          .filter((i) => i.status === 'issued' || i.status === 'overdue')
+          .sort((a, b) => Number(b.kind === 'membership') - Number(a.kind === 'membership'));
         this.debtInvoices.set(owed);
         this.selectedInvoiceIds.set(new Set(owed.map((i) => i.id)));
       },
@@ -468,8 +509,10 @@ export class DriverDetail {
     this.externalPayOpen.set(true);
   }
 
-  /** Toggles a debt invoice in/out of the partial-payment selection. */
+  /** Toggles a debt invoice in/out of the partial-payment selection. The membership
+   *  invoice is mandatory: it stays selected and cannot be toggled off. */
   toggleInvoice(id: string): void {
+    if (id === this.membershipInvoice()?.id) return;
     this.selectedInvoiceIds.update((set) => {
       const next = new Set(set);
       if (next.has(id)) next.delete(id);
@@ -545,8 +588,9 @@ export class DriverDetail {
     if (p.payerPhone) form.set('payerPhone', p.payerPhone);
     if (p.payerId) form.set('payerId', p.payerId);
     if (p.payerAccount) form.set('payerAccount', p.payerAccount);
-    if (p.amountUsd) form.set('amountUsd', p.amountUsd);
     if (note) form.set('note', note);
+    // Admin "approve immediately" toggle: liquidate the payment on the spot.
+    if (this.autoApprove()) form.set('autoApprove', 'true');
     for (const f of p.files) form.append('files', f, f.name);
     return form;
   }
@@ -556,10 +600,14 @@ export class DriverDetail {
     this.saving.set(true);
     this.error.set(null);
     this.submissionsApi.create(this.id(), form).subscribe({
-      next: () => {
+      next: (res) => {
         this.saving.set(false);
         close();
-        this.renewResult.set('Pago enviado. Queda pendiente de aprobación por un administrador.');
+        this.renewResult.set(
+          res.approved
+            ? 'Pago registrado y aprobado. Las facturas quedaron pagadas.'
+            : 'Pago enviado. Queda pendiente de aprobación por un administrador.',
+        );
         this.load();
       },
       error: (err: HttpErrorResponse) => {

@@ -59,48 +59,6 @@
           {{ d.subscription.status === 'expired' ? 'Pagar y reactivar' : 'Generar pago' }}
         </button>
       }
-      @if (d.status === 'pending') {
-        <button type="button" (click)="confirmAction.set('reject')"
-          class="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-gray-700">
-          Rechazar
-        </button>
-        <button type="button" (click)="confirmAction.set('approve')"
-          [disabled]="!!pendingSubmission()"
-          [title]="pendingSubmission() ? 'Aprueba primero el pago en revisión, en Facturación' : ''"
-          class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50">
-          Aprobar
-        </button>
-      }
-      @if (d.status === 'approved' || d.status === 'suspended') {
-        <button type="button" [disabled]="saving()"
-          (click)="askConfirm(d.status === 'suspended'
-            ? { title: '¿Reactivar a ' + d.fullName + '?', message: 'El afiliado vuelve a operar y a recibir viajes.', confirmLabel: 'Reactivar', danger: false, action: 'suspend' }
-            : { title: '¿Suspender a ' + d.fullName + '?', message: 'Dejará de operar y no recibirá viajes hasta que lo reactives.', confirmLabel: 'Suspender', danger: true, action: 'suspend' })"
-          class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-          {{ d.status === 'suspended' ? 'Reactivar' : 'Suspender' }}
-        </button>
-      }
-      @if (d.status === 'approved') {
-        <button type="button" [disabled]="saving()"
-          (click)="askConfirm({ title: '¿Pausar a ' + d.fullName + '?', message: 'Licencia administrativa: se congela la tarifa (el tiempo no corre) hasta reanudar. Exige la tarifa al día.', confirmLabel: 'Pausar', danger: false, action: 'pause' })"
-          class="rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-60 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-gray-700">
-          Pausar (licencia)
-        </button>
-      }
-      @if (d.status === 'paused') {
-        <button type="button" [disabled]="saving()"
-          (click)="askConfirm({ title: '¿Reanudar a ' + d.fullName + '?', message: 'Vuelve a operar; la tarifa corre de nuevo, desplazada por el tiempo que estuvo en pausa.', confirmLabel: 'Reanudar', danger: false, action: 'resume' })"
-          class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
-          Reanudar
-        </button>
-      }
-      @if (d.status === 'penalized') {
-        <button type="button" [disabled]="saving()"
-          (click)="askConfirm({ title: '¿Reactivar a ' + d.fullName + '?', message: 'Vuelve a la calle de inmediato, sin esperar al día de reincorporación automática. Exige deuda 0.', confirmLabel: 'Reactivar', danger: false, action: 'reactivate' })"
-          class="rounded-lg border border-green-300 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-50 disabled:opacity-60 dark:border-green-800 dark:text-green-300 dark:hover:bg-gray-700">
-          Reactivar ahora
-        </button>
-      }
     </div>
   </header>
 
@@ -110,59 +68,67 @@
     </p>
   }
 
-  <!-- Deuda vencida (rojo) vs. próximo cobro (ámbar): son EXCLUYENTES — si ya debe,
-       manda el rojo; si está solvente y se acerca el cobro, el ámbar (Luis 2026-07-29). -->
+  <!-- Money status. A payment under review (blue) and what is still owed after it
+       (red) can show TOGETHER on a partial payment; a full payment shows only blue.
+       With no payment under review the red band lists the whole debt, or the amber
+       band shows the solvent driver's next charge. Never for a rejected driver. -->
   @if (pendingSubmission(); as ps) {
     <section class="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/50 dark:bg-blue-950/30 md:p-5">
-      <h2 class="font-bold text-blue-900 dark:text-blue-200">Pago en revisión</h2>
-      <p class="mt-0.5 text-sm text-blue-800 dark:text-blue-300">
-        Se registró un pago por <strong>${{ ps.amountUsd }}</strong> el {{ ps.createdAt | date: 'dd/MM/yyyy HH:mm' }} ·
-        <strong>pendiente de aprobación</strong> por un administrador.
-      </p>
-      <a
-        [routerLink]="['/billing/submissions', ps.id]"
-        class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800"
-      >
-        Ir al pago para aprobarlo →
-      </a>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="min-w-0">
+          <h2 class="font-bold text-blue-900 dark:text-blue-200">Pago en revisión</h2>
+          <p class="mt-0.5 text-sm text-blue-800 dark:text-blue-300">
+            <strong>${{ ps.amountUsd }}</strong> · registrado el {{ ps.createdAt | date: 'dd/MM/yyyy HH:mm' }}
+            @if (ps.invoiceIds?.length; as n) { · cubre {{ n }} factura(s) }
+            · <strong>pendiente de aprobación</strong>.
+          </p>
+        </div>
+        <a [routerLink]="['/billing/submissions', ps.id]"
+          class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800">
+          Ir al pago para aprobarlo →
+        </a>
+      </div>
     </section>
-  } @else if (hasDebt() && d.status !== 'rejected') {
-    @if (rejectedSubmission(); as rej) {
-      <section class="mb-4 rounded-lg border border-red-300 bg-red-100 p-4 dark:border-red-900 dark:bg-red-950/40 md:p-5">
-        <h2 class="font-bold text-red-900 dark:text-red-200">Pago rechazado</h2>
-        <p class="mt-0.5 text-sm text-red-800 dark:text-red-300">
-          Su pago fue rechazado, genere uno nuevo o póngase en contacto con el administrador.
-          @if (rej.rejectionReason) { <span class="mt-1 block text-xs">Motivo: {{ rej.rejectionReason }}</span> }
-        </p>
-      </section>
-    }
+  }
+  @if (rejectedSubmission(); as rej) {
+    <section class="mb-4 rounded-lg border border-red-300 bg-red-100 p-4 dark:border-red-900 dark:bg-red-950/40 md:p-5">
+      <h2 class="font-bold text-red-900 dark:text-red-200">Pago rechazado</h2>
+      <p class="mt-0.5 text-sm text-red-800 dark:text-red-300">
+        Su pago fue rechazado, genere uno nuevo o póngase en contacto con el administrador.
+        @if (rej.rejectionReason) { <span class="mt-1 block text-xs">Motivo: {{ rej.rejectionReason }}</span> }
+      </p>
+    </section>
+  }
+  @if (hasRemainingDebt() && d.status !== 'rejected') {
     <section class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30 md:p-5">
-      <div>
-        <h2 class="font-bold text-red-900 dark:text-red-200">Deuda pendiente</h2>
-        <p class="mt-0.5 text-sm text-red-800 dark:text-red-300">
+      <h2 class="font-bold text-red-900 dark:text-red-200">Deuda pendiente</h2>
+      <p class="mt-0.5 text-sm text-red-800 dark:text-red-300">
+        @if (pendingSubmission()) {
+          Facturas no cubiertas por el pago en revisión
+        } @else {
           @if (+d.debt.membershipDue > 0) { Membresía@if (d.debt.weeksOwed) { + } }
           @if (d.debt.weeksOwed) { {{ d.debt.weeksOwed }} semana(s) de tarifa }
           @if (d.debt.penaltyCount) { + penalización }
-          · Total <strong>${{ d.debt.totalUsd }}</strong>
-        </p>
-      </div>
+        }
+        · Total <strong>${{ owedTotal() }}</strong>
+      </p>
       <!-- At the debt cap and a new week is coming = next Monday penalizes him. -->
-      @if (d.debt.weeksOwed >= d.debt.capWeeks && d.upcoming) {
+      @if (!pendingSubmission() && d.debt.weeksOwed >= d.debt.capWeeks && d.upcoming) {
         <p class="mt-2 rounded-lg bg-red-100 px-3 py-2 text-sm font-semibold text-red-800 dark:bg-red-900/40 dark:text-red-200">
           ⚠️ Paga antes del lunes 00:00 o la cuenta será suspendida.
         </p>
       }
       <ul class="mt-3 divide-y divide-red-200/70 dark:divide-red-900/40">
-        @if (+d.debt.membershipDue > 0) {
+        @if (+owedMembershipDue() > 0) {
           <li class="flex items-center justify-between gap-2 py-1.5 text-sm">
             <span class="text-red-900 dark:text-red-200">Membresía · pago único</span>
             <span class="flex items-center gap-2 font-semibold text-red-900 dark:text-red-200">
-              ${{ d.debt.membershipDue }}
+              ${{ owedMembershipDue() }}
               <span class="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">por pagar</span>
             </span>
           </li>
         }
-        @for (c of d.debt.charges; track c.id) {
+        @for (c of owedCharges(); track c.id) {
           <li class="flex items-center justify-between gap-2 py-1.5 text-sm">
             <span class="text-red-900 dark:text-red-200">
               {{ c.kind === 'penalty' ? 'Penalización' : 'Semana de tarifa' }}
@@ -181,7 +147,7 @@
         }
       </ul>
     </section>
-  } @else if (d.status !== 'rejected' && d.upcoming; as up) {
+  } @else if (!pendingSubmission() && d.status !== 'rejected' && d.upcoming; as up) {
     <!-- Próximo cobro: solvente pero el cobro del lunes ya está emitido (viernes 18:00).
          Nunca para un rechazado (no opera, no tiene cobro próximo). -->
     <section class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/30 md:p-5">
@@ -229,88 +195,22 @@
       }
     </div>
 
-    <!-- Tarifa -->
-    <div class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-5">
-      <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Tarifa</p>
-      @if (d.subscription; as s) {
-        <div class="mt-2 flex flex-wrap items-center gap-2">
-          <span class="text-sm font-bold text-gray-900 dark:text-white">{{ s.planName }}</span>
-          @switch (s.status) {
-            @case ('active') { <span class="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-800 dark:bg-green-900 dark:text-green-300">Vigente</span> }
-            @case ('expired') { <span class="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-800 dark:bg-red-900 dark:text-red-300">Vencida</span> }
-            @case ('scheduled') { <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">Programada</span> }
-            @default { <span class="rounded-full bg-gold-100 px-2 py-0.5 text-[11px] font-semibold text-gold-800">Pago pendiente</span> }
-          }
-        </div>
-        @let coverDays = daysUntilPaidEnd();
-        @if (tariffStartsAt(); as startsAt) {
-          <!-- Paid but not in force yet: the week bought starts next Monday. -->
-          <p class="mt-1 text-xs font-semibold text-gold-800">
-            Inicia el {{ startsAt | date: 'dd/MM/yyyy' }} · no puede recibir viajes hasta esa fecha
-          </p>
-        } @else if (coverDays !== null) {
-          <p class="mt-1 text-xs font-medium"
-            [class]="coverDays < 0 ? 'text-primary-700 dark:text-primary-400' : coverDays <= 2 ? 'text-gold-800' : 'text-gray-500 dark:text-gray-400'">
-            @if (coverDays > 1) { Próxima factura en {{ coverDays }} días }
-            @else if (coverDays === 1) { Próxima factura mañana }
-            @else if (coverDays === 0) { Próxima factura hoy }
-            @else { Cobertura vencida · en deuda }
-          </p>
-        }
-        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-          @if (s.paidUntil) {
-            Pagado hasta
-            <span [class]="(coverDays !== null && coverDays < 0) ? 'font-semibold text-primary-700 dark:text-primary-400' : 'font-semibold text-gray-700 dark:text-gray-200'">
-              {{ s.paidUntil | date: 'dd/MM/yyyy' }}</span>
-          } @else {
-            Sin cobertura pagada
-          }
-        </p>
-        @if (d.scheduledPlan; as next) {
-          <p class="mt-1.5 text-xs text-gold-800">
-            Cambio programado: <strong>{{ next.planName }}</strong>@if (next.startsAt) { · {{ next.startsAt | date: 'dd/MM/yyyy' }}}
-            <button type="button" (click)="cancelChangeOpen.set(true)" class="ml-1 font-semibold underline hover:no-underline">Cancelar</button>
-          </p>
-        }
-      } @else {
-        <p class="mt-2 text-sm text-gray-400">Sin tarifa contratada</p>
-      }
-    </div>
+    <!-- Tariff card: plan + status + dynamic coverage detail (own component) -->
+    <app-driver-tariff-card [driver]="d" (cancelChange)="cancelChangeOpen.set(true)" />
 
-    <!-- Estado operativo -->
-    <div class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-5">
-      <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Estado</p>
-      <div class="mt-2 flex flex-wrap items-center gap-2">
-        @switch (d.status) {
-          @case ('approved') { <span class="h-2.5 w-2.5 rounded-full bg-green-500"></span><span class="text-sm font-bold text-gray-900 dark:text-white">Aprobado</span> }
-          @case ('suspended') { <span class="h-2.5 w-2.5 rounded-full bg-red-500"></span><span class="text-sm font-bold text-gray-900 dark:text-white">Suspendido</span> }
-          @case ('pending') { <span class="h-2.5 w-2.5 rounded-full bg-gold-400"></span><span class="text-sm font-bold text-gray-900 dark:text-white">Pendiente</span> }
-          @case ('rejected') { <span class="h-2.5 w-2.5 rounded-full bg-primary-700"></span><span class="text-sm font-bold text-gray-900 dark:text-white">Rechazado</span> }
-          @case ('paused') { <span class="h-2.5 w-2.5 rounded-full bg-blue-500"></span><span class="text-sm font-bold text-gray-900 dark:text-white">Pausado</span> }
-          @case ('overdue') { <span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span><span class="text-sm font-bold text-gray-900 dark:text-white">En mora</span> }
-          @case ('penalized') { <span class="h-2.5 w-2.5 rounded-full bg-red-500"></span><span class="text-sm font-bold text-gray-900 dark:text-white">Penalizado</span> }
-        }
-      </div>
-      <!-- Each line explains WHAT the state means and WHERE it comes from
-           (admin action vs. automatic debt engine) so it reads unambiguously. -->
-      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-        @switch (d.status) {
-          @case ('approved') { Alta aprobada y al día · {{ d.isAvailable ? 'disponible para viajes' : 'inactivo (no recibe viajes)' }} }
-          @case ('suspended') { Suspendido por el administrador · no opera }
-          @case ('pending') {
-            @if (d.membershipPayment && d.subscription) {
-              Pagos completos · listo para que el administrador lo apruebe
-            } @else {
-              En cola de aprobación · faltan pagos de membresía o tarifa
-            }
-          }
-          @case ('rejected') { Solicitud rechazada por el administrador }
-          @case ('paused') { En licencia administrativa · la tarifa está congelada }
-          @case ('overdue') { Debe {{ d.debt.weeksOwed }} semana(s) de tarifa · sigue operando · lo marca el motor de deuda }
-          @case ('penalized') { Superó el tope de semanas en deuda · no opera hasta saldar · automático }
-        }
-      </p>
-    </div>
+    <!-- Status card: state + description + context + state actions (own component) -->
+    <app-driver-status-card
+      [driver]="d"
+      [saving]="saving()"
+      (approve)="confirmAction.set('approve')"
+      (reject)="confirmAction.set('reject')"
+      (suspendToggle)="askConfirm(d.status === 'suspended'
+        ? { title: '¿Reactivar a ' + d.fullName + '?', message: 'El afiliado vuelve a operar y a recibir viajes.', confirmLabel: 'Reactivar', danger: false, action: 'suspend' }
+        : { title: '¿Suspender a ' + d.fullName + '?', message: 'Dejará de operar y no recibirá viajes hasta que lo reactives.', confirmLabel: 'Suspender', danger: true, action: 'suspend' })"
+      (pause)="askConfirm({ title: '¿Pausar a ' + d.fullName + '?', message: 'Licencia administrativa: se congela la tarifa (el tiempo no corre) hasta reanudar. Exige la tarifa al día.', confirmLabel: 'Pausar', danger: false, action: 'pause' })"
+      (resume)="askConfirm({ title: '¿Reanudar a ' + d.fullName + '?', message: 'Vuelve a operar; la tarifa corre de nuevo, desplazada por el tiempo que estuvo en pausa.', confirmLabel: 'Reanudar', danger: false, action: 'resume' })"
+      (reactivate)="askConfirm({ title: '¿Reactivar a ' + d.fullName + '?', message: 'Vuelve a la calle de inmediato, sin esperar al día de reincorporación automática. Exige deuda 0.', confirmLabel: 'Reactivar', danger: false, action: 'reactivate' })"
+    />
   </div>
 
   <!-- Full-width tabs (Datos personales / Vehículos / Documentos) -->
@@ -730,6 +630,19 @@
                   class="block w-28 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
               </div>
+              <!-- Payment summary: dynamic total (tariff × periods) before paying -->
+              <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                @let c = renewCharge();
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Resumen de cobro</p>
+                <div class="mt-2 flex items-center justify-between gap-3 text-sm">
+                  <span class="text-gray-600 dark:text-gray-300">{{ c.name }} × {{ c.periods }} {{ c.periods === 1 ? 'período' : 'períodos' }}</span>
+                  <span class="shrink-0 text-gray-500 dark:text-gray-400">${{ c.price }} c/u</span>
+                </div>
+                <div class="mt-2 flex items-center justify-between gap-3 border-t border-gray-100 pt-2 dark:border-gray-700">
+                  <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Total a pagar</span>
+                  <span class="text-lg font-extrabold text-gold-900 dark:text-gold-400">${{ c.total }}</span>
+                </div>
+              </div>
               <div>
                 <label for="renewNote" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Motivo / constancia (opcional)
@@ -739,9 +652,12 @@
                   placeholder="Ej.: pagó una parte por transferencia y el resto en efectivo"
                   class="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
               </div>
+              <app-toggle [checked]="autoApprove()" (checkedChange)="autoApprove.set($event)"
+                label="Aprobar de inmediato"
+                hint="El pago se aprueba al instante y las facturas quedan pagadas, sin pasar por «Por aprobar»." />
             </div>
             <div class="sm:col-span-3">
-              <app-payment-capture #renewPc [optional]="false" [captureAmount]="false" [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
+              <app-payment-capture #renewPc [optional]="false" [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
               @if (!renewPc.complete()) {
                 <p class="mt-3 text-right text-xs text-gray-400">Completa los datos del pago para poder pagar.</p>
               }
@@ -815,9 +731,12 @@
               } @else {
                 <p class="text-sm text-red-600">No hay una tarifa activa configurada.</p>
               }
+              <app-toggle [checked]="autoApprove()" (checkedChange)="autoApprove.set($event)"
+                label="Aprobar de inmediato"
+                hint="El pago se aprueba al instante y las facturas quedan pagadas, sin pasar por «Por aprobar»." />
             </div>
             <div class="sm:col-span-3">
-              <app-payment-capture #enrollPc [captureAmount]="false" [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
+              <app-payment-capture #enrollPc [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
               @if (!enrollPc.complete()) {
                 <p class="mt-3 text-right text-xs text-gray-400">Completa los datos del pago para poder cobrar.</p>
               }
@@ -854,19 +773,20 @@
           <div class="grid grid-cols-1 gap-x-6 gap-y-4 px-4 py-4 sm:grid-cols-5 sm:px-6">
             <div class="space-y-4 sm:col-span-2">
               <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                <div class="flex items-center justify-between gap-4 border-b border-gray-100 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-700/30">
+                <div class="border-b border-gray-100 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-700/30">
                   <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Facturas por pagar</p>
-                  <span class="text-lg font-extrabold text-gold-900 dark:text-gold-400">${{ selectedDebtTotal() }}</span>
                 </div>
                 @if (debtInvoices().length) {
                   <ul class="divide-y divide-gray-100 dark:divide-gray-700">
                     @for (inv of debtInvoices(); track inv.id) {
                       <li class="flex items-center gap-3 px-3 py-2 text-sm">
-                        <input type="checkbox" [checked]="selectedInvoiceIds().has(inv.id)" (change)="toggleInvoice(inv.id)"
-                          class="h-4 w-4 shrink-0 rounded border-gray-300 text-primary-700 focus:ring-primary-700" />
+                        <input type="checkbox" [checked]="selectedInvoiceIds().has(inv.id)"
+                          [disabled]="inv.kind === 'membership'" (change)="toggleInvoice(inv.id)"
+                          class="h-4 w-4 shrink-0 rounded border-gray-300 text-primary-700 focus:ring-primary-700 disabled:opacity-60" />
                         <span class="min-w-0 flex-1">
                           <span class="font-mono text-[10px] font-semibold text-primary-700 dark:text-primary-300">#{{ inv.invoiceNumber }}</span>
                           <span class="ml-1 text-gray-700 dark:text-gray-200">{{ inv.concept }}</span>
+                          @if (inv.kind === 'membership') { <span class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-300">obligatoria</span> }
                           @if (inv.periodStart) { <span class="text-xs text-gray-400"> · {{ inv.periodStart | date: 'dd/MM' }}–{{ inv.periodEnd | date: 'dd/MM' }}</span> }
                         </span>
                         <span class="shrink-0 font-semibold text-gray-800 dark:text-gray-100">${{ inv.totalUsd }}</span>
@@ -874,6 +794,10 @@
                     }
                   </ul>
                   <p class="px-3 py-2 text-[11px] text-gray-400">Cada factura se paga completa. Desmarca las que no cubre este pago.</p>
+                  <div class="flex items-center justify-between gap-4 border-t border-gray-100 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-700/30">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Total a pagar</p>
+                    <span class="text-lg font-extrabold text-gold-900 dark:text-gold-400">${{ selectedDebtTotal() }}</span>
+                  </div>
                 } @else {
                   <p class="px-3 py-4 text-center text-sm text-gray-400">Este afiliado no tiene facturas por pagar.</p>
                 }
@@ -886,10 +810,15 @@
                   placeholder="Ej.: pago en efectivo recibido por el administrador"
                   class="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
               </div>
+              <app-toggle [checked]="autoApprove()" (checkedChange)="autoApprove.set($event)"
+                label="Aprobar de inmediato"
+                hint="El pago se aprueba al instante y las facturas quedan pagadas, sin pasar por «Por aprobar». Déjalo apagado para revisarlo luego." />
             </div>
             <div class="sm:col-span-3">
               <app-payment-capture #extPc [value]="payment()" (valueChange)="payment.set($event)" (fileError)="error.set($event)" />
-              @if (!extPc.complete()) {
+              @if (selectedInvoiceIds().size === 0) {
+                <p class="mt-3 text-right text-xs text-gray-400">Selecciona al menos una factura por pagar.</p>
+              } @else if (!extPc.complete()) {
                 <p class="mt-3 text-right text-xs text-gray-400">Completa los datos del pago para poder cobrar.</p>
               }
             </div>
@@ -899,7 +828,7 @@
               class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
               Cancelar
             </button>
-            <button type="button" (click)="registerExternalPayment()" [disabled]="saving() || !extPc.complete()"
+            <button type="button" (click)="registerExternalPayment()" [disabled]="saving() || !extPc.complete() || selectedInvoiceIds().size === 0"
               class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
               {{ saving() ? 'Registrando…' : 'Registrar pago' }}
             </button>
@@ -946,7 +875,7 @@
         </h2>
         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
           {{ action === 'approve'
-            ? 'La aprobación exige pagos registrados. La tarifa comienza a correr desde este momento.'
+            ? 'Empieza a operar hoy; su semana se ancla al lunes en curso (pierde los días ya transcurridos de la semana). Si prefieres una semana completa, no lo apruebes: el sistema lo hará solo el próximo lunes.'
             : 'El afiliado quedará rechazado; si tenía pagos, se reembolsan, y sus facturas quedan anuladas (conservan número).' }}
         </p>
         <div class="mt-5 flex justify-center gap-3">

@@ -19,6 +19,7 @@ import {
   SUBMISSION_STATUS_LABELS,
   type SubmissionListItem,
 } from '../../core/models/payment-submission.model';
+import { SkeletonRows } from '../../shared/components/skeleton-rows';
 import { DriversApi } from '../drivers/drivers.api';
 import { BillingApi, type MonthlyInvoicingPoint } from './billing.api';
 import { PaymentSubmissionsApi } from './payment-submissions.api';
@@ -41,7 +42,7 @@ type InvoiceStatusFilter = '' | 'issued' | 'overdue' | 'paid' | 'voided';
 
 @Component({
   selector: 'app-billing',
-  imports: [FormsModule, DatePipe, RouterLink],
+  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows],
   templateUrl: './billing.html',
 })
 export class Billing {

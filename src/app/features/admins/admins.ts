@@ -6,13 +6,14 @@ import { concatMap, of } from 'rxjs';
 import { INPUT_FILTERS } from '../../shared/directives/input-filters';
 import type { Admin } from '../../core/models/admin.model';
 import { AuthService } from '../../core/services/auth.service';
+import { SkeletonRows } from '../../shared/components/skeleton-rows';
 import { AdminsApi } from './admins.api';
 
 type ModalState = { mode: 'create' } | { mode: 'edit'; item: Admin } | null;
 
 @Component({
   selector: 'app-admins',
-  imports: [FormsModule, DatePipe, ...INPUT_FILTERS],
+  imports: [FormsModule, DatePipe, ...INPUT_FILTERS, SkeletonRows],
   templateUrl: './admins.html',
 })
 export class Admins {

@@ -41,17 +41,16 @@ export class PaymentSubmissionsApi {
     return this.http.post<void>(`${environment.apiUrl}/payment-submissions/${id}/reject`, { reason });
   }
 
-  /** Reverses an approved receipt: refund (voids its invoices) or correction. */
-  reverse(id: string, reversalType: 'refund' | 'correction', reason: string): Observable<void> {
-    return this.http.post<void>(`${environment.apiUrl}/payment-submissions/${id}/reverse`, {
-      reversalType,
-      reason,
-    });
+  /** Reverses an approved receipt (single action): voids the invoices it generated
+   *  and sends any debt it settled back to owed. Keeps the trace. */
+  reverse(id: string, reason: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/payment-submissions/${id}/reverse`, { reason });
   }
 
-  /** Creates a submission (multipart: payment meta + 1..5 receipt/bill images). */
-  create(driverId: string, form: FormData): Observable<{ id: string }> {
-    return this.http.post<{ id: string }>(
+  /** Creates a submission (multipart: payment meta + 0..5 receipt/bill images).
+   *  `approved` is true when the admin used the "approve immediately" toggle. */
+  create(driverId: string, form: FormData): Observable<{ id: string; approved: boolean }> {
+    return this.http.post<{ id: string; approved: boolean }>(
       `${environment.apiUrl}/drivers/${driverId}/payment-submissions`,
       form,
     );

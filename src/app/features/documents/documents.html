@@ -84,7 +84,7 @@
       </thead>
       <tbody>
         @if (loading()) {
-          <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Cargando…</td></tr>
+          <app-skeleton-rows [cols]="6" />
         } @else {
           @for (item of items(); track item.id) {
             <tr class="border-b border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">

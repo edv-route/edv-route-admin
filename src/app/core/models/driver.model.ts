@@ -26,6 +26,10 @@ export interface DriverListItem {
   registrationStep: number | null;
   createdAt: string;
   subscription: DriverSubscriptionSummary | null;
+  /** Outstanding debt (membership + owed tariff weeks), USD string ("0.00" if none). */
+  debtUsd: string;
+  /** A payment (v9 submission) is awaiting admin review. */
+  hasPendingSubmission: boolean;
 }
 
 export interface DriverList {
@@ -104,6 +108,9 @@ export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
     penaltyCount: number;
     /** Unpaid membership (alta debt), 0 when none — part of totalUsd. */
     membershipDue: string;
+    /** Invoice of the pending membership charge (null when none) — lets the profile
+     *  tell whether the membership line is covered by a pending payment. */
+    membershipInvoiceId: string | null;
     /** Debt cap (weeks) before penalization — for the "suspension imminent" warning. */
     capWeeks: number;
     charges: {
@@ -111,6 +118,8 @@ export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
       kind: 'period' | 'penalty';
       amountUsd: string;
       status: string;
+      /** Invoice this charge bills — matched against a pending payment's coverage. */
+      invoiceId: string | null;
       periodStart: string | null;
       periodEnd: string | null;
     }[];
@@ -132,6 +141,9 @@ export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
     amountUsd: string;
     purpose: string;
     createdAt: string;
+    /** Debt invoices this payment covers (partial payment). Null/empty = it covers
+     *  the whole debt — the profile then shows a single "en revisión" band. */
+    invoiceIds: string[] | null;
   } | null;
   /** v9: the most recent submission if it was REJECTED (drives the rejection message). */
   rejectedSubmission: {

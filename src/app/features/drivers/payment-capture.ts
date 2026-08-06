@@ -45,9 +45,8 @@ export interface PaymentCaptureValue {
   payerId: string | null;
   /** Email or name the payment came FROM (Zelle/Binance). */
   payerAccount: string | null;
-  /** Captured amount (USD): required for Efectivo Divisa (cash_usd). */
-  amountUsd: string | null;
-  /** Receipt(s): exactly 1 for the standard methods, up to 5 bill photos for cash. */
+  /** Receipt(s): up to 1 for the standard methods, up to 5 bill photos for cash.
+   *  Always OPTIONAL (2026-08-06). */
   files: File[];
 }
 
@@ -59,7 +58,6 @@ export const emptyPaymentCapture = (): PaymentCaptureValue => ({
   payerPhone: null,
   payerId: null,
   payerAccount: null,
-  amountUsd: null,
   files: [],
 });
 
@@ -97,13 +95,6 @@ export class PaymentCapture {
   /** Whether the payment block is optional. Only labelling — consumers still gate
    *  their submit on `complete`. Set false when the cobro must not be left blank. */
   readonly optional = input(true);
-  /**
-   * Whether Efectivo Divisa captures a free amount here. True for cobros that
-   * settle a variable amount (debt); false for enroll/advance, where the total is
-   * derived from the weeks selected outside this block (2026-08-04). When false the
-   * amount field is hidden and not required.
-   */
-  readonly captureAmount = input(true);
   /** A human message when the chosen file is rejected (size/type), or null when cleared. */
   readonly fileError = output<string | null>();
 
@@ -155,16 +146,12 @@ export class PaymentCapture {
     const v = this.value();
     const method = this.paymentMethods().find((m) => m.id === v.paymentMethodId);
     if (!method || !v.paidOn) return false;
-    // Efectivo Divisa: the bill photo is OPTIONAL (cash in hand). The amount is
-    // required only when captured here (debt); for enroll/advance the total is the
-    // weeks selected outside this block.
-    if (method.type === 'cash_usd') {
-      if (!this.captureAmount()) return true;
-      const amount = Number(v.amountUsd);
-      return !!v.amountUsd && Number.isFinite(amount) && amount > 0;
-    }
-    // Every other method requires a receipt.
-    if (v.files.length === 0) return false;
+    // The receipt is OPTIONAL for every method now (2026-08-06): verification moves
+    // to the approval step. Efectivo Divisa needs only method + date; its amount
+    // comes from the selected invoices, not a captured figure.
+    if (method.type === 'cash_usd') return true;
+    // The other methods still require their reference + payer identification; only
+    // the receipt image stopped being mandatory.
     if (!v.reference?.trim()) return false;
     if ((method.type === 'bank_transfer' || method.type === 'pago_movil') && !v.payerBank) return false;
     // Pago Móvil: the payer's phone (E.164) and document must be complete.
@@ -230,7 +217,6 @@ export class PaymentCapture {
       ...v,
       paymentMethodId: id,
       files: [], // receipts differ per method (1 vs up to 5); start clean
-      ...(type === 'cash_usd' ? {} : { amountUsd: null }),
       ...(clearsBank ? { payerBank: null } : {}),
       ...(clearsPayer ? { payerPhone: null, payerId: null } : {}),
       ...(clearsAccount ? { payerAccount: null } : {}),
@@ -268,10 +254,6 @@ export class PaymentCapture {
     const local = this.payerPhoneNumber.replace(/\D/g, '');
     const composed = /^0\d{10}$/.test(local) ? `+58${local.slice(1)}` : null;
     this.value.update((v) => ({ ...v, payerPhone: composed }));
-  }
-
-  setAmount(amount: string): void {
-    this.value.update((v) => ({ ...v, amountUsd: amount.trim() || null }));
   }
 
   /** Adds receipt(s): replaces the single one for standard methods; appends up

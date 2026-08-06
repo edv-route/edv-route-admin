@@ -11,6 +11,7 @@ import {
   type TrainingRecord,
   type TrainingStatus,
 } from '../../core/models/training.model';
+import { SkeletonRows } from '../../shared/components/skeleton-rows';
 import { DriversApi } from '../drivers/drivers.api';
 import { TrainingsApi } from './trainings.api';
 
@@ -28,7 +29,7 @@ function toLocalInput(iso: string | null): string {
 
 @Component({
   selector: 'app-trainings',
-  imports: [FormsModule, DatePipe, RouterLink],
+  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows],
   templateUrl: './trainings.html',
 })
 export class Trainings {

@@ -3,13 +3,14 @@ import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import type { VehicleType } from '../../core/models/vehicle-type.model';
+import { SkeletonRows } from '../../shared/components/skeleton-rows';
 import { VehicleTypesApi } from './vehicle-types.api';
 
 type ModalState = { mode: 'create' } | { mode: 'edit'; item: VehicleType } | null;
 
 @Component({
   selector: 'app-vehicle-types',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, SkeletonRows],
   templateUrl: './vehicle-types.html',
 })
 export class VehicleTypes {

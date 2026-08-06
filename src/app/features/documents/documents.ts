@@ -11,6 +11,7 @@ import {
 import type { Requirement } from '../../core/models/requirement.model';
 import { Select, type SelectOption } from '../../shared/components/select';
 import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
+import { SkeletonRows } from '../../shared/components/skeleton-rows';
 import { RequirementsApi } from '../requirements/requirements.api';
 import { DocumentsApi } from './documents.api';
 
@@ -18,7 +19,7 @@ const PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-documents',
-  imports: [FormsModule, DatePipe, RouterLink, Select, FileViewer],
+  imports: [FormsModule, DatePipe, RouterLink, Select, FileViewer, SkeletonRows],
   templateUrl: './documents.html',
 })
 export class Documents {

@@ -31,16 +31,6 @@
       [ngModelOptions]="{ standalone: true }" placeholder="dd/mm/aaaa" />
   </div>
 
-  <!-- Efectivo Divisa: captured amount (USD) — only when the total is settled here -->
-  @if (isCash() && captureAmount()) {
-    <div>
-      <label for="payAmount" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Monto recibido (USD)</label>
-      <input id="payAmount" type="text" inputmode="decimal" maxlength="12" [ngModel]="value().amountUsd"
-        (ngModelChange)="setAmount($event)" [ngModelOptions]="{ standalone: true }" placeholder="Ej.: 20.00"
-        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-    </div>
-  }
-
   <!-- Zelle / Binance: the email or name the payment came from -->
   @if (needsPayerAccount()) {
     <div class="sm:col-span-2">
