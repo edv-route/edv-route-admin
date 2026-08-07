@@ -10,8 +10,9 @@ import {
 } from '../../core/models/driver.model';
 import { DriversApi } from './drivers.api';
 import { SkeletonRows } from '../../shared/components/skeleton-rows';
+import { Pagination } from '../../shared/components/pagination';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 /** Semantic tone of a tariff badge → its pill color classes. */
 type BadgeTone = 'accent' | 'neutral' | 'success' | 'warning' | 'danger';
@@ -38,7 +39,7 @@ interface StatusBadge {
 
 @Component({
   selector: 'app-drivers',
-  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows],
+  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows, Pagination],
   templateUrl: './drivers.html',
 })
 export class Drivers {

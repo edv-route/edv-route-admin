@@ -20,6 +20,7 @@
         <li class="flex flex-wrap items-center justify-between gap-3 p-4 md:px-6">
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
+              <span class="shrink-0 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Pago N° {{ r.submissionNumber }}</span>
               <p class="font-semibold text-gray-900 dark:text-white">{{ purposeLabels[r.purpose] ?? 'Pago' }}</p>
               @switch (r.status) {
                 @case ('approved') { <span class="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-800 dark:bg-green-900 dark:text-green-300">Aprobado</span> }
@@ -29,8 +30,11 @@
               }
             </div>
             <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-              Pago N° {{ r.submissionNumber }} · {{ r.createdAt | date: 'dd/MM/yyyy HH:mm' }}
+              {{ r.createdAt | date: 'dd/MM/yyyy HH:mm' }}
               @if (r.paymentMethodName) { · {{ r.paymentMethodName }} }
+              @if (r.invoiceNumbers?.length) {
+                <span class="text-gray-600 dark:text-gray-300"> · {{ invoiceLabel(r.invoiceNumbers) }}</span>
+              }
             </p>
           </div>
           <div class="flex shrink-0 items-center gap-4">
@@ -41,6 +45,7 @@
         </li>
       }
     </ul>
+    <app-pagination [page]="page()" [total]="total()" [pageSize]="pageSize" (pageChange)="goToPage($event)" />
   </section>
 } @else {
   <div class="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center dark:border-gray-700">

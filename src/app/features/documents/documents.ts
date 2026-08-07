@@ -14,12 +14,13 @@ import { FileViewer, type FileViewerState } from '../../shared/components/file-v
 import { SkeletonRows } from '../../shared/components/skeleton-rows';
 import { RequirementsApi } from '../requirements/requirements.api';
 import { DocumentsApi } from './documents.api';
+import { Pagination } from '../../shared/components/pagination';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-documents',
-  imports: [FormsModule, DatePipe, RouterLink, Select, FileViewer, SkeletonRows],
+  imports: [FormsModule, DatePipe, RouterLink, Select, FileViewer, SkeletonRows, Pagination],
   templateUrl: './documents.html',
 })
 export class Documents {

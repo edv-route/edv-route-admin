@@ -133,29 +133,6 @@
     </table>
   </div>
 
-  <!-- Footer nav (Pro pattern: pager only — the "total afiliados" count was removed:
-       almost no one is approved yet, so most rows are applicants, not affiliates). -->
-  <nav class="flex flex-wrap items-center justify-between gap-3 p-4" aria-label="Paginación de la tabla">
-    @if (totalPages > 1) {
-      <p class="text-sm text-gray-500 dark:text-gray-400">Página {{ page() }} de {{ totalPages }}</p>
-      <div class="flex gap-2">
-        <button
-          type="button"
-          (click)="goToPage(page() - 1)"
-          [disabled]="page() === 1"
-          class="flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:outline-none focus:ring-4 focus:ring-gray-100 disabled:opacity-40 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-700"
-        >
-          Anterior
-        </button>
-        <button
-          type="button"
-          (click)="goToPage(page() + 1)"
-          [disabled]="page() === totalPages"
-          class="flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:outline-none focus:ring-4 focus:ring-gray-100 disabled:opacity-40 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-700"
-        >
-          Siguiente
-        </button>
-      </div>
-    }
-  </nav>
+  <!-- Footer nav: shared numbered pagination (Flowbite Pro). -->
+  <app-pagination [page]="page()" [total]="total()" [pageSize]="pageSize" (pageChange)="goToPage($event)" />
 </div>

@@ -23,7 +23,9 @@ Consume el backend `edv-route-backend` (Fastify) por HTTP — **nunca toca la BD
 - `features/` — una carpeta por feature, **lazy-loaded**. API por feature en `*.api.ts` (HttpClient).
 - `shared/` — componentes **sin estado**: `select` (usar siempre en vez de `<select>` a pelo),
   `date-picker`, `password-input`, `file-viewer`, **`action-menu`** (kebab ⋮ de acciones de
-  contenedor), directivas de `input-filters` (`appLetters/appDigits/appAlnum/appAlnumDash`).
+  contenedor), **`pagination`** (paginado numerado Flowbite Pro para listas server-side;
+  inputs `page`/`total`/`pageSize`, output `pageChange`), directivas de `input-filters`
+  (`appLetters/appDigits/appAlnum/appAlnumDash`).
 - **Textos de UI en español; código y comentarios en inglés.**
 - **Formularios**: Angular pone `novalidate`, así que todo form usa `#f="ngForm"` +
   `markAllAsTouched()` al enviar (CSS global pinta `.ng-invalid.ng-touched`) y muestra el error
@@ -38,7 +40,8 @@ Consume el backend `edv-route-backend` (Fastify) por HTTP — **nunca toca la BD
 | `/dashboard` | `dashboard` | Métricas y resumen |
 | `/drivers` · `/drivers/new` · `/drivers/:id` | `drivers` | Lista · **wizard de alta (4 pasos)** · perfil del chofer |
 | `/drivers/:id/payments` · `/drivers/:id/vehicles/:vehicleId` | `drivers` | Historial de pagos (1 fila/recibo) · detalle de vehículo |
-| `/billing` · `/billing/submissions/:id` · `/billing/:id` | `billing` | **Facturación**: pestañas Pagos/Facturas/Por aprobar · detalle de recibo · detalle de factura |
+| `/billing` · `/billing/:id` | `billing` | **Facturación**: solo facturas (gráfico mensual + filtro de estado + búsqueda) · detalle de factura |
+| `/receipts` · `/billing/submissions/:id` | `receipts` | **Recibos de pagos**: pestañas Pagos/Por aprobar · detalle de recibo (compartido, vuelve con `location.back()`) |
 | `/membership` | `membership` | Membresía + catálogo de **beneficios** (hijo, no sección propia) |
 | `/subscription-plans` | `subscription-plans` | Planes/tarifas |
 | `/payment-methods` | `payment-methods` | Catálogo de métodos de pago |

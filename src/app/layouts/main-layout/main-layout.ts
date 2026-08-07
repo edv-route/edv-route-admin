@@ -76,6 +76,7 @@ export class MainLayout {
         { label: 'Membresía', route: '/membership', icon: 'badge' },
         { label: 'Tarifas', route: '/subscription-plans', icon: 'cash' },
         { label: 'Facturación', route: '/billing', icon: 'receipt' },
+        { label: 'Recibos de pagos', route: '/receipts', icon: 'cash' },
         { label: 'Métodos de pago', route: '/payment-methods', icon: 'cash' },
         { label: 'Requerimientos', route: '/requirements', icon: 'clipboard' },
         { label: 'Documentos', route: '/documents', icon: 'document' },

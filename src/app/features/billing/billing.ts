@@ -15,53 +15,38 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import ApexCharts from 'apexcharts';
 import { INVOICE_STATUS_LABELS, type InvoiceListItem } from '../../core/models/billing.model';
-import {
-  SUBMISSION_STATUS_LABELS,
-  type SubmissionListItem,
-} from '../../core/models/payment-submission.model';
 import { SkeletonRows } from '../../shared/components/skeleton-rows';
 import { DriversApi } from '../drivers/drivers.api';
 import { BillingApi, type MonthlyInvoicingPoint } from './billing.api';
-import { PaymentSubmissionsApi } from './payment-submissions.api';
+import { Pagination } from '../../shared/components/pagination';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 const MONTHS = 12;
 const BRAND_RED = '#920606';
 
 /**
- * Billing redesign (2026-08-04): a payment RECEIPT covers N invoices (one per
- * concept). The screen has three tabs:
- *  - `receipts` ("Pagos"): the receipts (payment_submissions) — N° pago, pagador,
- *    monto, estado, fecha, detalle.
- *  - `invoices` ("Facturas"): individual per-concept invoices — N°, afiliado,
- *    período, monto, estado, and the receipt that paid them.
- *  - `review` ("Por aprobar"): pending receipts awaiting approval.
+ * Facturación: the invoices ledger — one invoice per concept (membership or tariff
+ * week), with its status and the receipt that paid it. Receipts and the approval
+ * inbox moved to the Recibos de pagos screen (2026-08-07); this screen is now
+ * invoices-only (monthly chart + status filter + search + per-driver history).
  */
-type BillingTab = 'receipts' | 'invoices' | 'review';
 type InvoiceStatusFilter = '' | 'issued' | 'overdue' | 'paid' | 'voided';
 
 @Component({
   selector: 'app-billing',
-  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows],
+  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows, Pagination],
   templateUrl: './billing.html',
 })
 export class Billing {
   private readonly api = inject(BillingApi);
-  private readonly submissionsApi = inject(PaymentSubmissionsApi);
   private readonly router = inject(Router);
 
   /** Bound from the query param (withComponentInputBinding) - per-driver history. */
   readonly driverId = input<string>();
-  /** Optional starting tab (e.g. ?tab=review after approving a receipt). */
-  readonly initialTab = input<string | undefined>(undefined, { alias: 'tab' });
 
   readonly invoiceStatusLabels = INVOICE_STATUS_LABELS;
-  readonly submissionStatusLabels = SUBMISSION_STATUS_LABELS;
 
-  readonly tab = signal<BillingTab>('receipts');
   readonly invoices = signal<InvoiceListItem[]>([]);
-  readonly receipts = signal<SubmissionListItem[]>([]);
-  readonly submissions = signal<SubmissionListItem[]>([]);
   readonly total = signal(0);
   readonly page = signal(1);
   readonly loading = signal(true);
@@ -85,9 +70,7 @@ export class Billing {
     // Reload whenever the bound driverId changes (including first binding).
     effect(() => {
       const id = this.driverId();
-      const t = this.initialTab();
       untracked(() => {
-        if (t === 'review' || t === 'invoices' || t === 'receipts') this.tab.set(t);
         this.driverName.set(null);
         if (id) driversApi.detail(id).subscribe((d) => this.driverName.set(d.fullName));
         this.page.set(1);
@@ -149,55 +132,27 @@ export class Billing {
 
   load(): void {
     this.loading.set(true);
-    const common = {
-      ...(this.driverId() ? { driverId: this.driverId() as string } : {}),
-      ...(this.search.trim() ? { search: this.search.trim() } : {}),
-      page: this.page(),
-      limit: PAGE_SIZE,
-    };
-    const onError = (err: HttpErrorResponse): void => {
-      this.loading.set(false);
-      this.error.set(
-        (err.error as { message?: string } | null)?.message ?? 'Error de conexión con la API',
-      );
-    };
-
-    if (this.tab() === 'invoices') {
-      this.api
-        .invoices({ ...common, ...(this.invoiceStatus() ? { status: this.invoiceStatus() } : {}) })
-        .subscribe({
-          next: (result) => {
-            this.invoices.set(result.items);
-            this.total.set(result.total);
-            this.loading.set(false);
-          },
-          error: onError,
-        });
-    } else {
-      // `receipts` = all receipts; `review` = pending only. (Search not wired yet.)
-      this.submissionsApi
-        .list({
-          ...(this.tab() === 'review' ? { status: 'pending' as const } : {}),
-          ...(this.driverId() ? { driverId: this.driverId() as string } : {}),
-          page: this.page(),
-          limit: PAGE_SIZE,
-        })
-        .subscribe({
-          next: (result) => {
-            if (this.tab() === 'review') this.submissions.set(result.items);
-            else this.receipts.set(result.items);
-            this.total.set(result.total);
-            this.loading.set(false);
-          },
-          error: onError,
-        });
-    }
-  }
-
-  setTab(tab: BillingTab): void {
-    if (this.tab() === tab) return;
-    this.tab.set(tab);
-    this.applyFilters();
+    this.api
+      .invoices({
+        ...(this.driverId() ? { driverId: this.driverId() as string } : {}),
+        ...(this.search.trim() ? { search: this.search.trim() } : {}),
+        ...(this.invoiceStatus() ? { status: this.invoiceStatus() } : {}),
+        page: this.page(),
+        limit: PAGE_SIZE,
+      })
+      .subscribe({
+        next: (result) => {
+          this.invoices.set(result.items);
+          this.total.set(result.total);
+          this.loading.set(false);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.loading.set(false);
+          this.error.set(
+            (err.error as { message?: string } | null)?.message ?? 'Error de conexión con la API',
+          );
+        },
+      });
   }
 
   setInvoiceStatus(status: InvoiceStatusFilter): void {

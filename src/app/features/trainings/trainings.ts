@@ -14,8 +14,9 @@ import {
 import { SkeletonRows } from '../../shared/components/skeleton-rows';
 import { DriversApi } from '../drivers/drivers.api';
 import { TrainingsApi } from './trainings.api';
+import { Pagination } from '../../shared/components/pagination';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 type ModalState = { mode: 'create' } | { mode: 'edit'; item: TrainingRecord } | null;
 
@@ -29,7 +30,7 @@ function toLocalInput(iso: string | null): string {
 
 @Component({
   selector: 'app-trainings',
-  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows],
+  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows, Pagination],
   templateUrl: './trainings.html',
 })
 export class Trainings {

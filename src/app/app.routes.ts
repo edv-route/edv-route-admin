@@ -70,6 +70,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/billing/billing').then((m) => m.Billing),
       },
       {
+        path: 'receipts',
+        loadComponent: () => import('./features/receipts/receipts').then((m) => m.Receipts),
+      },
+      {
         path: 'billing/submissions/:id',
         loadComponent: () =>
           import('./features/billing/payment-submission-detail').then(

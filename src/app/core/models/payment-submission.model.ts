@@ -21,6 +21,8 @@ export interface SubmissionListItem {
   createdAt: string;
   reviewedAt: string | null;
   fileCount: number;
+  /** N° of every invoice this receipt covers (via its charges); null while none exist yet. */
+  invoiceNumbers: string[] | null;
 }
 
 /** A receipt/bill image resolved to a short-lived signed URL. */

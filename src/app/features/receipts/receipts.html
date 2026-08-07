@@ -1,0 +1,127 @@
+<!-- Receipts (money-in) list-card. Pro chassis; EDV colors. -->
+<div class="rounded-lg bg-white shadow-sm dark:bg-gray-800">
+  <div class="px-4 pt-4 md:px-6 md:pt-6">
+    <h1 class="text-xl font-bold text-gray-900 dark:text-white">Recibos de pagos</h1>
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+      Cada <strong>recibo</strong> es un pago del afiliado que cancela una o varias
+      <strong>facturas</strong>. Revisa y aprueba los pendientes; los documentos de dinero nunca se borran.
+    </p>
+  </div>
+
+  @if (error(); as message) {
+    <p class="mx-4 mt-4 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-700 dark:text-primary-300 md:mx-6">
+      {{ message }}
+    </p>
+  }
+
+  <div class="flex flex-wrap items-center gap-3 px-4 py-4 md:px-6">
+    <div class="flex rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-600 dark:bg-gray-700">
+      @for (t of [['all', 'Pagos'], ['review', 'Por aprobar']]; track t[0]) {
+        <button
+          type="button"
+          (click)="setTab($any(t[0]))"
+          [class]="tab() === t[0]
+            ? 'rounded-md bg-primary-700 px-4 py-1.5 text-xs font-semibold text-white'
+            : 'rounded-md px-4 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'"
+        >
+          {{ t[1] }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="overflow-x-auto">
+    @if (tab() === 'all') {
+      <!-- Pagos = receipts (payment_submissions), one row per payment. -->
+      <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+        <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+          <tr>
+            <th class="px-4 py-3 font-semibold">N° pago</th>
+            <th class="px-4 py-3 font-semibold">Pagador</th>
+            <th class="px-4 py-3 font-semibold">Monto</th>
+            <th class="px-4 py-3 font-semibold">Estado</th>
+            <th class="px-4 py-3 font-semibold">Fecha</th>
+            <th class="px-4 py-3 font-semibold">Método</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <app-skeleton-rows [cols]="6" />
+          } @else {
+            @for (r of items(); track r.id) {
+              <tr class="border-b border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">
+                <td class="px-4 py-3">
+                  <span class="font-mono font-semibold text-primary-700 dark:text-primary-300">#{{ r.submissionNumber }}</span>
+                </td>
+                <td class="px-4 py-3"><span class="font-semibold text-gray-800 dark:text-gray-100">{{ r.driverName }}</span></td>
+                <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">${{ r.amountUsd }}</td>
+                <td class="px-4 py-3">
+                  @switch (r.status) {
+                    @case ('approved') { <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-green-500"></span>Aprobado</span> }
+                    @case ('rejected') { <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-primary-600"></span>Rechazado</span> }
+                    @case ('reverted') { <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-gray-400"></span>Revertido</span> }
+                    @default { <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-gold-500"></span>Pendiente</span> }
+                  }
+                </td>
+                <td class="whitespace-nowrap px-4 py-3">{{ r.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td class="px-4 py-3">
+                  @if (r.paymentMethodName) {
+                    <p class="text-xs font-medium text-gray-700 dark:text-gray-200">{{ r.paymentMethodName }}</p>
+                  }
+                  <a [routerLink]="['/billing/submissions', r.id]"
+                    class="text-xs font-semibold text-primary-700 hover:underline dark:text-primary-300">Ver detalle del pago</a>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Sin pagos registrados.</td></tr>
+            }
+          }
+        </tbody>
+      </table>
+    } @else {
+      <!-- Por aprobar: pending receipts awaiting approval. -->
+      <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+        <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+          <tr>
+            <th class="px-4 py-3 font-semibold">N° pago</th>
+            <th class="px-4 py-3 font-semibold">Afiliado</th>
+            <th class="px-4 py-3 font-semibold">Origen</th>
+            <th class="px-4 py-3 font-semibold">Monto</th>
+            <th class="px-4 py-3 font-semibold">Método</th>
+            <th class="px-4 py-3 font-semibold">Enviado</th>
+            <th class="px-4 py-3 font-semibold">Comprobantes</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <app-skeleton-rows [cols]="7" />
+          } @else {
+            @for (item of items(); track item.id) {
+              <tr class="border-b border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">
+                <td class="px-4 py-3"><span class="font-mono font-semibold text-primary-700 dark:text-primary-300">#{{ item.submissionNumber }}</span></td>
+                <td class="px-4 py-3"><span class="font-semibold text-gray-800 dark:text-gray-100">{{ item.driverName }}</span></td>
+                <td class="px-4 py-3">
+                  <span class="rounded-full bg-gold-100 px-2 py-0.5 text-[11px] font-semibold text-gold-800">
+                    {{ item.source === 'app' ? 'Chofer' : 'Admin' }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">${{ item.amountUsd }}</td>
+                <td class="px-4 py-3">{{ item.paymentMethodName ?? '—' }}</td>
+                <td class="whitespace-nowrap px-4 py-3">{{ item.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td class="px-4 py-3">
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ item.fileCount }} img.</p>
+                  <a [routerLink]="['/billing/submissions', item.id]"
+                    class="text-xs font-semibold text-primary-700 hover:underline dark:text-primary-300">Ver detalle del pago</a>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="px-6 py-8 text-center text-gray-400">No hay pagos por aprobar.</td></tr>
+            }
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+
+  <app-pagination [page]="page()" [total]="total()" [pageSize]="pageSize" (pageChange)="goToPage($event)" />
+</div>

@@ -131,7 +131,7 @@
         @for (c of owedCharges(); track c.id) {
           <li class="flex items-center justify-between gap-2 py-1.5 text-sm">
             <span class="text-red-900 dark:text-red-200">
-              {{ c.kind === 'penalty' ? 'Penalización' : 'Semana de tarifa' }}
+              {{ c.kind === 'penalty' ? 'Penalización' : 'Tarifa de la semana' }}
               @if (c.periodStart) {
                 <span class="text-red-700/80 dark:text-red-300/80">· {{ c.periodStart | date: 'dd/MM' }}–{{ c.periodEnd | date: 'dd/MM' }}</span>
               }
