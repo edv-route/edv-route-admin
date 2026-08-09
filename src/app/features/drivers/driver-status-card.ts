@@ -41,6 +41,27 @@ export class DriverStatusCard {
   readonly hasDebt = computed(() => Number(this.driver().debt.totalUsd) > 0);
   readonly pendingSubmission = computed(() => this.driver().pendingSubmission);
 
+  /** Mirrors the backend approval gate: membership paid + a tariff + zero debt +
+   *  no payment under review. Drives the Aprobar button's disabled state so the
+   *  admin never gets a 409 by clicking it with debt pending. */
+  readonly canApprove = computed(() => {
+    const d = this.driver();
+    return (
+      !!d.subscription &&
+      d.membershipPayment?.status === 'paid' &&
+      !this.hasDebt() &&
+      !this.pendingSubmission()
+    );
+  });
+
+  /** Tooltip explaining why Aprobar is disabled (empty when it's enabled). */
+  readonly approveDisabledReason = computed(() => {
+    if (this.pendingSubmission()) return 'Aprueba primero el pago en revisión (Facturación)';
+    if (this.hasDebt()) return 'No se puede aprobar con deuda pendiente: registra los pagos primero';
+    if (!this.canApprove()) return 'Faltan los pagos de membresía y tarifa';
+    return '';
+  });
+
   readonly meta = computed<StatusMeta>(() => {
     const d = this.driver();
     switch (d.status) {

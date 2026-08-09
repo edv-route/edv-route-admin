@@ -11,8 +11,8 @@
           Rechazar
         </button>
         <button type="button" (click)="approve.emit()"
-          [disabled]="!!pendingSubmission()"
-          [title]="pendingSubmission() ? 'Aprueba primero el pago en revisión, en Facturación' : ''"
+          [disabled]="!canApprove()"
+          [title]="approveDisabledReason()"
           class="rounded-lg bg-primary-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50">
           Aprobar
         </button>
