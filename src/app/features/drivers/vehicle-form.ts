@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { BusyDirective } from '../../shared/directives/busy.directive';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, of, type Observable } from 'rxjs';
@@ -28,7 +29,7 @@ interface PhotoDraft {
  */
 @Component({
   selector: 'app-vehicle-form',
-  imports: [FormsModule, Select, ...INPUT_FILTERS],
+  imports: [FormsModule, Select, ...INPUT_FILTERS, BusyDirective],
   templateUrl: './vehicle-form.html',
 })
 export class VehicleForm {

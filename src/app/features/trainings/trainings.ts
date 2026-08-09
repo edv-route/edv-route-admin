@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { BusyDirective } from '../../shared/directives/busy.directive';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -30,7 +31,7 @@ function toLocalInput(iso: string | null): string {
 
 @Component({
   selector: 'app-trainings',
-  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows, Pagination],
+  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows, Pagination, BusyDirective],
   templateUrl: './trainings.html',
 })
 export class Trainings {

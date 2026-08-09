@@ -180,7 +180,7 @@
               class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
               Cancelar
             </button>
-            <button type="button" (click)="addDocument()" [disabled]="!docRequirementId || saving()"
+            <button type="button" (click)="addDocument()" [disabled]="!docRequirementId || saving()" [appBusy]="saving()"
               class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
               {{ saving() ? 'Guardando…' : 'Registrar' }}
             </button>
@@ -233,7 +233,7 @@
       <div class="mt-6 flex justify-end gap-3">
         <button type="button" (click)="editOpen.set(false)"
           class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Cancelar</button>
-        <button type="button" (click)="saveEdit()" [disabled]="saving()"
+        <button type="button" (click)="saveEdit()" [disabled]="saving()" [appBusy]="saving()"
           class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">{{ saving() ? 'Guardando…' : 'Guardar' }}</button>
       </div>
     </div>

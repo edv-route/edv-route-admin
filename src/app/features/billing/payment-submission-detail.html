@@ -169,7 +169,7 @@
           <div class="mt-5 flex justify-end gap-3">
             <button type="button" (click)="closeConfirm()" [disabled]="saving()"
               class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Cancelar</button>
-            <button type="button" (click)="approve()" [disabled]="saving()"
+            <button type="button" (click)="approve()" [disabled]="saving()" [appBusy]="saving()"
               class="rounded-lg bg-primary-700 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">{{ saving() ? 'Aprobando…' : 'Aprobar pago' }}</button>
           </div>
         } @else if (action === 'reject') {
@@ -184,7 +184,7 @@
           <div class="mt-5 flex justify-end gap-3">
             <button type="button" (click)="closeConfirm()" [disabled]="saving()"
               class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Cancelar</button>
-            <button type="button" (click)="reject()" [disabled]="saving()"
+            <button type="button" (click)="reject()" [disabled]="saving()" [appBusy]="saving()"
               class="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">{{ saving() ? 'Procesando…' : 'Confirmar rechazo' }}</button>
           </div>
         } @else {
@@ -204,7 +204,7 @@
           <div class="mt-5 flex justify-end gap-3">
             <button type="button" (click)="closeConfirm()" [disabled]="saving()"
               class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Cancelar</button>
-            <button type="button" (click)="reverse()" [disabled]="saving()"
+            <button type="button" (click)="reverse()" [disabled]="saving()" [appBusy]="saving()"
               class="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">{{ saving() ? 'Procesando…' : 'Confirmar reversión' }}</button>
           </div>
         }

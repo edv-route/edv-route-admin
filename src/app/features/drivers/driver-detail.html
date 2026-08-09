@@ -202,7 +202,7 @@
     <app-driver-status-card
       [driver]="d"
       [saving]="saving()"
-      (approve)="confirmAction.set('approve')"
+      (approve)="openApprove()"
       (reject)="confirmAction.set('reject')"
       (suspendToggle)="askConfirm(d.status === 'suspended'
         ? { title: '¿Reactivar a ' + d.fullName + '?', message: 'El afiliado vuelve a operar y a recibir viajes.', confirmLabel: 'Reactivar', danger: false, action: 'suspend' }
@@ -507,7 +507,7 @@
               class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
               Cancelar
             </button>
-            <button type="submit" [disabled]="saving()"
+            <button type="submit" [disabled]="saving()" [appBusy]="saving()"
               class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
               {{ saving() ? 'Guardando…' : 'Guardar' }}
             </button>
@@ -566,7 +566,7 @@
               class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
               Cancelar
             </button>
-            <button type="submit" [disabled]="!docRequirementId || saving()"
+            <button type="submit" [disabled]="!docRequirementId || saving()" [appBusy]="saving()"
               class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
               {{ saving() ? 'Guardando…' : 'Registrar' }}
             </button>
@@ -668,7 +668,7 @@
               class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
               Cancelar
             </button>
-            <button type="button" (click)="renew()" [disabled]="saving() || renewPeriods() < 1 || !renewPc.complete()"
+            <button type="button" (click)="renew()" [disabled]="saving() || renewPeriods() < 1 || !renewPc.complete()" [appBusy]="saving()"
               class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
               {{ saving() ? 'Pagando…' : 'Pagar' }}
             </button>
@@ -692,7 +692,7 @@
             class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
             Volver
           </button>
-          <button type="button" (click)="cancelScheduledChange()" [disabled]="saving()"
+          <button type="button" (click)="cancelScheduledChange()" [disabled]="saving()" [appBusy]="saving()"
             class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
             {{ saving() ? 'Cancelando…' : 'Confirmar' }}
           </button>
@@ -747,7 +747,7 @@
               class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
               Cancelar
             </button>
-            <button type="button" (click)="enroll()" [disabled]="saving() || !weeklyPlan() || !enrollPc.complete()"
+            <button type="button" (click)="enroll()" [disabled]="saving() || !weeklyPlan() || !enrollPc.complete()" [appBusy]="saving()"
               class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
               {{ saving() ? 'Guardando…' : 'Guardar' }}
             </button>
@@ -828,7 +828,7 @@
               class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
               Cancelar
             </button>
-            <button type="button" (click)="registerExternalPayment()" [disabled]="saving() || !extPc.complete() || selectedInvoiceIds().size === 0"
+            <button type="button" (click)="registerExternalPayment()" [disabled]="saving() || !extPc.complete() || selectedInvoiceIds().size === 0" [appBusy]="saving()"
               class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
               {{ saving() ? 'Registrando…' : 'Registrar pago' }}
             </button>
@@ -849,16 +849,10 @@
             class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
             Cancelar
           </button>
-          <button type="button" (click)="runConfirm()" [disabled]="saving()"
+          <button type="button" (click)="runConfirm()" [disabled]="saving()" [appBusy]="saving()"
             [class]="c.danger
               ? 'inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60'
               : 'inline-flex items-center rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60'">
-            @if (saving()) {
-              <svg class="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-              </svg>
-            }
             {{ saving() ? 'Procesando…' : c.confirmLabel }}
           </button>
         </div>
@@ -866,31 +860,98 @@
     </div>
   }
 
-  <!-- Approve/reject confirmation -->
+  <!-- Approve (two start modes) / reject confirmation -->
   @if (confirmAction(); as action) {
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4">
-      <div class="w-full max-w-sm rounded-lg bg-white p-4 text-center shadow-lg dark:bg-gray-800 sm:p-6">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-white">
-          {{ action === 'approve' ? '¿Aprobar a ' + d.fullName + '?' : '¿Rechazar a ' + d.fullName + '?' }}
-        </h2>
-        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          {{ action === 'approve'
-            ? 'Empieza a operar hoy; su semana se ancla al lunes en curso (pierde los días ya transcurridos de la semana). Si prefieres una semana completa, no lo apruebes: el sistema lo hará solo el próximo lunes.'
-            : 'El afiliado quedará rechazado; si tenía pagos, se reembolsan, y sus facturas quedan anuladas (conservan número).' }}
-        </p>
-        <div class="mt-5 flex justify-center gap-3">
-          <button type="button" (click)="confirmAction.set(null)"
-            class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-            Cancelar
-          </button>
-          <button type="button" (click)="runAction()" [disabled]="saving()"
-            [class]="action === 'approve'
-              ? 'rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60'
-              : 'rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60'">
-            {{ saving() ? 'Procesando…' : action === 'approve' ? 'Aprobar' : 'Rechazar' }}
-          </button>
+      @if (action === 'approve') {
+        <div class="w-full max-w-md rounded-lg bg-white p-5 shadow-lg dark:bg-gray-800 sm:p-6">
+          @if (!approveConfirming()) {
+            <!-- Step 1: pick the start mode -->
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">¿Aprobar a {{ d.fullName }}?</h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Elige cuándo empieza a operar y desde cuándo corre su tarifa. En ambos casos la tarifa
+              arranca un lunes.
+            </p>
+            <div class="mt-4 space-y-3">
+              <button type="button" (click)="approveMode.set('next_monday')"
+                [class]="approveMode() === 'next_monday'
+                  ? 'flex w-full gap-3 rounded-lg border-2 border-primary-600 bg-primary-50 p-3 text-left dark:bg-gray-700'
+                  : 'flex w-full gap-3 rounded-lg border border-gray-200 p-3 text-left hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700'">
+                <span class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border"
+                  [class]="approveMode() === 'next_monday' ? 'border-primary-600' : 'border-gray-300 dark:border-gray-500'">
+                  @if (approveMode() === 'next_monday') { <span class="h-2 w-2 rounded-full bg-primary-600"></span> }
+                </span>
+                <span>
+                  <span class="block text-sm font-semibold text-gray-900 dark:text-white">Empezar el próximo lunes ({{ nextMonday() | date: 'dd/MM' }})</span>
+                  <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">Queda <strong>Programado</strong>. Su tarifa arranca ese lunes con la semana completa; no opera hasta entonces.</span>
+                </span>
+              </button>
+              <button type="button" (click)="approveMode.set('now')"
+                [class]="approveMode() === 'now'
+                  ? 'flex w-full gap-3 rounded-lg border-2 border-primary-600 bg-primary-50 p-3 text-left dark:bg-gray-700'
+                  : 'flex w-full gap-3 rounded-lg border border-gray-200 p-3 text-left hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700'">
+                <span class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border"
+                  [class]="approveMode() === 'now' ? 'border-primary-600' : 'border-gray-300 dark:border-gray-500'">
+                  @if (approveMode() === 'now') { <span class="h-2 w-2 rounded-full bg-primary-600"></span> }
+                </span>
+                <span>
+                  <span class="block text-sm font-semibold text-gray-900 dark:text-white">Empezar ya</span>
+                  <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">Opera desde hoy, pero su tarifa se ancla al <strong>lunes de esta semana</strong>: pierde los días ya transcurridos.</span>
+                </span>
+              </button>
+            </div>
+            <div class="mt-5 flex justify-center gap-3">
+              <button type="button" (click)="closeApprove()"
+                class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                Cancelar
+              </button>
+              <button type="button" (click)="continueApprove()" [disabled]="!approveMode()"
+                class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50">
+                Continuar
+              </button>
+            </div>
+          } @else {
+            <!-- Step 2: confirm the choice (loading button until it settles) -->
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">Confirmar aprobación</h2>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              @if (approveMode() === 'next_monday') {
+                <strong>{{ d.fullName }}</strong> quedará <strong>Programado</strong>: su tarifa arranca el
+                <strong>lunes {{ nextMonday() | date: 'dd/MM/yyyy' }}</strong> (semana completa) y empezará a operar ese día.
+              } @else {
+                <strong>{{ d.fullName }}</strong> quedará <strong>aprobado</strong> y podrá operar <strong>hoy</strong>;
+                su tarifa se ancla al lunes de esta semana, perdiendo los días ya transcurridos.
+              }
+            </p>
+            <div class="mt-5 flex justify-center gap-3">
+              <button type="button" (click)="approveConfirming.set(false)" [disabled]="saving()"
+                class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                Atrás
+              </button>
+              <button type="button" (click)="confirmApprove()" [disabled]="saving()" [appBusy]="saving()"
+                class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+                {{ saving() ? 'Procesando…' : 'Confirmar' }}
+              </button>
+            </div>
+          }
         </div>
-      </div>
+      } @else {
+        <div class="w-full max-w-sm rounded-lg bg-white p-4 text-center shadow-lg dark:bg-gray-800 sm:p-6">
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">¿Rechazar a {{ d.fullName }}?</h2>
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            El afiliado quedará rechazado; si tenía pagos, se reembolsan, y sus facturas quedan anuladas (conservan número).
+          </p>
+          <div class="mt-5 flex justify-center gap-3">
+            <button type="button" (click)="confirmAction.set(null)"
+              class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+              Cancelar
+            </button>
+            <button type="button" (click)="runAction()" [disabled]="saving()" [appBusy]="saving()"
+              class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">
+              {{ saving() ? 'Procesando…' : 'Rechazar' }}
+            </button>
+          </div>
+        </div>
+      }
     </div>
   }
 

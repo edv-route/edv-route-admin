@@ -267,6 +267,7 @@
           <button
             type="submit"
             [disabled]="saving()"
+            [appBusy]="saving()"
             class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-50"
           >
             Continuar →
@@ -438,7 +439,7 @@
         </p>
         <div class="mt-6 flex items-center justify-between gap-3">
           <button type="button" (click)="goToStep(3)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
-          <button type="button" (click)="register(false)" [disabled]="saving()"
+          <button type="button" (click)="register(false)" [disabled]="saving()" [appBusy]="saving()"
             class="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
             {{ saving() ? 'Registrando…' : 'Registrar sin pago' }}
           </button>
@@ -541,11 +542,11 @@
           <div class="flex flex-wrap items-center justify-between gap-3">
             <button type="button" (click)="goToStep(3)" class="text-sm font-medium text-gray-400 hover:text-gray-600">← Atrás</button>
             <div class="flex flex-wrap gap-3">
-              <button type="button" (click)="register(false)" [disabled]="saving() || hasPayment()"
+              <button type="button" (click)="register(false)" [disabled]="saving() || hasPayment()" [appBusy]="saving()"
                 class="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                 Finalizar sin pago
               </button>
-              <button type="button" (click)="register(true)" [disabled]="!planId || !hasPayment() || saving()"
+              <button type="button" (click)="register(true)" [disabled]="!planId || !hasPayment() || saving()" [appBusy]="saving()"
                 class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-40">
                 {{ saving() ? 'Registrando…' : 'Registrar y facturar' }}
               </button>

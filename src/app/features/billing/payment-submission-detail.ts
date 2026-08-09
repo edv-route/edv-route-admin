@@ -1,4 +1,5 @@
 import { Component, inject, input, signal } from '@angular/core';
+import { BusyDirective } from '../../shared/directives/busy.directive';
 import { DatePipe, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import type { HttpErrorResponse } from '@angular/common/http';
@@ -19,7 +20,7 @@ import { PaymentSubmissionsApi } from './payment-submissions.api';
  */
 @Component({
   selector: 'app-payment-submission-detail',
-  imports: [DatePipe, FormsModule, RouterLink, FileViewer],
+  imports: [DatePipe, FormsModule, RouterLink, FileViewer, BusyDirective],
   templateUrl: './payment-submission-detail.html',
 })
 export class PaymentSubmissionDetail {

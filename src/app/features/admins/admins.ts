@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { BusyDirective } from '../../shared/directives/busy.directive';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -13,7 +14,7 @@ type ModalState = { mode: 'create' } | { mode: 'edit'; item: Admin } | null;
 
 @Component({
   selector: 'app-admins',
-  imports: [FormsModule, DatePipe, ...INPUT_FILTERS, SkeletonRows],
+  imports: [FormsModule, DatePipe, ...INPUT_FILTERS, SkeletonRows, BusyDirective],
   templateUrl: './admins.html',
 })
 export class Admins {

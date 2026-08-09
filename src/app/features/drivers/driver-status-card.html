@@ -83,9 +83,15 @@
       } @else {
         <div class="flex items-center justify-between gap-3">
           <dt class="text-gray-400">Aprobación</dt>
-          <dd class="font-medium text-gray-700 dark:text-gray-200">Automática el lunes {{ nextMonday() | date: 'dd/MM' }}</dd>
+          <dd class="font-medium text-gray-700 dark:text-gray-200">Listo · elige cuándo inicia al aprobar</dd>
         </div>
       }
+    }
+    @if (d.status === 'scheduled') {
+      <div class="flex items-center justify-between gap-3">
+        <dt class="text-gray-400">Inicia</dt>
+        <dd class="font-semibold text-indigo-700 dark:text-indigo-300">{{ d.subscription?.currentPeriodStart | date: 'dd/MM/yyyy' }}</dd>
+      </div>
     }
     @if (d.status === 'overdue') {
       <div class="flex items-center justify-between gap-3">

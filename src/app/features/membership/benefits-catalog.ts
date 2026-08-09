@@ -1,4 +1,5 @@
 import { Component, inject, output, signal } from '@angular/core';
+import { BusyDirective } from '../../shared/directives/busy.directive';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import type { Benefit } from '../../core/models/benefit.model';
@@ -14,7 +15,7 @@ type ModalState = { mode: 'create' } | { mode: 'edit'; item: Benefit } | null;
  */
 @Component({
   selector: 'app-benefits-catalog',
-  imports: [FormsModule, SkeletonRows],
+  imports: [FormsModule, SkeletonRows, BusyDirective],
   templateUrl: './benefits-catalog.html',
 })
 export class BenefitsCatalog {

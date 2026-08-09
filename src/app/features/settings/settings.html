@@ -76,6 +76,7 @@
               type="button"
               (click)="save(setting)"
               [disabled]="!isDirty(setting) || savingKey() === setting.key"
+              [appBusy]="savingKey() === setting.key"
               class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-40"
             >
               {{ savingKey() === setting.key ? 'Guardando…' : 'Guardar' }}

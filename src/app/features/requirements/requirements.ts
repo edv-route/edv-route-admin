@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { BusyDirective } from '../../shared/directives/busy.directive';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import type { Requirement, RequirementAppliesTo } from '../../core/models/requirement.model';
@@ -10,7 +11,7 @@ type ModalState = { mode: 'create' } | { mode: 'edit'; item: Requirement } | nul
 
 @Component({
   selector: 'app-requirements',
-  imports: [FormsModule, Select, SkeletonRows],
+  imports: [FormsModule, Select, SkeletonRows, BusyDirective],
   templateUrl: './requirements.html',
 })
 export class Requirements {

@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { BusyDirective } from '../../shared/directives/busy.directive';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Select, type SelectOption } from '../../shared/components/select';
@@ -22,7 +23,7 @@ type ModalState = { mode: 'create' } | { mode: 'edit'; item: PaymentMethod } | n
 
 @Component({
   selector: 'app-payment-methods',
-  imports: [FormsModule, Select, ...INPUT_FILTERS],
+  imports: [FormsModule, Select, ...INPUT_FILTERS, BusyDirective],
   templateUrl: './payment-methods.html',
 })
 export class PaymentMethods {

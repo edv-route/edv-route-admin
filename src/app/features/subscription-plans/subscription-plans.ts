@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { BusyDirective } from '../../shared/directives/busy.directive';
 import { HttpClient, type HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { environment } from '../../../environments/environment';
@@ -15,7 +16,7 @@ type ModalState = { mode: 'create' } | { mode: 'edit'; item: SubscriptionPlan } 
 
 @Component({
   selector: 'app-subscription-plans',
-  imports: [FormsModule, SkeletonRows],
+  imports: [FormsModule, SkeletonRows, BusyDirective],
   templateUrl: './subscription-plans.html',
 })
 export class SubscriptionPlans {

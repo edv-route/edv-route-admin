@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
+import { BusyDirective } from '../../shared/directives/busy.directive';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -28,7 +29,7 @@ import { DriversApi } from './drivers.api';
  */
 @Component({
   selector: 'app-driver-vehicle-detail',
-  imports: [FormsModule, RouterLink, Select, ...INPUT_FILTERS, FileViewer],
+  imports: [FormsModule, RouterLink, Select, ...INPUT_FILTERS, FileViewer, BusyDirective],
   templateUrl: './driver-vehicle-detail.html',
 })
 export class DriverVehicleDetail {

@@ -204,6 +204,7 @@
           <button
             type="submit"
             [disabled]="saving()"
+            [appBusy]="saving()"
             class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60"
           >
             {{ saving() ? 'Guardando…' : 'Guardar' }}

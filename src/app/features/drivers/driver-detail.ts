@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, signal, viewChild } from '@angular/core';
+import { BusyDirective } from '../../shared/directives/busy.directive';
 import { HttpClient, type HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule, type NgForm } from '@angular/forms';
@@ -59,7 +60,7 @@ interface ConfirmDialog {
 
 @Component({
   selector: 'app-driver-detail',
-  imports: [FormsModule, DatePipe, RouterLink, Select, ...INPUT_FILTERS, PasswordInput, DatePicker, PaymentCapture, FileViewer, VehicleForm, Toggle, DriverStatusCard, DriverTariffCard],
+  imports: [FormsModule, DatePipe, RouterLink, Select, ...INPUT_FILTERS, PasswordInput, DatePicker, PaymentCapture, FileViewer, VehicleForm, Toggle, DriverStatusCard, DriverTariffCard, BusyDirective],
   templateUrl: './driver-detail.html',
 })
 export class DriverDetail {
@@ -88,6 +89,9 @@ export class DriverDetail {
     { id: 'documents', label: 'Documentos' },
   ];
   readonly confirmAction = signal<'approve' | 'reject' | null>(null);
+  /** Approve modal: chosen start mode (step 1) and whether we're on the confirm step. */
+  readonly approveMode = signal<'now' | 'next_monday' | null>(null);
+  readonly approveConfirming = signal(false);
   /** Generic confirmation modal for one-click important actions. */
   readonly confirm = signal<ConfirmDialog | null>(null);
   readonly renewOpen = signal(false);
@@ -386,12 +390,11 @@ export class DriverDetail {
     });
   }
 
+  /** Confirms a rejection. Approval goes through confirmApprove() (needs a start mode). */
   runAction(): void {
-    const action = this.confirmAction();
-    if (!action || this.saving()) return;
+    if (this.confirmAction() !== 'reject' || this.saving()) return;
     this.saving.set(true);
-    const request = action === 'approve' ? this.api.approve(this.id()) : this.api.reject(this.id());
-    request.subscribe({
+    this.api.reject(this.id()).subscribe({
       next: () => {
         this.saving.set(false);
         this.confirmAction.set(null);
@@ -402,6 +405,62 @@ export class DriverDetail {
         this.fail(err);
       },
     });
+  }
+
+  /** Opens the approve modal on its selection step (resets the chosen mode). */
+  openApprove(): void {
+    this.approveMode.set(null);
+    this.approveConfirming.set(false);
+    this.confirmAction.set('approve');
+  }
+
+  /** Closes the approve modal (blocked while the request is in flight). */
+  closeApprove(): void {
+    if (this.saving()) return;
+    this.resetApprove();
+  }
+
+  /** Step 1 → step 2: move to the confirmation once a start mode is chosen. */
+  continueApprove(): void {
+    if (this.approveMode()) this.approveConfirming.set(true);
+  }
+
+  /**
+   * Step 2: approves the alta with the chosen start mode — `now` (operate today,
+   * tariff anchored to this week's Monday, loses elapsed days) or `next_monday`
+   * (driver left `scheduled`; tariff starts next Monday). The confirm button stays
+   * in its loading state until the modal closes (success) or the request fails.
+   */
+  confirmApprove(): void {
+    const startMode = this.approveMode();
+    if (!startMode || this.saving()) return;
+    this.saving.set(true);
+    this.api.approve(this.id(), startMode).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.resetApprove();
+        this.load();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.resetApprove();
+        this.fail(err);
+      },
+    });
+  }
+
+  private resetApprove(): void {
+    this.confirmAction.set(null);
+    this.approveConfirming.set(false);
+    this.approveMode.set(null);
+  }
+
+  /** Next Monday (today when it is Monday) — the "start next Monday" date in the modal. */
+  nextMonday(): Date {
+    const d = new Date();
+    const days = (8 - d.getDay()) % 7; // 0 when today is Monday
+    d.setDate(d.getDate() + days);
+    d.setHours(0, 0, 0, 0);
+    return d;
   }
 
   /** Opens the generic confirmation modal for an important action. */

@@ -25,7 +25,8 @@ Consume el backend `edv-route-backend` (Fastify) por HTTP — **nunca toca la BD
   `date-picker`, `password-input`, `file-viewer`, **`action-menu`** (kebab ⋮ de acciones de
   contenedor), **`pagination`** (paginado numerado Flowbite Pro para listas server-side;
   inputs `page`/`total`/`pageSize`, output `pageChange`), directivas de `input-filters`
-  (`appLetters/appDigits/appAlnum/appAlnumDash`).
+  (`appLetters/appDigits/appAlnum/appAlnumDash`) y **`appBusy`** (spinner interno del botón
+  mientras `[appBusy]` es `true`; no toca el `[disabled]`; un único estilo de spinner en todo el panel).
 - **Textos de UI en español; código y comentarios en inglés.**
 - **Formularios**: Angular pone `novalidate`, así que todo form usa `#f="ngForm"` +
   `markAllAsTouched()` al enviar (CSS global pinta `.ng-invalid.ng-touched`) y muestra el error

@@ -177,8 +177,10 @@ export class DriversApi {
     );
   }
 
-  approve(id: string): Observable<unknown> {
-    return this.http.post(`${this.baseUrl}/${id}/approve`, {});
+  /** `startMode` picks when the tariff starts: `now` (current-week Monday, active
+   *  at once) or `next_monday` (starts next Monday; driver stays `scheduled`). */
+  approve(id: string, startMode: 'now' | 'next_monday'): Observable<unknown> {
+    return this.http.post(`${this.baseUrl}/${id}/approve`, { startMode });
   }
 
   /** A different planId turns the renewal into a plan change. */

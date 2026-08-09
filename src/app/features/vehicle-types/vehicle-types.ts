@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { BusyDirective } from '../../shared/directives/busy.directive';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -10,7 +11,7 @@ type ModalState = { mode: 'create' } | { mode: 'edit'; item: VehicleType } | nul
 
 @Component({
   selector: 'app-vehicle-types',
-  imports: [FormsModule, DatePipe, SkeletonRows],
+  imports: [FormsModule, DatePipe, SkeletonRows, BusyDirective],
   templateUrl: './vehicle-types.html',
 })
 export class VehicleTypes {

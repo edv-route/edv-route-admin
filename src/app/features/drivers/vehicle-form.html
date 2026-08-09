@@ -88,7 +88,7 @@
           class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
           Cancelar
         </button>
-        <button type="button" (click)="submit()" [disabled]="!canConfirm() || saving()"
+        <button type="button" (click)="submit()" [disabled]="!canConfirm() || saving()" [appBusy]="saving()"
           class="rounded-lg bg-primary-700 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-40">
           {{ saving() ? 'Registrando…' : 'Registrar vehículo' }}
         </button>

@@ -51,7 +51,7 @@
     </form>
 
     <div class="flex rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-600 dark:bg-gray-700">
-      @for (opt of [['', 'Todos'], ['pending', 'Pendientes'], ['approved', 'Aprobados'], ['overdue', 'En mora'], ['penalized', 'Penalizados'], ['paused', 'Pausados'], ['suspended', 'Suspendidos'], ['rejected', 'Rechazados']]; track opt[0]) {
+      @for (opt of [['', 'Todos'], ['pending', 'Pendientes'], ['scheduled', 'Programados'], ['approved', 'Aprobados'], ['overdue', 'En mora'], ['penalized', 'Penalizados'], ['paused', 'Pausados'], ['suspended', 'Suspendidos'], ['rejected', 'Rechazados']]; track opt[0]) {
         <button
           type="button"
           (click)="setStatus($any(opt[0]))"

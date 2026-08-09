@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { BusyDirective } from '../../shared/directives/busy.directive';
 import { HttpClient, type HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -17,7 +18,7 @@ interface MembershipPayload {
 
 @Component({
   selector: 'app-membership',
-  imports: [FormsModule, DatePipe, BenefitsCatalog],
+  imports: [FormsModule, DatePipe, BenefitsCatalog, BusyDirective],
   templateUrl: './membership.html',
 })
 export class MembershipPage {

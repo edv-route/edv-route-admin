@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { BusyDirective } from '../../shared/directives/busy.directive';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -17,7 +18,7 @@ const TIMEZONE_OPTIONS = [
 
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, BusyDirective],
   templateUrl: './settings.html',
 })
 export class Settings {

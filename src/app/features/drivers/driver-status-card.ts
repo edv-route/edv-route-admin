@@ -41,26 +41,6 @@ export class DriverStatusCard {
   readonly hasDebt = computed(() => Number(this.driver().debt.totalUsd) > 0);
   readonly pendingSubmission = computed(() => this.driver().pendingSubmission);
 
-  /** A pending driver with the alta paid and zero debt auto-approves next Monday. */
-  readonly readyForAutoApproval = computed(() => {
-    const d = this.driver();
-    return (
-      d.status === 'pending' &&
-      d.membershipPayment?.status === 'paid' &&
-      !!d.subscription &&
-      !this.hasDebt()
-    );
-  });
-
-  /** Next Monday (today when it is Monday): when a ready pending driver auto-approves. */
-  nextMonday(): Date {
-    const d = new Date();
-    const days = (8 - d.getDay()) % 7; // 0 when today is Monday
-    d.setDate(d.getDate() + days);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }
-
   readonly meta = computed<StatusMeta>(() => {
     const d = this.driver();
     switch (d.status) {
@@ -69,6 +49,12 @@ export class DriverStatusCard {
           label: 'Aprobado',
           dot: 'bg-green-500',
           desc: `Alta aprobada y al día · ${d.isAvailable ? 'disponible para viajes' : 'inactivo (no recibe viajes)'}`,
+        };
+      case 'scheduled':
+        return {
+          label: 'Programado',
+          dot: 'bg-indigo-500',
+          desc: 'Aprobado · su tarifa arranca el próximo lunes (aún no opera)',
         };
       case 'suspended':
         return { label: 'Suspendido', dot: 'bg-red-500', desc: 'Suspendido por el administrador · no opera' };

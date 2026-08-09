@@ -132,6 +132,8 @@ export class Drivers {
     // Rejected: the tariff no longer applies (refunded on rejection).
     if (item.status === 'rejected') return { label: '—', sub: '', date: null, tone: 'neutral' };
     if (!sub) return { label: 'Sin tarifa', sub: 'No ha elegido plan', date: null, tone: 'neutral' };
+    // Approved with the "next Monday" option: not operative yet, starts that Monday.
+    if (item.status === 'scheduled') return { label: 'Programada', sub: 'Inicia el próximo lunes', date: null, tone: 'accent' };
     // Administrative pause (licencia) freezes the tariff clock.
     if (item.status === 'paused') return { label: 'Congelada', sub: 'En pausa (licencia)', date: null, tone: 'neutral' };
     // A pending driver's tariff only activates once his alta is PAID and approved,
@@ -160,6 +162,8 @@ export class Drivers {
     switch (item.status) {
       case 'approved':
         return { label: 'Aprobado', sub: 'Activo en el sistema', dot: 'bg-green-500' };
+      case 'scheduled':
+        return { label: 'Programado', sub: 'Aprobado · inicia el lunes', dot: 'bg-indigo-500' };
       case 'rejected':
         return { label: 'Rechazado', sub: 'Solicitud descartada', dot: 'bg-primary-700 dark:bg-primary-400' };
       case 'suspended':

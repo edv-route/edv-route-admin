@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { BusyDirective } from '../../../shared/directives/busy.directive';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -7,7 +8,7 @@ import { PasswordInput } from '../../../shared/components/password-input';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule, PasswordInput],
+  imports: [FormsModule, PasswordInput, BusyDirective],
   templateUrl: './login.html',
 })
 export class Login {

@@ -1,5 +1,8 @@
 export type DriverStatus =
   | 'pending'
+  /** Approved with the "start next Monday" option: decision made but not operative
+   *  yet; the activation job flips him to `approved` on that Monday (2026-08-09). */
+  | 'scheduled'
   | 'approved'
   | 'rejected'
   | 'suspended'
@@ -154,6 +157,7 @@ export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
 
 export const DRIVER_STATUS_LABELS: Record<DriverStatus, string> = {
   pending: 'Pendiente',
+  scheduled: 'Programado',
   approved: 'Aprobado',
   rejected: 'Rechazado',
   suspended: 'Suspendido',

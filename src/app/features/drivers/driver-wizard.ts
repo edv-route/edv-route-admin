@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { BusyDirective } from '../../shared/directives/busy.directive';
 import { HttpClient, type HttpErrorResponse } from '@angular/common/http';
 import { FormsModule, type NgForm } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -46,7 +47,7 @@ import {
  */
 @Component({
   selector: 'app-driver-wizard',
-  imports: [FormsModule, RouterLink, Select, PasswordInput, DatePicker, PasswordPolicyDirective, ...INPUT_FILTERS, VehicleDraftModal, DocumentDraftModal, PaymentDraftModal, ActionMenu],
+  imports: [FormsModule, RouterLink, Select, PasswordInput, DatePicker, PasswordPolicyDirective, ...INPUT_FILTERS, VehicleDraftModal, DocumentDraftModal, PaymentDraftModal, ActionMenu, BusyDirective],
   templateUrl: './driver-wizard.html',
 })
 export class DriverWizard {
@@ -554,16 +555,6 @@ export class DriverWizard {
         },
         error: (err: HttpErrorResponse) => this.fail(err),
       });
-  }
-
-  approveNow(): void {
-    const id = this.driverId();
-    if (!id || this.saving()) return;
-    this.saving.set(true);
-    this.api.approve(id).subscribe({
-      next: () => void this.router.navigate(['/drivers', id]),
-      error: (err: HttpErrorResponse) => this.fail(err),
-    });
   }
 
   finish(): void {
