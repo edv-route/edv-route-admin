@@ -1,34 +1,21 @@
-import {
-  Component,
-  DestroyRef,
-  ElementRef,
-  effect,
-  inject,
-  input,
-  signal,
-  untracked,
-  viewChild,
-} from '@angular/core';
+import { Component, effect, inject, input, signal, untracked } from '@angular/core';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import ApexCharts from 'apexcharts';
 import { INVOICE_STATUS_LABELS, type InvoiceListItem } from '../../core/models/billing.model';
 import { SkeletonRows } from '../../shared/components/skeleton-rows';
 import { DriversApi } from '../drivers/drivers.api';
-import { BillingApi, type MonthlyInvoicingPoint } from './billing.api';
+import { BillingApi } from './billing.api';
 import { Pagination } from '../../shared/components/pagination';
 
 const PAGE_SIZE = 10;
-const MONTHS = 12;
-const BRAND_RED = '#920606';
 
 /**
  * Facturación: the invoices ledger — one invoice per concept (membership or tariff
  * week), with its status and the receipt that paid it. Receipts and the approval
- * inbox moved to the Recibos de pagos screen (2026-08-07); this screen is now
- * invoices-only (monthly chart + status filter + search + per-driver history).
+ * inbox live in the Recibos de pagos screen (2026-08-07). Invoices-only: status
+ * filter + search + per-driver history (the monthly chart was removed 2026-08-10).
  */
 type InvoiceStatusFilter = '' | 'issued' | 'overdue' | 'paid' | 'voided';
 
@@ -56,15 +43,9 @@ export class Billing {
   readonly invoiceStatus = signal<InvoiceStatusFilter>('');
 
   search = '';
+  private searchTimer?: ReturnType<typeof setTimeout>;
 
   readonly pageSize = PAGE_SIZE;
-  readonly months = MONTHS;
-
-  // Monthly invoicing bar chart (global view only)
-  private readonly destroyRef = inject(DestroyRef);
-  readonly monthlyPoints = signal<MonthlyInvoicingPoint[] | null>(null);
-  private readonly chartEl = viewChild<ElementRef<HTMLDivElement>>('monthlyChart');
-  private chart: ApexCharts | null = null;
 
   constructor(driversApi: DriversApi) {
     // Reload whenever the bound driverId changes (including first binding).
@@ -77,53 +58,6 @@ export class Billing {
         this.load();
       });
     });
-
-    this.api.monthlySeries(MONTHS).subscribe({
-      next: (points) => this.monthlyPoints.set(points),
-      error: () => this.monthlyPoints.set([]),
-    });
-
-    // Render once the container (global view) and the data both exist.
-    effect(() => {
-      const el = this.chartEl()?.nativeElement;
-      const points = this.monthlyPoints();
-      if (!el || !points || this.chart) return;
-      this.chart = new ApexCharts(el, this.chartOptions(points));
-      void this.chart.render();
-    });
-    this.destroyRef.onDestroy(() => this.chart?.destroy());
-  }
-
-  private monthLabel(iso: string): string {
-    return new Date(`${iso}T00:00:00`).toLocaleDateString('es-VE', {
-      month: 'short',
-      year: '2-digit',
-    });
-  }
-
-  /** Column chart in EDV brand red; neutral grid for both themes. */
-  private chartOptions(points: MonthlyInvoicingPoint[]): ApexCharts.ApexOptions {
-    return {
-      chart: {
-        type: 'bar',
-        height: 260,
-        fontFamily: 'Montserrat, sans-serif',
-        toolbar: { show: false },
-        foreColor: '#9ca3af',
-      },
-      series: [{ name: 'Facturado (USD)', data: points.map((p) => Number(p.totalUsd)) }],
-      colors: [BRAND_RED],
-      plotOptions: { bar: { borderRadius: 4, columnWidth: '55%' } },
-      dataLabels: { enabled: false },
-      xaxis: {
-        categories: points.map((p) => this.monthLabel(p.month)),
-        axisBorder: { show: false },
-        axisTicks: { show: false },
-      },
-      yaxis: { labels: { formatter: (value: number) => `$${value.toFixed(0)}` } },
-      grid: { borderColor: 'rgba(156, 163, 175, 0.2)', strokeDashArray: 4 },
-      tooltip: { y: { formatter: (value: number) => `$${value.toFixed(2)} USD` } },
-    };
   }
 
   get totalPages(): number {
@@ -163,6 +97,12 @@ export class Billing {
   applyFilters(): void {
     this.page.set(1);
     this.load();
+  }
+
+  /** Live search: reloads 300ms after the last keystroke (Enter still applies now). */
+  onSearchChange(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.applyFilters(), 300);
   }
 
   clearDriver(): void {

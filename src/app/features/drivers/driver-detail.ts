@@ -454,13 +454,20 @@ export class DriverDetail {
     this.approveMode.set(null);
   }
 
-  /** Next Monday (today when it is Monday) — the "start next Monday" date in the modal. */
+  /** The FOLLOWING Monday — always next week, even when today is Monday (so
+   *  "Empezar ya" covers this Monday). Matches the backend "próximo lunes" anchor. */
   nextMonday(): Date {
     const d = new Date();
-    const days = (8 - d.getDay()) % 7; // 0 when today is Monday
-    d.setDate(d.getDate() + days);
+    const sinceMonday = (d.getDay() + 6) % 7; // days since this week's Monday
+    d.setDate(d.getDate() - sinceMonday + 7); // this week's Monday + 7 = next Monday
     d.setHours(0, 0, 0, 0);
     return d;
+  }
+
+  /** True when today is Monday: "Empezar ya" then starts today with the full week,
+   *  so its note drops the "loses days" line. */
+  isMonday(): boolean {
+    return new Date().getDay() === 1;
   }
 
   /** Opens the generic confirmation modal for an important action. */

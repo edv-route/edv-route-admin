@@ -11,6 +11,8 @@ import type {
 export interface SubmissionListOptions {
   status?: SubmissionStatus;
   driverId?: string;
+  /** Free-text: payer name or receipt number. */
+  search?: string;
   page: number;
   limit: number;
 }
@@ -23,6 +25,7 @@ export class PaymentSubmissionsApi {
     let params = new HttpParams().set('page', opts.page).set('limit', opts.limit);
     if (opts.status) params = params.set('status', opts.status);
     if (opts.driverId) params = params.set('driverId', opts.driverId);
+    if (opts.search) params = params.set('search', opts.search);
     return this.http.get<SubmissionList>(`${environment.apiUrl}/payment-submissions`, { params });
   }
 

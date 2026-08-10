@@ -896,7 +896,13 @@
                 </span>
                 <span>
                   <span class="block text-sm font-semibold text-gray-900 dark:text-white">Empezar ya</span>
-                  <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">Opera desde hoy, pero su tarifa se ancla al <strong>lunes de esta semana</strong>: pierde los días ya transcurridos.</span>
+                  <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
+                    @if (isMonday()) {
+                      Opera desde hoy con la <strong>semana completa</strong> (hoy es lunes; no pierde días).
+                    } @else {
+                      Opera desde hoy, pero su tarifa se ancla al <strong>lunes de esta semana</strong>: pierde los días ya transcurridos.
+                    }
+                  </span>
                 </span>
               </button>
             </div>
@@ -919,7 +925,11 @@
                 <strong>lunes {{ nextMonday() | date: 'dd/MM/yyyy' }}</strong> (semana completa) y empezará a operar ese día.
               } @else {
                 <strong>{{ d.fullName }}</strong> quedará <strong>aprobado</strong> y podrá operar <strong>hoy</strong>;
-                su tarifa se ancla al lunes de esta semana, perdiendo los días ya transcurridos.
+                @if (isMonday()) {
+                  su tarifa arranca hoy (lunes) con la <strong>semana completa</strong>.
+                } @else {
+                  su tarifa se ancla al lunes de esta semana, perdiendo los días ya transcurridos.
+                }
               }
             </p>
             <div class="mt-5 flex justify-center gap-3">

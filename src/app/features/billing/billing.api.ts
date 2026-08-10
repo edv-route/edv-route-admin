@@ -21,13 +21,6 @@ export interface PaymentListOptions {
   limit: number;
 }
 
-/** One month of invoicing (business-timezone month, voided excluded). */
-export interface MonthlyInvoicingPoint {
-  month: string;
-  totalUsd: string;
-  count: number;
-}
-
 @Injectable({ providedIn: 'root' })
 export class BillingApi {
   private readonly http = inject(HttpClient);
@@ -51,14 +44,6 @@ export class BillingApi {
 
   invoiceDetail(id: string): Observable<InvoiceDetail> {
     return this.http.get<InvoiceDetail>(`${environment.apiUrl}/invoices/${id}`);
-  }
-
-  monthlySeries(months: number): Observable<MonthlyInvoicingPoint[]> {
-    const params = new HttpParams().set('months', months);
-    return this.http.get<MonthlyInvoicingPoint[]>(
-      `${environment.apiUrl}/invoices/monthly-series`,
-      { params },
-    );
   }
 
   /** Short-lived signed URL to view an invoice's receipt (comprobante). */

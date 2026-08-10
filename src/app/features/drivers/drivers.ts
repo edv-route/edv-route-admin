@@ -54,6 +54,7 @@ export class Drivers {
   readonly statusFilter = signal<DriverStatus | ''>('');
 
   search = '';
+  private searchTimer?: ReturnType<typeof setTimeout>;
 
   readonly pageSize = PAGE_SIZE;
 
@@ -98,6 +99,12 @@ export class Drivers {
   onSearch(): void {
     this.page.set(1);
     this.load();
+  }
+
+  /** Live search: reloads 300ms after the last keystroke (Enter still applies now). */
+  onSearchChange(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.onSearch(), 300);
   }
 
   goToPage(page: number): void {
