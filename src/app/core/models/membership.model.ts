@@ -5,6 +5,8 @@ export interface Membership {
   priceUsd: string;
   active: boolean;
   benefitIds: number[];
+  /** Non-rejected drivers who paid this version (drives the versioning warning). */
+  memberCount: number;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
