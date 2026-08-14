@@ -129,11 +129,11 @@
                   }
                 </div>
                 <div class="flex shrink-0 gap-2">
-                  @if (v.approvalStatus !== 'approved') {
+                  <!-- A verdict is final: approve/reject only while the vehicle is
+                       under review. -->
+                  @if (v.approvalStatus !== 'approved' && v.approvalStatus !== 'rejected') {
                     <button type="button" (click)="approveVehicle(v)" [disabled]="saving()"
                       class="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50">Aprobar</button>
-                  }
-                  @if (v.approvalStatus !== 'rejected') {
                     <button type="button" (click)="openReject({ kind: 'vehicle', id: v.id, label: 'el vehículo ' + (v.plate || v.brand || '') })" [disabled]="saving()"
                       class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40">Rechazar</button>
                   }
@@ -174,12 +174,12 @@
           <button type="button" (click)="openFile(doc)"
             class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Ver</button>
         }
-        @if (doc.approvalStatus !== 'approved') {
+        <!-- A verdict is final: approve/reject only while under review. It reopens
+             (back to 'pending') when the applicant re-uploads the file. -->
+        @if (doc.approvalStatus !== 'approved' && doc.approvalStatus !== 'rejected') {
           <button type="button" (click)="approveDocument(doc)" [disabled]="saving() || !doc.fileUrl"
             [title]="doc.fileUrl ? '' : 'No hay archivo que aprobar'"
             class="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50">Aprobar</button>
-        }
-        @if (doc.approvalStatus !== 'rejected') {
           <button type="button" (click)="openReject({ kind: 'document', id: doc.id, label: doc.requirementName })" [disabled]="saving()"
             class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40">Rechazar</button>
         }
