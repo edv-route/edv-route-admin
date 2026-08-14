@@ -1,4 +1,5 @@
 import { Component, inject, input, signal } from '@angular/core';
+import { FolioPipe } from '../../shared/pipes/folio.pipe';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -23,7 +24,7 @@ type StatusFilter = 'all' | SubmissionStatus;
  */
 @Component({
   selector: 'app-receipts',
-  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows, Pagination],
+  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows, Pagination, FolioPipe],
   templateUrl: './receipts.html',
 })
 export class Receipts {

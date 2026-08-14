@@ -1,4 +1,5 @@
 import { Component, effect, inject, input, signal, untracked } from '@angular/core';
+import { FolioPipe } from '../../shared/pipes/folio.pipe';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -21,7 +22,7 @@ type InvoiceStatusFilter = '' | 'issued' | 'overdue' | 'paid' | 'voided';
 
 @Component({
   selector: 'app-billing',
-  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows, Pagination],
+  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows, Pagination, FolioPipe],
   templateUrl: './billing.html',
 })
 export class Billing {

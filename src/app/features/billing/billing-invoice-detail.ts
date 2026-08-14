@@ -1,4 +1,5 @@
 import { Component, inject, input, signal } from '@angular/core';
+import { FolioPipe } from '../../shared/pipes/folio.pipe';
 import { DatePipe, Location } from '@angular/common';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { INVOICE_STATUS_LABELS, type InvoiceDetail } from '../../core/models/billing.model';
@@ -20,7 +21,7 @@ interface Proof {
  */
 @Component({
   selector: 'app-billing-invoice-detail',
-  imports: [DatePipe, FileViewer],
+  imports: [DatePipe, FileViewer, FolioPipe],
   templateUrl: './billing-invoice-detail.html',
 })
 export class BillingInvoiceDetail {

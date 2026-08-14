@@ -1,67 +1,145 @@
 @let d = driver();
-<div class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-5">
-  <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Tarifa</p>
-  @if (d.subscription; as s) {
-    <div class="mt-2 flex flex-wrap items-center gap-2">
-      <span class="text-sm font-bold text-gray-900 dark:text-white">{{ s.planName }}</span>
-      @if (badge(); as b) {
-        <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" [class]="toneClasses[b.tone]">{{ b.label }}</span>
-      }
+<!-- When the tariff start can be set (approved + payment settled + not started),
+     the whole card becomes a prominent call-to-action, highlighted and clickable
+     → opens "Establecer inicio". Every other state keeps the compact layout. -->
+<div
+  [class]="canStartTariff()
+    ? 'group cursor-pointer rounded-xl border-2 border-gold-400 bg-gold-50 p-5 shadow-md ring-2 ring-gold-400/30 transition hover:bg-gold-100 hover:shadow-lg dark:border-gold-400/60 dark:bg-gold-400/10 dark:hover:bg-gold-400/20 md:p-6'
+    : 'rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-5'"
+  (click)="canStartTariff() && startTariff.emit()">
+
+  @if (canStartTariff()) {
+    <!-- ── Call-to-action: tariff ready but not started yet ── -->
+    <div class="flex items-start gap-3">
+      <!-- Flag icon: this is the starting line of the tariff. -->
+      <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gold-200 text-gold-800 shadow-inner dark:bg-gold-400/20 dark:text-gold-300">
+        <svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 21V4.5m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.5 48.5 0 0 1-.005 10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 15" />
+        </svg>
+      </span>
+      <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-[11px] font-bold uppercase tracking-widest text-gold-700 dark:text-gold-400">Tarifa</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-gold-200 px-2.5 py-0.5 text-xs font-bold text-gold-900 dark:bg-gold-400/20 dark:text-gold-200">
+            <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-gold-600 dark:bg-gold-400"></span>
+            Sin iniciar
+          </span>
+        </div>
+        @if (d.subscription; as s) {
+          <h3 class="mt-1 text-2xl font-extrabold leading-tight text-gray-900 dark:text-white">{{ s.planName }}</h3>
+          <p class="text-base font-bold text-gray-700 dark:text-gray-200">
+            ${{ s.priceUsd }} <span class="text-sm font-normal text-gray-400">/ {{ periodUnit() }}</span>
+          </p>
+        }
+      </div>
     </div>
-    <p class="mt-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200">
-      ${{ s.priceUsd }} <span class="text-xs font-normal text-gray-400">/ {{ periodUnit() }}</span>
-    </p>
 
-    @let cover = coverDays();
-    <dl class="mt-3 space-y-1.5 border-t border-gray-100 pt-3 text-xs dark:border-gray-700">
-      <div class="flex items-center justify-between gap-3">
-        <dt class="text-gray-400">Cobertura pagada</dt>
-        @if (s.paidUntil) {
-          <dd class="font-semibold" [class]="cover !== null && cover < 0 ? 'text-primary-700 dark:text-primary-400' : 'text-gray-700 dark:text-gray-200'">
-            hasta {{ s.paidUntil | date: 'dd/MM/yyyy' }}
-          </dd>
-        } @else {
-          <dd class="font-medium text-gray-500 dark:text-gray-400">Sin cobertura pagada</dd>
-        }
+    <!-- Why it matters: nothing runs until the start is set. -->
+    <div class="mt-4 flex gap-2.5 rounded-lg border border-gold-300 bg-gold-100/70 p-3 dark:border-gold-400/40 dark:bg-gold-400/10">
+      <svg class="mt-0.5 h-5 w-5 shrink-0 text-gold-700 dark:text-gold-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      </svg>
+      <div>
+        <p class="text-sm font-bold text-gold-900 dark:text-gold-200">La tarifa está lista, pero aún no arranca</p>
+        <p class="mt-0.5 text-sm text-gold-800 dark:text-gold-300/90">
+          Define desde cuándo empieza a cobrarse. Hasta entonces el afiliado <strong>no opera</strong> ni se le cobra.
+        </p>
       </div>
+    </div>
 
-      @if (s.paidPeriods > 0) {
-        <div class="flex items-center justify-between gap-3">
-          <dt class="text-gray-400">{{ periodUnit() === 'semana' ? 'Semanas pagadas' : 'Períodos pagados' }}</dt>
-          <dd class="font-medium text-gray-700 dark:text-gray-200">{{ s.paidPeriods }}</dd>
-        </div>
-      }
+    <!-- CTA: the whole card is clickable; this reads as the action button. -->
+    <div class="mt-4 flex items-center justify-between gap-3 border-t border-gold-300 pt-3 dark:border-gold-400/40">
+      <span class="text-xs font-bold uppercase tracking-wide text-gold-700 dark:text-gold-400">Acción pendiente</span>
+      <span class="inline-flex items-center gap-1.5 rounded-lg bg-gold-500 px-4 py-2 text-sm font-bold text-gold-950 shadow-sm transition group-hover:bg-gold-600">
+        Establecer inicio
+        <svg class="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+        </svg>
+      </span>
+    </div>
 
-      <div class="flex items-center justify-between gap-3">
-        @if (startsAt(); as start) {
-          <dt class="text-gray-400">Inicia</dt>
-          <dd class="text-right font-semibold text-gold-800">{{ start | date: 'dd/MM/yyyy' }} · no opera antes</dd>
-        } @else if (cover !== null) {
-          <dt class="text-gray-400">Próximo cobro</dt>
-          <dd class="font-medium"
-            [class]="cover < 0 ? 'text-primary-700 dark:text-primary-400' : cover <= 2 ? 'text-gold-800' : 'text-gray-700 dark:text-gray-200'">
-            @if (cover > 1) { en {{ cover }} días · {{ s.paidUntil | date: 'dd/MM' }} }
-            @else if (cover === 1) { mañana }
-            @else if (cover === 0) { hoy }
-            @else { vencido · en deuda }
-          </dd>
-        } @else {
-          <dt class="text-gray-400">Cobro</dt>
-          <dd class="font-medium text-gray-500 dark:text-gray-400">Al registrar el pago</dd>
-        }
-      </div>
-
-      @if (d.scheduledPlan; as next) {
-        <div class="flex items-start justify-between gap-3 border-t border-gray-100 pt-1.5 dark:border-gray-700">
-          <dt class="text-gray-400">Cambio programado</dt>
-          <dd class="text-right">
-            <span class="font-semibold text-gold-800">{{ next.planName }}</span>@if (next.startsAt) { <span class="text-gray-400"> · {{ next.startsAt | date: 'dd/MM' }}</span> }
-            <button type="button" (click)="cancelChange.emit()" class="ml-1 font-semibold text-primary-700 underline hover:no-underline dark:text-primary-300">Cancelar</button>
-          </dd>
-        </div>
-      }
-    </dl>
   } @else {
-    <p class="mt-2 text-sm text-gray-400">Sin tarifa contratada</p>
+    <!-- ── Compact layout (every other state) ── -->
+    <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Tarifa</p>
+    @if (d.subscription; as s) {
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <span class="text-sm font-bold text-gray-900 dark:text-white">{{ s.planName }}</span>
+        @if (badge(); as b) {
+          <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" [class]="toneClasses[b.tone]">{{ b.label }}</span>
+        }
+      </div>
+      <p class="mt-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200">
+        ${{ s.priceUsd }} <span class="text-xs font-normal text-gray-400">/ {{ periodUnit() }}</span>
+      </p>
+
+      @let cover = coverDays();
+      @if (!notStarted()) {
+      <dl class="mt-3 space-y-1.5 border-t border-gray-100 pt-3 text-xs dark:border-gray-700">
+        <div class="flex items-center justify-between gap-3">
+          <dt class="text-gray-400">Cobertura pagada</dt>
+          @if (s.paidUntil) {
+            <dd class="font-semibold" [class]="cover !== null && cover < 0 ? 'text-primary-700 dark:text-primary-400' : 'text-gray-700 dark:text-gray-200'">
+              hasta {{ s.paidUntil | date: 'dd/MM/yyyy' }}
+            </dd>
+          } @else {
+            <dd class="font-medium text-gray-500 dark:text-gray-400">Sin cobertura pagada</dd>
+          }
+        </div>
+
+        @if (s.paidPeriods > 0) {
+          <div class="flex items-center justify-between gap-3">
+            <dt class="text-gray-400">{{ periodUnit() === 'semana' ? 'Semanas pagadas' : 'Períodos pagados' }}</dt>
+            <dd class="font-medium text-gray-700 dark:text-gray-200">{{ s.paidPeriods }}</dd>
+          </div>
+        }
+
+        <div class="flex items-center justify-between gap-3">
+          @if (startsAt(); as start) {
+            <dt class="text-gray-400">Inicia</dt>
+            <dd class="text-right font-semibold text-gold-800">{{ start | date: 'dd/MM/yyyy' }} · no opera antes</dd>
+          } @else if (s.nextChargeAt) {
+            <!-- Debt engine on: the cobro is EMITTED on the billing Friday, not when
+                 coverage ends (that's the "Cobertura pagada hasta" row above). -->
+            @let charge = chargeDays();
+            <dt class="text-gray-400">Próximo cobro</dt>
+            <dd class="font-medium" [class]="charge !== null && charge <= 2 ? 'text-gold-800' : 'text-gray-700 dark:text-gray-200'">
+              @if (charge !== null && charge > 1) { en {{ charge }} días · {{ s.nextChargeAt | date: 'dd/MM' }} }
+              @else if (charge === 1) { mañana · {{ s.nextChargeAt | date: 'dd/MM' }} }
+              @else if (charge === 0) { hoy · {{ s.nextChargeAt | date: 'HH:mm' }} }
+              @else { inminente }
+            </dd>
+          } @else if (cover !== null) {
+            <dt class="text-gray-400">Próximo cobro</dt>
+            <dd class="font-medium"
+              [class]="cover < 0 ? 'text-primary-700 dark:text-primary-400' : cover <= 2 ? 'text-gold-800' : 'text-gray-700 dark:text-gray-200'">
+              @if (cover > 1) { en {{ cover }} días · {{ s.paidUntil | date: 'dd/MM' }} }
+              @else if (cover === 1) { mañana }
+              @else if (cover === 0) { hoy }
+              @else { vencido · en deuda }
+            </dd>
+          } @else {
+            <dt class="text-gray-400">Cobro</dt>
+            <dd class="font-medium text-gray-500 dark:text-gray-400">Al registrar el pago</dd>
+          }
+        </div>
+
+        @if (d.scheduledPlan; as next) {
+          <div class="flex items-start justify-between gap-3 border-t border-gray-100 pt-1.5 dark:border-gray-700">
+            <dt class="text-gray-400">Cambio programado</dt>
+            <dd class="text-right">
+              <span class="font-semibold text-gold-800">{{ next.planName }}</span>@if (next.startsAt) { <span class="text-gray-400"> · {{ next.startsAt | date: 'dd/MM' }}</span> }
+              <button type="button" (click)="cancelChange.emit()" class="ml-1 font-semibold text-primary-700 underline hover:no-underline dark:text-primary-300">Cancelar</button>
+            </dd>
+          </div>
+        }
+      </dl>
+      }
+    } @else {
+      <p class="mt-2 text-sm text-gray-400">Sin tarifa contratada</p>
+    }
+
+    @if (notStarted()) {
+      <p class="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-400 dark:border-gray-700">Falta el pago para arrancar la tarifa</p>
+    }
   }
 </div>

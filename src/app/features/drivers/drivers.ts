@@ -152,6 +152,9 @@ export class Drivers {
     }
     // The debt engine flagged him: coverage lapsed and he owes.
     if (item.status === 'overdue' || item.status === 'penalized') return { label: 'Vencida', sub: 'En deuda', date: null, tone: 'danger' };
+    // Approved but the tariff start hasn't been set yet (solicitudes-app): not started.
+    if (item.status === 'approved' && !item.tariffStartSetAt)
+      return { label: 'Sin iniciar', sub: 'Falta establecer el inicio', date: null, tone: 'warning' };
     // Operative driver: read the coverage of his subscription.
     if (sub.status === 'expired') return { label: 'Vencida', sub: 'En deuda', date: null, tone: 'danger' };
     if (sub.dueSoon) return { label: 'Por vencer', sub: 'Vence el', date: sub.currentPeriodEnd, tone: 'warning' };
@@ -168,7 +171,9 @@ export class Drivers {
   statusBadge(item: DriverListItem): StatusBadge {
     switch (item.status) {
       case 'approved':
-        return { label: 'Aprobado', sub: 'Activo en el sistema', dot: 'bg-green-500' };
+        return item.tariffStartSetAt
+          ? { label: 'Aprobado', sub: 'Activo en el sistema', dot: 'bg-green-500' }
+          : { label: 'Aprobado', sub: 'Pendiente de activación', dot: 'bg-gold-400' };
       case 'scheduled':
         return { label: 'Programado', sub: 'Aprobado · inicia el lunes', dot: 'bg-indigo-500' };
       case 'rejected':

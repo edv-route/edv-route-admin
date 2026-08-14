@@ -79,7 +79,7 @@
           <tr class="border-b border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
             <td class="px-4 py-3">
               <a [routerLink]="['/billing', item.id]"
-                class="font-mono font-semibold text-primary-700 hover:underline dark:text-primary-300">#{{ item.invoiceNumber }}</a>
+                class="font-mono font-semibold text-primary-700 hover:underline dark:text-primary-300">#{{ item.invoiceNumber | folio }}</a>
             </td>
             <td class="px-4 py-3"><span class="font-semibold text-gray-800 dark:text-gray-100">{{ item.driverName }}</span></td>
             <td class="whitespace-nowrap px-4 py-3">

@@ -33,8 +33,13 @@ const PERIOD_UNIT: Record<string, string> = {
 })
 export class DriverTariffCard {
   readonly driver = input.required<DriverDetail>();
+  /** Approved + payment settled (debt 0) + tariff start NOT set yet (solicitudes-app):
+   *  the whole card is highlighted and clickable to open "Establecer inicio". */
+  readonly canStartTariff = input(false);
   /** Cancel the scheduled plan change (the parent opens the confirm modal). */
   readonly cancelChange = output<void>();
+  /** Click on the highlighted card → open the "Establecer inicio" modal. */
+  readonly startTariff = output<void>();
 
   readonly toneClasses: Record<BadgeTone, string> = {
     accent: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
@@ -51,12 +56,40 @@ export class DriverTariffCard {
     return Math.ceil((new Date(until).getTime() - Date.now()) / 86_400_000);
   }
 
-  /** Start of a paid-but-not-in-force tariff (bought week starts a future Monday). */
+  /**
+   * Calendar days until the engine emits the next charge (nextChargeAt). Counted
+   * by local date (not elapsed hours), so a Wed→Fri 18:00 charge reads "2 días",
+   * matching how the admin thinks about it. Null when there is no scheduled charge.
+   */
+  chargeDays(): number | null {
+    const next = this.driver().subscription?.nextChargeAt;
+    if (!next) return null;
+    const charge = new Date(next);
+    const today = new Date();
+    const a = Date.UTC(charge.getFullYear(), charge.getMonth(), charge.getDate());
+    const b = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    return Math.round((a - b) / 86_400_000);
+  }
+
+  /** Start of a not-yet-operating tariff: a `scheduled` driver (starts a future
+   *  Monday, doesn't operate yet) or a scheduled plan-change. */
   readonly startsAt = computed<string | null>(() => {
-    const s = this.driver().subscription;
-    if (!s || s.status !== 'scheduled' || !s.currentPeriodStart) return null;
-    return new Date(s.currentPeriodStart).getTime() > Date.now() ? s.currentPeriodStart : null;
+    const d = this.driver();
+    const s = d.subscription;
+    if (!s || !s.currentPeriodStart) return null;
+    if (d.status === 'scheduled') return s.currentPeriodStart;
+    if (s.status === 'scheduled') {
+      return new Date(s.currentPeriodStart).getTime() > Date.now() ? s.currentPeriodStart : null;
+    }
+    return null;
   });
+
+  /** Approved but the tariff start hasn't been set yet (solicitudes-app): the
+   *  coverage / paid-periods / next-charge figures are PROVISIONAL (they re-anchor
+   *  when the start is set), so they're hidden until then. */
+  readonly notStarted = computed(
+    () => this.driver().status === 'approved' && !this.driver().tariffStartSetAt,
+  );
 
   /** Human unit of the plan's billing period ("semana", "mes"…). */
   periodUnit(): string {
@@ -74,6 +107,10 @@ export class DriverTariffCard {
       if (Number(d.debt.totalUsd) > 0) return { label: 'Sin pagar', tone: 'warning' };
       return { label: 'Por activar', tone: 'accent' };
     }
+    // Approved but the tariff start hasn't been set yet (solicitudes-app): not started.
+    if (d.status === 'approved' && !d.tariffStartSetAt) return { label: 'Sin iniciar', tone: 'warning' };
+    // Scheduled: approved but starts a future Monday — doesn't operate yet.
+    if (d.status === 'scheduled') return { label: 'Programada', tone: 'neutral' };
     const cover = this.coverDays();
     if (s.status === 'expired' || (cover !== null && cover < 0)) return { label: 'Vencida', tone: 'danger' };
     if (s.status === 'active' && cover !== null && cover <= 2) return { label: 'Por vencer', tone: 'warning' };

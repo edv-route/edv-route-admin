@@ -196,13 +196,13 @@
           }
         </div>
         <div>
-          <label for="w-email" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
-            Email <span class="font-normal text-gray-400">(opcional)</span>
-          </label>
-          <input id="w-email" name="email" type="email" email #emailCtrl="ngModel" [(ngModel)]="person.email"
+          <label for="w-email" class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Email *</label>
+          <input id="w-email" name="email" type="email" email required #emailCtrl="ngModel" [(ngModel)]="person.email"
             class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
           @if (emailCtrl.invalid && emailCtrl.touched) {
-            <p class="mt-1 text-xs font-medium text-primary-700">Correo electrónico no válido.</p>
+            <p class="mt-1 text-xs font-medium text-primary-700">
+              {{ emailCtrl.errors?.['required'] ? 'El email es obligatorio.' : 'Correo electrónico no válido.' }}
+            </p>
           }
         </div>
 
@@ -559,6 +559,11 @@
 
         @if (paymentModalOpen()) {
           <app-payment-draft-modal [totalUsd]="total()" [initial]="paymentDraft()"
+            [initialAutoApprove]="paymentDraft()?.autoApprove ?? false"
+            [membershipName]="membership()?.name ?? ''"
+            [membershipUsd]="membership()?.priceUsd ?? null"
+            [tariffUsd]="selectedPlan()?.priceUsd ?? null"
+            [periods]="periods"
             (saved)="onPaymentSaved($event)" (cancel)="closePaymentModal()" />
         }
       }
@@ -572,7 +577,7 @@
             Facturas emitidas:
             @for (n of invoiceNumbers(); track n) {
               <span class="mx-1 rounded-full bg-gold-100 px-2.5 py-0.5 text-xs font-bold text-gold-800">
-                N° {{ n }}
+                N° {{ n | folio }}
               </span>
             }
           </p>
@@ -585,7 +590,11 @@
         <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">
           El afiliado está <strong>pendiente</strong>.
           @if (paidAtRegister()) {
-            El pago quedó <strong>pendiente de aprobación</strong> en Facturación → «Por aprobar». Al aprobarlo se emite la factura del alta (membresía + semanas) y podrás aprobar al afiliado.
+            @if (approvedAtRegister()) {
+              El pago fue <strong>aprobado</strong> y se emitieron las facturas del alta (membresía + semanas). Ya puedes <strong>aprobar al afiliado</strong> desde su perfil.
+            } @else {
+              El pago quedó <strong>pendiente de aprobación</strong> en Facturación → «Por aprobar». Al aprobarlo se emite la factura del alta (membresía + semanas) y podrás aprobar al afiliado.
+            }
           } @else {
             Cóbrale la membresía y la tarifa desde su perfil; la aprobación exige esos pagos.
           }
@@ -595,7 +604,7 @@
             class="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
             Ir al perfil
           </button>
-          @if (paidAtRegister()) {
+          @if (paidAtRegister() && !approvedAtRegister()) {
             <a routerLink="/receipts" [queryParams]="{ tab: 'review' }"
               class="rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800">
               Ir a «Por aprobar»

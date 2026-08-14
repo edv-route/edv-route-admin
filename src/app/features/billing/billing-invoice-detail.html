@@ -12,12 +12,13 @@
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white p-5 shadow-sm dark:bg-gray-800 md:p-6">
       <div>
         <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Factura interna</p>
-        <h1 class="font-mono text-2xl font-bold text-gray-900 dark:text-white">#{{ inv.invoiceNumber }}</h1>
+        <h1 class="font-mono text-2xl font-bold text-gray-900 dark:text-white">#{{ inv.invoiceNumber | folio }}</h1>
       </div>
       <div class="text-right">
         @switch (inv.status) {
           @case ('paid') { <span class="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-800 dark:bg-green-900 dark:text-green-300"><span class="h-2 w-2 rounded-full bg-green-500"></span>{{ statusLabels.paid }}</span> }
           @case ('voided') { <span class="inline-flex items-center gap-2 rounded-full bg-primary-100 px-3 py-1 text-sm font-semibold text-primary-800 dark:bg-primary-900 dark:text-primary-300"><span class="h-2 w-2 rounded-full bg-primary-600"></span>{{ statusLabels.voided }}</span> }
+          @case ('overdue') { <span class="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800 dark:bg-amber-900 dark:text-amber-300"><span class="h-2 w-2 rounded-full bg-amber-500"></span>{{ statusLabels.overdue }}</span> }
           @default { <span class="inline-flex items-center gap-2 rounded-full bg-gold-100 px-3 py-1 text-sm font-semibold text-gold-800"><span class="h-2 w-2 rounded-full bg-gold-500"></span>{{ statusLabels.issued }}</span> }
         }
         <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">${{ inv.totalUsd }}</p>

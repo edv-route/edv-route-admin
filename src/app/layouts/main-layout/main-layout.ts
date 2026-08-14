@@ -72,6 +72,7 @@ export class MainLayout {
       title: 'Operación',
       items: [
         { label: 'Dashboard', route: '/dashboard', icon: 'dashboard' },
+        { label: 'Solicitudes', route: '/requests', icon: 'clipboard' },
         { label: 'Afiliados', route: '/drivers', icon: 'users' },
         { label: 'Membresía', route: '/membership', icon: 'badge' },
         { label: 'Tarifas', route: '/subscription-plans', icon: 'cash' },

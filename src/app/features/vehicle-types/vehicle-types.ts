@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { BusyDirective } from '../../shared/directives/busy.directive';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, type NgForm } from '@angular/forms';
 import type { VehicleType } from '../../core/models/vehicle-type.model';
 import { SkeletonRows } from '../../shared/components/skeleton-rows';
 import { VehicleTypesApi } from './vehicle-types.api';
@@ -60,9 +60,14 @@ export class VehicleTypes {
     this.modal.set(null);
   }
 
-  save(): void {
+  save(form: NgForm): void {
     const state = this.modal();
     if (!state || this.saving()) return;
+    // Angular sets `novalidate`: reveal native validation errors and stop.
+    if (form.invalid) {
+      form.form.markAllAsTouched();
+      return;
+    }
     this.saving.set(true);
     this.error.set(null);
 

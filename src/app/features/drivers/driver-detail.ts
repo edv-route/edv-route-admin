@@ -3,7 +3,7 @@ import { BusyDirective } from '../../shared/directives/busy.directive';
 import { HttpClient, type HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule, type NgForm } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { of, type Observable } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import type {
@@ -26,8 +26,11 @@ import { INPUT_FILTERS } from '../../shared/directives/input-filters';
 import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
 import { DocumentsApi, validateFile } from '../documents/documents.api';
 import { PaymentSubmissionsApi } from '../billing/payment-submissions.api';
+import { PaymentReviewModal } from '../billing/payment-review-modal';
+import { FolioPipe } from '../../shared/pipes/folio.pipe';
 import { BillingApi } from '../billing/billing.api';
 import type { InvoiceListItem } from '../../core/models/billing.model';
+import { SUBMISSION_PURPOSE_LABELS } from '../../core/models/payment-submission.model';
 import { DriversApi } from './drivers.api';
 import { PaymentCapture, type PaymentCaptureValue, emptyPaymentCapture } from './payment-capture';
 import { VehicleForm } from './vehicle-form';
@@ -60,7 +63,7 @@ interface ConfirmDialog {
 
 @Component({
   selector: 'app-driver-detail',
-  imports: [FormsModule, DatePipe, RouterLink, Select, ...INPUT_FILTERS, PasswordInput, DatePicker, PaymentCapture, FileViewer, VehicleForm, Toggle, DriverStatusCard, DriverTariffCard, BusyDirective],
+  imports: [FormsModule, DatePipe, RouterLink, Select, ...INPUT_FILTERS, PasswordInput, DatePicker, PaymentCapture, FileViewer, VehicleForm, Toggle, DriverStatusCard, DriverTariffCard, PaymentReviewModal, BusyDirective, FolioPipe],
   templateUrl: './driver-detail.html',
 })
 export class DriverDetail {
@@ -70,6 +73,7 @@ export class DriverDetail {
   private readonly billingApi = inject(BillingApi);
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly id = input.required<string>();
   readonly statusLabels = DRIVER_STATUS_LABELS;
@@ -92,6 +96,14 @@ export class DriverDetail {
   /** Approve modal: chosen start mode (step 1) and whether we're on the confirm step. */
   readonly approveMode = signal<'now' | 'next_monday' | null>(null);
   readonly approveConfirming = signal(false);
+  /** Tariff start ("Establecer inicio") modal — decoupled from approval. Reuses
+   *  `approveMode`/`approveConfirming` for its picker + confirm steps. */
+  readonly tariffStartOpen = signal(false);
+  /** Ready to set the start: approved, start not set AND payment settled (debt 0). */
+  readonly canStartTariff = computed(() => {
+    const d = this.driver();
+    return !!d && d.status === 'approved' && !d.tariffStartSetAt && Number(d.debt.totalUsd) === 0;
+  });
   /** Generic confirmation modal for one-click important actions. */
   readonly confirm = signal<ConfirmDialog | null>(null);
   readonly renewOpen = signal(false);
@@ -162,21 +174,55 @@ export class DriverDetail {
     this.pendingSubmission() ? null : (this.driver()?.rejectedSubmission ?? null),
   );
 
-  /** v9 partial-payment split — the debt invoices the pending payment covers.
-   *  Empty when it covers the whole debt (or is not a partial debt payment). */
-  readonly coveredInvoiceIds = computed(() => new Set(this.pendingSubmission()?.invoiceIds ?? []));
-  /** The pending payment covers the WHOLE debt: single "en revisión" band, no red one. */
-  readonly pendingCoversAll = computed(
-    () => !!this.pendingSubmission() && this.coveredInvoiceIds().size === 0,
-  );
-  /** Tariff/penalty charges NOT covered by the pending payment (still owed). When
-   *  the pending payment covers the whole debt there is no remainder. */
+  /** Invoice ids reserved by ALL pending payments (union, from the backend):
+   *  multiple pending payments may each cover different invoices (2026-08-12). */
+  readonly coveredInvoiceIds = computed(() => new Set(this.driver()?.coveredInvoiceIds ?? []));
+  /** A pending payment covers the WHOLE debt: only a `debt` payment with no
+   *  specific invoices settles everything. advance/enroll/change_plan also carry
+   *  invoiceIds=null but do NOT clear existing debt invoices (they generate their
+   *  own charges), so they must not hide the debt band nor the "Registrar pago"
+   *  button while the debt engine may still emit a new owed week. */
+  readonly pendingCoversAll = computed(() => {
+    const ps = this.pendingSubmission();
+    return !!ps && ps.purpose === 'debt' && (ps.invoiceIds === null || ps.invoiceIds.length === 0);
+  });
+  /** Tariff/penalty charges NOT covered by any pending payment (still owed). */
   readonly owedCharges = computed(() => {
     const d = this.driver();
     if (!d || this.pendingCoversAll()) return [];
     const covered = this.coveredInvoiceIds();
     return d.debt.charges.filter((c) => !(c.invoiceId && covered.has(c.invoiceId)));
   });
+  /** Debt (membership or a charge) NOT reserved by any pending payment → a NEW
+   *  payment can still be registered for it, even while others are under review. */
+  readonly hasUnreservedDebt = computed(() => {
+    const d = this.driver();
+    if (!d || this.pendingCoversAll()) return false;
+    const covered = this.coveredInvoiceIds();
+    const memId = d.debt.membershipInvoiceId;
+    const memOwed = Number(d.debt.membershipDue) > 0 && !(memId && covered.has(memId));
+    const chargeOwed = d.debt.charges.some(
+      (c) => Number(c.amountUsd) > 0 && !(c.invoiceId && covered.has(c.invoiceId)),
+    );
+    return memOwed || chargeOwed;
+  });
+
+  /** Quick-look modal for a payment under review (opened from a payment card). */
+  readonly reviewModalId = signal<string | null>(null);
+  openReview(id: string): void {
+    this.reviewModalId.set(id);
+  }
+  /** The review modal approved the payment: close it and refresh the profile,
+   *  auto-offering "Establecer inicio" when the tariff start becomes due (same
+   *  path as approving from the detail page's ?start=1 navigation). */
+  onReviewResolved(): void {
+    this.reviewModalId.set(null);
+    this.reloadThenMaybeStartTariff();
+  }
+  /** Human label for a submission purpose ("Pago de deuda", "Alta…"). */
+  purposeLabel(purpose: string): string {
+    return SUBMISSION_PURPOSE_LABELS[purpose] ?? 'Pago';
+  }
   /** Membership debt still owed (0 when the pending payment already covers it). */
   readonly owedMembershipDue = computed(() => {
     const d = this.driver();
@@ -332,6 +378,13 @@ export class DriverDetail {
       next: (d) => {
         this.driver.set(d);
         this.loading.set(false);
+        // Case 1 (approve affiliate → approve payment): arriving from the payment
+        // screen (?start=1) and the tariff start is now due → auto-open the modal,
+        // then clear the flag so a refresh doesn't reopen it.
+        if (this.route.snapshot.queryParamMap.get('start') && this.canStartTariff()) {
+          this.openTariffStart();
+          void this.router.navigate([], { queryParams: {}, replaceUrl: true });
+        }
       },
       error: (err: HttpErrorResponse) => {
         this.loading.set(false);
@@ -407,51 +460,88 @@ export class DriverDetail {
     });
   }
 
-  /** Opens the approve modal on its selection step (resets the chosen mode). */
+  /** Opens the simple approve confirmation (start mode is DECOUPLED → startTariff). */
   openApprove(): void {
-    this.approveMode.set(null);
-    this.approveConfirming.set(false);
     this.confirmAction.set('approve');
   }
 
-  /** Closes the approve modal (blocked while the request is in flight). */
+  /** Closes the approve/reject confirmation (blocked while a request is in flight). */
   closeApprove(): void {
     if (this.saving()) return;
-    this.resetApprove();
-  }
-
-  /** Step 1 → step 2: move to the confirmation once a start mode is chosen. */
-  continueApprove(): void {
-    if (this.approveMode()) this.approveConfirming.set(true);
+    this.confirmAction.set(null);
   }
 
   /**
-   * Step 2: approves the alta with the chosen start mode — `now` (operate today,
-   * tariff anchored to this week's Monday, loses elapsed days) or `next_monday`
-   * (driver left `scheduled`; tariff starts next Monday). The confirm button stays
-   * in its loading state until the modal closes (success) or the request fails.
+   * Approves a PENDING affiliate → approved. Does NOT anchor the tariff (decoupled,
+   * solicitudes-app): if his payment is already settled, the "Establecer inicio"
+   * modal is offered right after (auto entry point); otherwise the highlighted
+   * tariff card remains until the admin sets it.
    */
   confirmApprove(): void {
-    const startMode = this.approveMode();
-    if (!startMode || this.saving()) return;
+    if (this.saving()) return;
     this.saving.set(true);
-    this.api.approve(this.id(), startMode).subscribe({
+    this.api.approve(this.id()).subscribe({
       next: () => {
         this.saving.set(false);
-        this.resetApprove();
-        this.load();
+        this.confirmAction.set(null);
+        this.reloadThenMaybeStartTariff();
       },
       error: (err: HttpErrorResponse) => {
-        this.resetApprove();
+        this.confirmAction.set(null);
         this.fail(err);
       },
     });
   }
 
-  private resetApprove(): void {
-    this.confirmAction.set(null);
-    this.approveConfirming.set(false);
+  // ── Tariff start ("Establecer inicio"), decoupled from approval ──
+
+  /** Opens the "Establecer inicio" modal on its picker step. */
+  openTariffStart(): void {
     this.approveMode.set(null);
+    this.approveConfirming.set(false);
+    this.tariffStartOpen.set(true);
+  }
+
+  /** Closes it — the "Establecer inicio luego" action (blocked mid-request). */
+  closeTariffStart(): void {
+    if (this.saving()) return;
+    this.tariffStartOpen.set(false);
+    this.approveMode.set(null);
+    this.approveConfirming.set(false);
+  }
+
+  /** Picker step → confirm step, once a start mode is chosen. */
+  continueTariffStart(): void {
+    if (this.approveMode()) this.approveConfirming.set(true);
+  }
+
+  /** Sets when the tariff starts (now / next_monday) and anchors the subscription. */
+  confirmTariffStart(): void {
+    const startMode = this.approveMode();
+    if (!startMode || this.saving()) return;
+    this.saving.set(true);
+    this.api.startTariff(this.id(), startMode).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.closeTariffStart();
+        this.load();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.closeTariffStart();
+        this.fail(err);
+      },
+    });
+  }
+
+  /** Reload after approving and auto-open "Establecer inicio" when it's due. */
+  private reloadThenMaybeStartTariff(): void {
+    this.api.detail(this.id()).subscribe({
+      next: (detail) => {
+        this.driver.set(detail);
+        if (this.canStartTariff()) this.openTariffStart();
+      },
+      error: (err: HttpErrorResponse) => this.fail(err),
+    });
   }
 
   /** The FOLLOWING Monday — always next week, even when today is Monday (so
@@ -561,8 +651,11 @@ export class DriverDetail {
     // invoice is forced first and stays selected (it cannot be unchecked).
     this.billingApi.invoices({ driverId: this.id(), page: 1, limit: 100 }).subscribe({
       next: (result) => {
+        // Exclude invoices already reserved by another pending payment: a new
+        // payment may only cover the still-unreserved debt (no double charge).
+        const covered = this.coveredInvoiceIds();
         const owed = result.items
-          .filter((i) => i.status === 'issued' || i.status === 'overdue')
+          .filter((i) => (i.status === 'issued' || i.status === 'overdue') && !covered.has(i.id))
           .sort((a, b) => Number(b.kind === 'membership') - Number(a.kind === 'membership'));
         this.debtInvoices.set(owed);
         this.selectedInvoiceIds.set(new Set(owed.map((i) => i.id)));

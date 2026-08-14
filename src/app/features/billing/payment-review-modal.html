@@ -1,0 +1,247 @@
+<div class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/60 backdrop-blur-sm" (click)="close.emit()">
+  <div class="flex min-h-full items-center justify-center p-4">
+    <!-- stopPropagation: clicks inside the card must not close the modal -->
+    <div class="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-800" (click)="$event.stopPropagation()">
+      <!-- Header: brand gradient, prominent amount -->
+      <div class="relative bg-gradient-to-br from-gold-400 to-gold-600 px-6 py-5 text-gray-900">
+        <button type="button" (click)="close.emit()" aria-label="Cerrar"
+          class="absolute right-4 top-4 rounded-lg p-1.5 text-gray-900/50 transition hover:bg-gray-900/10 hover:text-gray-900">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+        </button>
+        <p class="text-xs font-semibold uppercase tracking-widest text-gray-800">Pago en revisión</p>
+        @if (detail(); as d) {
+          <div class="mt-1 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 class="text-3xl font-extrabold leading-none text-gray-900">${{ d.amountUsd }}</h2>
+              <p class="mt-1 text-sm text-gray-800"><span class="font-bold text-gray-900">Recibo N° {{ d.submissionNumber | folio }}</span> · {{ purposeLabel() }}</p>
+            </div>
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-gold-800 shadow-sm">
+              <span class="h-1.5 w-1.5 rounded-full bg-gold-500"></span>
+              Pendiente de aprobación
+            </span>
+          </div>
+        } @else {
+          <div class="mt-1.5 h-8 w-40 animate-pulse rounded-lg bg-white/30"></div>
+          <div class="mt-2 h-3 w-56 animate-pulse rounded bg-white/25"></div>
+        }
+      </div>
+
+      <!-- Body -->
+      @if (loading()) {
+        <div class="space-y-5 px-6 py-5">
+          <!-- Skeleton: payment details -->
+          <div>
+            <div class="mb-3 h-2.5 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+            <div class="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+              @for (i of [0, 1, 2, 3]; track $index) {
+                <div class="flex justify-between gap-3 border-b border-gray-100 pb-2 dark:border-gray-700/60">
+                  <div class="h-3 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+                  <div class="h-3 w-20 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+                </div>
+              }
+            </div>
+          </div>
+          <!-- Skeleton: invoices covered -->
+          <div>
+            <div class="mb-2 h-2.5 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+            <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+              @for (i of [0, 1]; track $index) {
+                <div class="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 last:border-b-0 dark:border-gray-700/60">
+                  <div class="space-y-1.5">
+                    <div class="h-3 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+                    <div class="h-2.5 w-32 animate-pulse rounded bg-gray-200/70 dark:bg-gray-700/70"></div>
+                  </div>
+                  <div class="h-3 w-12 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+                </div>
+              }
+            </div>
+          </div>
+          <!-- Skeleton: receipt image -->
+          <div>
+            <div class="mb-2 h-2.5 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+            <div class="grid grid-cols-3 gap-3">
+              @for (i of [0, 1, 2]; track $index) {
+                <div class="h-28 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700"></div>
+              }
+            </div>
+          </div>
+        </div>
+      } @else if (error(); as message) {
+        <div class="px-6 py-8 text-center text-sm font-medium text-primary-700 dark:text-primary-300">{{ message }}</div>
+      } @else if (detail(); as d) {
+        <div class="space-y-5 px-6 py-5">
+          <!-- Payment details -->
+          <section>
+            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Datos del pago</h3>
+            <dl class="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+              <div class="flex justify-between gap-3 border-b border-gray-100 pb-2 dark:border-gray-700/60">
+                <dt class="text-gray-500 dark:text-gray-400">Método</dt>
+                <dd class="text-right font-medium text-gray-900 dark:text-white">{{ d.paymentMethodName ?? '—' }}</dd>
+              </div>
+              <div class="flex justify-between gap-3 border-b border-gray-100 pb-2 dark:border-gray-700/60">
+                <dt class="text-gray-500 dark:text-gray-400">Registrado</dt>
+                <dd class="text-right text-gray-800 dark:text-gray-200">{{ d.createdAt | date: 'dd/MM/yyyy HH:mm' }}</dd>
+              </div>
+              @if (d.paidOn) {
+                <div class="flex justify-between gap-3 border-b border-gray-100 pb-2 dark:border-gray-700/60">
+                  <dt class="text-gray-500 dark:text-gray-400">Fecha del pago</dt>
+                  <dd class="text-right text-gray-800 dark:text-gray-200">{{ d.paidOn | date: 'dd/MM/yyyy' }}</dd>
+                </div>
+              }
+              @if (d.paymentReference) {
+                <div class="flex justify-between gap-3 border-b border-gray-100 pb-2 dark:border-gray-700/60">
+                  <dt class="text-gray-500 dark:text-gray-400">Referencia</dt>
+                  <dd class="text-right font-medium text-gray-800 dark:text-gray-200">{{ d.paymentReference }}</dd>
+                </div>
+              }
+              @if (d.payerBank) {
+                <div class="flex justify-between gap-3 border-b border-gray-100 pb-2 dark:border-gray-700/60">
+                  <dt class="text-gray-500 dark:text-gray-400">Banco emisor</dt>
+                  <dd class="text-right text-gray-800 dark:text-gray-200">{{ d.payerBank }}</dd>
+                </div>
+              }
+              @if (d.payerId) {
+                <div class="flex justify-between gap-3 border-b border-gray-100 pb-2 dark:border-gray-700/60">
+                  <dt class="text-gray-500 dark:text-gray-400">Cédula pagador</dt>
+                  <dd class="text-right text-gray-800 dark:text-gray-200">{{ d.payerId }}</dd>
+                </div>
+              }
+              @if (d.payerAccount) {
+                <div class="flex justify-between gap-3 border-b border-gray-100 pb-2 dark:border-gray-700/60">
+                  <dt class="text-gray-500 dark:text-gray-400">Cuenta origen</dt>
+                  <dd class="text-right text-gray-800 dark:text-gray-200">{{ d.payerAccount }}</dd>
+                </div>
+              }
+            </dl>
+            @if (d.note) {
+              <p class="mt-2 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-gray-700/40 dark:text-gray-300">
+                <span class="font-semibold">Nota:</span> {{ d.note }}
+              </p>
+            }
+          </section>
+
+          <!-- Two columns: what it covers (left) · receipt image (right) -->
+          <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <!-- Left: what it covers -->
+            <section>
+              <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Qué cubre este pago</h3>
+              <ul class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                @for (it of d.items; track $index) {
+                  <li class="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 text-sm last:border-b-0 dark:border-gray-700/60">
+                    <span class="min-w-0">
+                      @if (it.invoiceNumber) {
+                        <span class="font-bold text-gray-900 dark:text-white">Factura N° {{ it.invoiceNumber | folio }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400">
+                          {{ it.label }}@if (it.periodStart) { · {{ it.periodStart | date: 'dd/MM' }}–{{ it.periodEnd | date: 'dd/MM' }} }
+                        </span>
+                      } @else {
+                        <span class="font-semibold text-gray-900 dark:text-white">{{ it.label }}</span>
+                        @if (it.periodStart) {
+                          <span class="block text-xs text-gray-400">{{ it.periodStart | date: 'dd/MM' }}–{{ it.periodEnd | date: 'dd/MM' }}</span>
+                        }
+                      }
+                    </span>
+                    <span class="shrink-0 font-semibold text-gray-900 dark:text-white">${{ it.amountUsd }}</span>
+                  </li>
+                } @empty {
+                  <li class="px-4 py-3 text-sm text-gray-400">Sin desglose disponible.</li>
+                }
+              </ul>
+              <div class="mt-2 flex items-center justify-between px-1 text-sm">
+                <span class="font-semibold text-gray-500 dark:text-gray-400">Total del pago</span>
+                <span class="text-lg font-extrabold text-gold-700 dark:text-gold-300">${{ d.amountUsd }}</span>
+              </div>
+            </section>
+
+            <!-- Right: receipt image(s), larger and contained so it reads well -->
+            <section>
+              <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Comprobante</h3>
+              @if (d.files.length > 0) {
+                <div class="space-y-3">
+                  @for (f of d.files; track f.id) {
+                    <figure class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                      @if (isPdf(f.url)) {
+                        <iframe [src]="f.url" title="Comprobante" class="h-80 w-full"></iframe>
+                      } @else {
+                        <button type="button" (click)="zoomed.set(f.url)" class="block w-full bg-gray-50 dark:bg-gray-900/40" title="Ampliar">
+                          <img [src]="f.url" alt="Comprobante" class="mx-auto max-h-80 w-full cursor-zoom-in object-contain" />
+                        </button>
+                      }
+                    </figure>
+                  }
+                </div>
+              } @else {
+                <div class="flex min-h-40 items-center justify-center rounded-lg border border-dashed border-gray-200 text-sm text-gray-400 dark:border-gray-700 dark:text-gray-500">
+                  Sin comprobante adjunto
+                </div>
+              }
+            </section>
+          </div>
+        </div>
+
+        <!-- Footer: the actions open a small confirmation modal (below). -->
+        <div class="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-700">
+          <button type="button" (click)="close.emit()"
+            class="mr-auto rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+            Cerrar
+          </button>
+          <button type="button" (click)="ask('reject')"
+            class="rounded-lg border border-red-200 px-5 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-gray-700">
+            Rechazar
+          </button>
+          <button type="button" (click)="ask('approve')"
+            class="rounded-lg bg-gold-500 px-5 py-2 text-sm font-semibold text-gold-950 hover:bg-gold-600">
+            Aprobar pago
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- Small confirmation modal for the money actions (approve / reject), above the
+     review modal. No backdrop-click close: a money action needs a deliberate click. -->
+@if (action(); as act) {
+  @if (detail(); as d) {
+    <div class="fixed inset-0 z-[70] flex items-center justify-center bg-gray-900/60 p-4">
+      <div class="w-full max-w-md rounded-lg bg-white p-5 shadow-lg dark:bg-gray-800 sm:p-6">
+        @if (act === 'approve') {
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">¿Aprobar el pago?</h2>
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Se aprobará el pago de <strong>{{ d.driverName }}</strong> por <strong>${{ d.amountUsd }}</strong>:
+            se salda lo que cubre y se <strong>emite la factura</strong>. Los documentos de dinero no se borran.
+          </p>
+          @if (actionError(); as message) { <p class="mt-3 text-xs font-medium text-red-600 dark:text-red-400">{{ message }}</p> }
+          <div class="mt-5 flex justify-end gap-3">
+            <button type="button" (click)="cancel()" [disabled]="saving()"
+              class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Cancelar</button>
+            <button type="button" (click)="approve()" [disabled]="saving()" [appBusy]="saving()"
+              class="rounded-lg bg-gold-500 px-5 py-2 text-sm font-semibold text-gold-950 hover:bg-gold-600 disabled:opacity-60">{{ saving() ? 'Aprobando…' : 'Aprobar pago' }}</button>
+          </div>
+        } @else {
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">¿Rechazar el pago?</h2>
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            El pago quedará <strong>rechazado</strong> (con rastro) y el chofer verá el aviso para generar uno nuevo. Indica el motivo:
+          </p>
+          <textarea name="rejectReason" [(ngModel)]="rejectReason" rows="2" maxlength="500" [disabled]="saving()"
+            placeholder="Ej.: comprobante ilegible / no se encontró el pago en la cuenta"
+            class="mt-3 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-gold-500 focus:ring-gold-500 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
+          @if (actionError(); as message) { <p class="mt-2 text-xs font-medium text-red-600 dark:text-red-400">{{ message }}</p> }
+          <div class="mt-5 flex justify-end gap-3">
+            <button type="button" (click)="cancel()" [disabled]="saving()"
+              class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Cancelar</button>
+            <button type="button" (click)="reject()" [disabled]="saving()" [appBusy]="saving()"
+              class="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">{{ saving() ? 'Procesando…' : 'Confirmar rechazo' }}</button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+}
+
+<!-- Full-screen zoom of a receipt image -->
+@if (zoomed(); as url) {
+  <div class="fixed inset-0 z-[60] flex items-center justify-center bg-gray-950/90 p-4" (click)="zoomed.set(null)">
+    <img [src]="url" alt="Comprobante" class="max-h-full max-w-full rounded-lg object-contain" />
+  </div>
+}

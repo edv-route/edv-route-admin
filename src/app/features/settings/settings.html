@@ -46,6 +46,22 @@
                   <option [value]="tz"></option>
                 }
               </datalist>
+            } @else if (isBoolean(setting)) {
+              <label [for]="'set-' + setting.key" class="inline-flex cursor-pointer items-center gap-2">
+                <input
+                  [id]="'set-' + setting.key"
+                  type="checkbox"
+                  class="peer sr-only"
+                  [checked]="draft(setting.key) === 'true'"
+                  (change)="setDraft(setting.key, $any($event.target).checked ? 'true' : 'false')"
+                />
+                <span
+                  class="relative h-6 w-11 rounded-full bg-gray-300 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary-700 peer-checked:after:translate-x-5 dark:bg-gray-600"
+                ></span>
+                <span class="w-24 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ draft(setting.key) === 'true' ? 'Activado' : 'Desactivado' }}
+                </span>
+              </label>
             } @else if (isNumeric(setting)) {
               <input
                 [id]="'set-' + setting.key"

@@ -60,6 +60,10 @@ export class Settings {
     return typeof setting.value === 'number';
   }
 
+  isBoolean(setting: Setting): boolean {
+    return typeof setting.value === 'boolean';
+  }
+
   isTimezone(setting: Setting): boolean {
     return setting.key === 'business_timezone';
   }
@@ -81,9 +85,12 @@ export class Settings {
     if (this.savingKey() || !this.isDirty(setting)) return;
     const raw = this.draft(setting.key).trim();
 
-    // Numeric keys must stay numeric: the API stores JSON, not text.
+    // Each key must keep its JSON type: the API stores JSON, not text. A boolean
+    // sent as the string "true" would defeat the engines' strict `=== true` check.
     let value: unknown = raw;
-    if (this.isNumeric(setting)) {
+    if (this.isBoolean(setting)) {
+      value = raw === 'true';
+    } else if (this.isNumeric(setting)) {
       const parsed = Number(raw);
       if (!Number.isInteger(parsed) || parsed < 0) {
         this.error.set(`${this.label(setting.key)}: debe ser un número entero de 0 o más.`);

@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { BusyDirective } from '../../shared/directives/busy.directive';
 import type { HttpErrorResponse } from '@angular/common/http';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, type NgForm } from '@angular/forms';
 import type { Requirement, RequirementAppliesTo } from '../../core/models/requirement.model';
 import { Select, type SelectOption } from '../../shared/components/select';
 import { SkeletonRows } from '../../shared/components/skeleton-rows';
@@ -74,9 +74,15 @@ export class Requirements {
     this.modal.set(null);
   }
 
-  save(): void {
+  save(form: NgForm): void {
     const state = this.modal();
     if (!state || this.saving()) return;
+    // Angular sets `novalidate`, so native required/minlength never fire on their
+    // own: mark all touched to reveal the errors (global CSS paints them) and stop.
+    if (form.invalid) {
+      form.form.markAllAsTouched();
+      return;
+    }
     this.saving.set(true);
     this.error.set(null);
 

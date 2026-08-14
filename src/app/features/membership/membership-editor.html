@@ -27,7 +27,7 @@
       }
     }
 
-    <form (ngSubmit)="save()">
+    <form #f="ngForm" (ngSubmit)="save(f)">
       <!-- Datos -->
       <section class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-6">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white">Datos</h2>
@@ -114,7 +114,7 @@
           </div>
           <button
             type="button" (click)="addBenefit()"
-            [disabled]="addingBenefit() || newBenefitName.trim() === ''"
+            [disabled]="addingBenefit() || newBenefitName.trim().length < 3"
             class="mt-2 rounded-lg border border-primary-700 px-3 py-1.5 text-xs font-semibold text-primary-700 hover:bg-primary-50 disabled:opacity-50 dark:text-primary-300 dark:hover:bg-gray-700"
           >
             {{ addingBenefit() ? 'Agregando…' : '+ Agregar beneficio' }}
@@ -125,6 +125,11 @@
       @if (error(); as message) {
         <p class="mt-4 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-800 dark:text-primary-300">
           {{ message }}
+        </p>
+      }
+      @if (f.submitted && f.invalid) {
+        <p class="mt-4 text-sm font-medium text-red-600 dark:text-red-400">
+          Revisa el nombre (mínimo 3 caracteres) y el precio.
         </p>
       }
 

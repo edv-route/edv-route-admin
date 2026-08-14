@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { FolioPipe } from '../../shared/pipes/folio.pipe';
 import { BusyDirective } from '../../shared/directives/busy.directive';
 import { HttpClient, type HttpErrorResponse } from '@angular/common/http';
 import { FormsModule, type NgForm } from '@angular/forms';
@@ -47,7 +48,7 @@ import {
  */
 @Component({
   selector: 'app-driver-wizard',
-  imports: [FormsModule, RouterLink, Select, PasswordInput, DatePicker, PasswordPolicyDirective, ...INPUT_FILTERS, VehicleDraftModal, DocumentDraftModal, PaymentDraftModal, ActionMenu, BusyDirective],
+  imports: [FormsModule, RouterLink, Select, PasswordInput, DatePicker, PasswordPolicyDirective, ...INPUT_FILTERS, VehicleDraftModal, DocumentDraftModal, PaymentDraftModal, ActionMenu, BusyDirective, FolioPipe],
   templateUrl: './driver-wizard.html',
 })
 export class DriverWizard {
@@ -67,6 +68,8 @@ export class DriverWizard {
   readonly fileWarning = signal<string | null>(null);
   /** Whether the alta included a payment (gates "Aprobar ahora" in the summary). */
   readonly paidAtRegister = signal(false);
+  /** Whether that payment was approved on the spot (autoApprove) at register time. */
+  readonly approvedAtRegister = signal(false);
 
   readonly requirements = signal<Requirement[]>([]);
   readonly vehicleTypes = signal<VehicleType[]>([]);
@@ -164,7 +167,11 @@ export class DriverWizard {
     const used = new Set(this.docs().map((d) => d.requirementId));
     return this.driverRequirements().filter((r) => !used.has(r.id));
   });
-  readonly activePlans = computed(() => this.plans().filter((p) => p.active));
+  /** Enroll bills membership + N WEEKLY weeks, so only weekly tariffs are offered
+   *  and selectable in the alta (a monthly/annual plan cannot be enrolled). */
+  readonly activePlans = computed(() =>
+    this.plans().filter((p) => p.active && p.billingPeriod === 'weekly'),
+  );
   /** A single active tariff is preselected and its dropdown locked. */
   readonly singlePlan = computed(() => this.activePlans().length === 1);
   readonly planOptions = computed<SelectOption[]>(() =>
@@ -441,6 +448,9 @@ export class DriverWizard {
     const form = new FormData();
     form.set('purpose', 'enroll');
     form.set('periods', String(this.periods));
+    // Send the chosen tariff so the backend bills THIS plan, not "the first weekly
+    // one" — otherwise the summary total and the invoice diverge with >1 weekly plan.
+    if (this.planId != null) form.set('planId', String(this.planId));
     if (draft.paymentMethodId != null) form.set('paymentMethodId', String(draft.paymentMethodId));
     if (draft.reference) form.set('reference', draft.reference);
     if (draft.payerBank) form.set('payerBank', draft.payerBank);
@@ -448,6 +458,8 @@ export class DriverWizard {
     if (draft.payerPhone) form.set('payerPhone', draft.payerPhone);
     if (draft.payerId) form.set('payerId', draft.payerId);
     if (draft.payerAccount) form.set('payerAccount', draft.payerAccount);
+    // Admin-only: approve on the spot (skips the second review in Facturación).
+    if (draft.autoApprove) form.set('autoApprove', 'true');
     for (const f of draft.files) form.append('files', f, f.name);
     return form;
   }
@@ -524,22 +536,24 @@ export class DriverWizard {
           );
         }),
         switchMap(({ result, flags }) => {
-          // The captured payment → pending ENROLL submission (membership + N weeks).
+          // The captured payment → ENROLL submission (membership + N weeks). With the
+          // admin "approve now" toggle it is settled on the spot; otherwise pending.
           if (sendPayment && draft) {
             return this.submissionsApi.create(result.userId, this.buildEnrollForm(draft)).pipe(
-              map(() => ({ result, flags, paymentSent: true })),
-              catchError(() => of({ result, flags, paymentSent: false })),
+              map((res) => ({ result, flags, paymentSent: true, paymentApproved: res.approved })),
+              catchError(() => of({ result, flags, paymentSent: false, paymentApproved: false })),
             );
           }
-          return of({ result, flags, paymentSent: false });
+          return of({ result, flags, paymentSent: false, paymentApproved: false });
         }),
       )
       .subscribe({
-        next: ({ result, flags, paymentSent }) => {
+        next: ({ result, flags, paymentSent, paymentApproved }) => {
           this.saving.set(false);
           this.driverId.set(result.userId);
           this.invoiceNumbers.set(result.invoiceNumbers ?? []);
           this.paidAtRegister.set(paymentSent);
+          this.approvedAtRegister.set(paymentApproved);
           const failed = flags.filter((ok) => !ok).length;
           if (failed > 0) {
             this.fileWarning.set(

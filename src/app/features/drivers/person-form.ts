@@ -149,6 +149,11 @@ export function composePerson(f: PersonFormFields, opts: ComposeOptions = {}): C
     }
   }
 
+  // Email is mandatory when creating (requireCredentials); editing an existing
+  // affiliate keeps it optional so legacy records without email can still be saved.
+  if (opts.requireCredentials && !f.email.trim()) {
+    return { ok: false, error: 'El correo electrónico es obligatorio.' };
+  }
   if (f.email.trim() && !EMAIL_VALID.test(f.email.trim())) {
     return { ok: false, error: 'El correo electrónico no es válido.' };
   }

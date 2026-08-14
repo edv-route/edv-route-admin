@@ -1,4 +1,6 @@
 export type DriverStatus =
+  /** App solicitud in review — not an affiliate yet (solicitudes-app, 2026-08-11). */
+  | 'applicant'
   | 'pending'
   /** Approved with the "start next Monday" option: decision made but not operative
    *  yet; the activation job flips him to `approved` on that Monday (2026-08-09). */
@@ -28,6 +30,8 @@ export interface DriverListItem {
   source: 'app' | 'admin';
   registrationStep: number | null;
   createdAt: string;
+  /** When the tariff start was set; null = approved but not started yet (no opera). */
+  tariffStartSetAt: string | null;
   subscription: DriverSubscriptionSummary | null;
   /** Outstanding debt (membership + owed tariff weeks), USD string ("0.00" if none). */
   debtUsd: string;
@@ -54,6 +58,8 @@ export interface DriverVehicle {
   color: string | null;
   plate: string | null;
   approvalStatus: 'pending' | 'approved' | 'rejected';
+  /** Reason shown to the applicant when the vehicle is rejected (solicitudes-app). */
+  rejectionReason: string | null;
   images: VehicleImage[];
 }
 
@@ -65,7 +71,12 @@ export interface DriverDocument {
   vehicleId: string | null;
   fileUrl: string | null;
   expiresAt: string | null;
+  /** Validity axis (inert since solicitudes-app). */
   status: 'valid' | 'expired' | 'rejected';
+  /** Review axis (solicitudes-app): the admin approves/rejects each document. */
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  /** Reason shown to the applicant when the document is rejected. */
+  rejectionReason: string | null;
 }
 
 export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
@@ -79,6 +90,9 @@ export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
   hasAppPassword: boolean;
   isAvailable: boolean;
   contractUrl: string | null;
+  /** When the tariff start was set (solicitudes-app); null = not set yet → the
+   *  profile highlights the tariff card and offers "Establecer inicio". */
+  tariffStartSetAt: string | null;
   /** The driver's "current" vehicle (backend sends it; used to flag it in the UI). */
   currentVehicleId: string | null;
   vehicles: DriverVehicle[];
@@ -99,6 +113,12 @@ export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
     /** End of the LAST prepaid period (advances included) — when coverage runs out. */
     paidUntil: string | null;
     paidPeriods: number;
+    /**
+     * When the debt engine will EMIT the next weekly charge (the billing Friday
+     * before coverage ends). Present only for an active weekly tariff with the
+     * engine on; null/absent otherwise (prepaid → the card falls back to paidUntil).
+     */
+    nextChargeAt?: string | null;
   } | null;
   /**
    * Outstanding debt (v8 debt engine): unpaid weekly charges + penalty.
@@ -148,6 +168,24 @@ export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
      *  the whole debt — the profile then shows a single "en revisión" band. */
     invoiceIds: string[] | null;
   } | null;
+  /** All payments under review (most recent first): the profile lists each with
+   *  its amount, not just the most recent one. */
+  pendingSubmissions: {
+    id: string;
+    /** Continuous receipt number (the "N° de pago"). */
+    submissionNumber: string;
+    amountUsd: string;
+    purpose: string;
+    createdAt: string;
+    invoiceIds: string[] | null;
+    /** N° of every invoice this payment covers, ascending. */
+    invoiceNumbers: string[];
+  }[];
+  /** How many payments are under review (2026-08-12: multiple allowed). */
+  pendingCount: number;
+  /** Union of invoice ids covered by ALL pending payments — the debt already
+   *  reserved. A new payment may only target invoices NOT in this set. */
+  coveredInvoiceIds: string[];
   /** v9: the most recent submission if it was REJECTED (drives the rejection message). */
   rejectedSubmission: {
     rejectionReason: string | null;
@@ -156,6 +194,7 @@ export interface DriverDetail extends Omit<DriverListItem, 'subscription'> {
 }
 
 export const DRIVER_STATUS_LABELS: Record<DriverStatus, string> = {
+  applicant: 'Solicitud',
   pending: 'Pendiente',
   scheduled: 'Programado',
   approved: 'Aprobado',

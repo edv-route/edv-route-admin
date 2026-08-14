@@ -41,35 +41,42 @@ export class DriverStatusCard {
   readonly hasDebt = computed(() => Number(this.driver().debt.totalUsd) > 0);
   readonly pendingSubmission = computed(() => this.driver().pendingSubmission);
 
-  /** Mirrors the backend approval gate: membership paid + a tariff + zero debt +
-   *  no payment under review. Drives the Aprobar button's disabled state so the
-   *  admin never gets a 409 by clicking it with debt pending. */
+  /** Approved but the tariff start hasn't been set yet → approved but does NOT
+   *  operate (no "recibe viajes" until it's started). */
+  readonly notStarted = computed(
+    () => this.driver().status === 'approved' && !this.driver().tariffStartSetAt,
+  );
+
+  /** Mirrors the RELAXED backend approval gate (solicitudes-app): the affiliate is
+   *  ENROLLED (has a membership + a tariff, paid OR as debt). Debt no longer blocks
+   *  approval — approve and the tariff start are decoupled; the debt is settled by
+   *  the payment and the start (which does require debt 0) is set afterwards. */
   readonly canApprove = computed(() => {
     const d = this.driver();
-    return (
-      !!d.subscription &&
-      d.membershipPayment?.status === 'paid' &&
-      !this.hasDebt() &&
-      !this.pendingSubmission()
-    );
+    return !!d.subscription && !!d.membershipPayment;
   });
 
   /** Tooltip explaining why Aprobar is disabled (empty when it's enabled). */
-  readonly approveDisabledReason = computed(() => {
-    if (this.pendingSubmission()) return 'Aprueba primero el pago en revisión (Facturación)';
-    if (this.hasDebt()) return 'No se puede aprobar con deuda pendiente: registra los pagos primero';
-    if (!this.canApprove()) return 'Faltan los pagos de membresía y tarifa';
-    return '';
-  });
+  readonly approveDisabledReason = computed(() =>
+    this.canApprove() ? '' : 'Primero regístrale la membresía y la tarifa (alta o deuda)',
+  );
 
   readonly meta = computed<StatusMeta>(() => {
     const d = this.driver();
     switch (d.status) {
       case 'approved':
+        if (this.notStarted())
+          return {
+            label: 'Aprobado',
+            dot: 'bg-green-500',
+            desc: this.hasDebt()
+              ? 'Aprobado · aún no opera: falta pagar para arrancar la tarifa'
+              : 'Aprobado · aún no opera: falta establecer el inicio de la tarifa',
+          };
         return {
           label: 'Aprobado',
           dot: 'bg-green-500',
-          desc: `Alta aprobada y al día · ${d.isAvailable ? 'disponible para viajes' : 'inactivo (no recibe viajes)'}`,
+          desc: `Al día · ${d.isAvailable ? 'disponible para viajes' : 'inactivo (no recibe viajes)'}`,
         };
       case 'scheduled':
         return {
@@ -92,10 +99,19 @@ export class DriverStatusCard {
       case 'penalized':
         return { label: 'Penalizado', dot: 'bg-red-500', desc: 'Superó el tope de semanas en deuda · no opera hasta saldar' };
       default:
+        if (!this.canApprove())
+          return { label: 'Pendiente', dot: 'bg-gold-400', desc: 'En cola de aprobación · faltan la membresía o la tarifa' };
         if (this.pendingSubmission())
-          return { label: 'Pendiente', dot: 'bg-gold-400', desc: 'Tiene un pago en revisión · apruébalo para poder aprobar el alta' };
+          return {
+            label: 'Pendiente',
+            dot: 'bg-gold-400',
+            desc:
+              d.pendingCount > 1
+                ? `Listo para aprobar · tiene ${d.pendingCount} pagos en revisión (aprueba cada uno para saldar lo que cubre)`
+                : 'Listo para aprobar · tiene un pago en revisión (al aprobarlo salda lo que cubre)',
+          };
         if (this.hasDebt())
-          return { label: 'Pendiente', dot: 'bg-gold-400', desc: 'En cola de aprobación · faltan pagos de membresía o tarifa' };
+          return { label: 'Pendiente', dot: 'bg-gold-400', desc: 'Listo para aprobar · quedará aprobado con su deuda de alta' };
         return { label: 'Pendiente', dot: 'bg-gold-400', desc: 'En regla · listo para aprobar' };
     }
   });

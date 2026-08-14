@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { BusyDirective } from '../../shared/directives/busy.directive';
 import { HttpClient, type HttpErrorResponse } from '@angular/common/http';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, type NgForm } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import type { Benefit } from '../../core/models/benefit.model';
@@ -88,7 +88,9 @@ export class MembershipEditor {
   /** Creates a benefit and includes it at once (persisted with the membership). */
   addBenefit(): void {
     const name = this.newBenefitName.trim();
-    if (name === '' || this.addingBenefit()) return;
+    // Backend requires >= 3 chars (createBenefitSchema); block short names here so
+    // the admin never gets a raw AJV 400 for a 1-2 letter benefit.
+    if (name.length < 3 || this.addingBenefit()) return;
     this.addingBenefit.set(true);
     this.error.set(null);
     this.benefitsApi
@@ -112,8 +114,13 @@ export class MembershipEditor {
       });
   }
 
-  save(): void {
+  save(form: NgForm): void {
     if (this.saving()) return;
+    // Angular sets `novalidate`: reveal native required/minlength errors and stop.
+    if (form.invalid) {
+      form.form.markAllAsTouched();
+      return;
+    }
     this.saving.set(true);
     this.error.set(null);
 

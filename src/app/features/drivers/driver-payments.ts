@@ -1,4 +1,5 @@
 import { Component, inject, input, signal } from '@angular/core';
+import { FolioPipe, padFolio } from '../../shared/pipes/folio.pipe';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -20,7 +21,7 @@ const PAGE_SIZE = 10;
  */
 @Component({
   selector: 'app-driver-payments',
-  imports: [DatePipe, RouterLink, Pagination],
+  imports: [DatePipe, RouterLink, Pagination, FolioPipe],
   templateUrl: './driver-payments.html',
 })
 export class DriverPayments {
@@ -56,7 +57,7 @@ export class DriverPayments {
   invoiceLabel(numbers: string[] | null): string {
     if (!numbers || numbers.length === 0) return '';
     const noun = numbers.length === 1 ? 'factura' : 'facturas';
-    return `Cubre ${noun} #${numbers.join(', #')}`;
+    return `Cubre ${noun} ${numbers.map((n) => '#' + padFolio(n)).join(', ')}`;
   }
 
   load(): void {

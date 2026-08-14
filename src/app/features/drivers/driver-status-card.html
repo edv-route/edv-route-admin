@@ -56,9 +56,13 @@
     @if (d.status === 'approved' || d.status === 'overdue') {
       <div class="flex items-center justify-between gap-3">
         <dt class="text-gray-400">Disponibilidad</dt>
-        <dd class="font-medium" [class]="d.isAvailable ? 'text-green-700 dark:text-green-300' : 'text-gray-500 dark:text-gray-400'">
-          {{ d.isAvailable ? 'Activo · recibe viajes' : 'Inactivo · no recibe viajes' }}
-        </dd>
+        @if (notStarted()) {
+          <dd class="font-medium text-gray-500 dark:text-gray-400">No opera aún · tarifa sin iniciar</dd>
+        } @else {
+          <dd class="font-medium" [class]="d.isAvailable ? 'text-green-700 dark:text-green-300' : 'text-gray-500 dark:text-gray-400'">
+            {{ d.isAvailable ? 'Activo · recibe viajes' : 'Inactivo · no recibe viajes' }}
+          </dd>
+        }
       </div>
     }
     <div class="flex items-center justify-between gap-3">
@@ -69,11 +73,13 @@
       <dt class="text-gray-400">Registrado</dt>
       <dd class="font-medium text-gray-700 dark:text-gray-200">{{ d.createdAt | date: 'dd/MM/yyyy' }}</dd>
     </div>
-    @if (d.status === 'pending') {
+    @if (d.status === 'pending' || notStarted()) {
       @if (pendingSubmission(); as ps) {
         <div class="flex items-center justify-between gap-3">
           <dt class="text-gray-400">Pago</dt>
-          <dd class="font-semibold text-blue-700 dark:text-blue-300">En revisión · ${{ ps.amountUsd }}</dd>
+          <dd class="font-semibold text-blue-700 dark:text-blue-300">
+            @if (d.pendingCount > 1) { En revisión · {{ d.pendingCount }} pagos } @else { En revisión · ${{ ps.amountUsd }} }
+          </dd>
         </div>
       } @else if (hasDebt()) {
         <div class="flex items-center justify-between gap-3">
@@ -82,8 +88,10 @@
         </div>
       } @else {
         <div class="flex items-center justify-between gap-3">
-          <dt class="text-gray-400">Aprobación</dt>
-          <dd class="font-medium text-gray-700 dark:text-gray-200">Listo · elige cuándo inicia al aprobar</dd>
+          <dt class="text-gray-400">{{ d.status === 'pending' ? 'Aprobación' : 'Tarifa' }}</dt>
+          <dd class="font-medium text-gray-700 dark:text-gray-200">
+            {{ d.status === 'pending' ? 'Listo · elige cuándo inicia al aprobar' : 'Falta establecer el inicio' }}
+          </dd>
         </div>
       }
     }

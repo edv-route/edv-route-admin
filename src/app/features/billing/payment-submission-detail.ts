@@ -1,9 +1,10 @@
 import { Component, inject, input, signal } from '@angular/core';
+import { FolioPipe } from '../../shared/pipes/folio.pipe';
 import { BusyDirective } from '../../shared/directives/busy.directive';
 import { DatePipe, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import type { HttpErrorResponse } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
   SUBMISSION_PURPOSE_LABELS,
   SUBMISSION_STATUS_LABELS,
@@ -20,12 +21,13 @@ import { PaymentSubmissionsApi } from './payment-submissions.api';
  */
 @Component({
   selector: 'app-payment-submission-detail',
-  imports: [DatePipe, FormsModule, RouterLink, FileViewer, BusyDirective],
+  imports: [DatePipe, FormsModule, RouterLink, FileViewer, BusyDirective, FolioPipe],
   templateUrl: './payment-submission-detail.html',
 })
 export class PaymentSubmissionDetail {
   private readonly api = inject(PaymentSubmissionsApi);
   private readonly location = inject(Location);
+  private readonly router = inject(Router);
 
   readonly id = input.required<string>();
   readonly statusLabels = SUBMISSION_STATUS_LABELS;
@@ -90,7 +92,9 @@ export class PaymentSubmissionDetail {
     this.saving.set(true);
     this.error.set(null);
     this.api.approve(sub.id).subscribe({
-      next: () => this.back(),
+      // Return to the affiliate profile with ?start=1 so it can auto-open the
+      // "Establecer inicio" modal when the tariff start is now due (solicitudes-app).
+      next: () => void this.router.navigate(['/drivers', sub.driverId], { queryParams: { start: 1 } }),
       error: (err: HttpErrorResponse) => {
         this.saving.set(false);
         this.confirmAction.set(null);

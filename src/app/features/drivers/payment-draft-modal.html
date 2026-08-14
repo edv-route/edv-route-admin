@@ -10,12 +10,38 @@
       <!-- Two columns to keep the modal short: total · payment (same shell as the profile cobro modals) -->
       <div class="grid grid-cols-1 gap-x-6 gap-y-4 px-4 py-4 sm:grid-cols-5 sm:px-6">
         <div class="space-y-4 sm:col-span-2">
-          @if (totalUsd(); as t) {
-            <div class="flex items-center justify-between rounded-lg px-4 py-3" style="background-color: #fdfaec">
-              <span class="text-sm font-bold text-gold-900">Total a pagar</span>
-              <span class="text-2xl font-extrabold text-gold-900">${{ t }}</span>
+          <!-- Itemized breakdown (receipt-style) so the total is easy to understand -->
+          <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+            <div class="border-b border-gray-100 bg-gray-50 px-4 py-2.5 dark:border-gray-700 dark:bg-gray-700/30">
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Desglose del cobro</p>
             </div>
-          }
+            <dl class="divide-y divide-gray-100 dark:divide-gray-700">
+              @if (membershipUsd() != null) {
+                <div class="flex items-start justify-between gap-3 px-4 py-2.5">
+                  <dt class="text-sm text-gray-700 dark:text-gray-300">
+                    {{ membershipName() || 'Membresía' }}
+                    <span class="block text-xs text-gray-400">Pago único</span>
+                  </dt>
+                  <dd class="shrink-0 text-sm font-semibold text-gray-900 dark:text-white">${{ membershipUsd() }}</dd>
+                </div>
+              }
+              @if (tariffUsd() != null) {
+                <div class="flex items-start justify-between gap-3 px-4 py-2.5">
+                  <dt class="text-sm text-gray-700 dark:text-gray-300">
+                    Tarifa semanal
+                    <span class="block text-xs text-gray-400">${{ tariffUsd() }} × {{ periods() }} {{ periods() === 1 ? 'semana' : 'semanas' }}</span>
+                  </dt>
+                  <dd class="shrink-0 text-sm font-semibold text-gray-900 dark:text-white">${{ tariffLineTotal() }}</dd>
+                </div>
+              }
+              @if (totalUsd(); as t) {
+                <div class="flex items-center justify-between gap-3 px-4 py-3" style="background-color: #fdfaec">
+                  <dt class="text-sm font-bold text-gold-900">Total a pagar</dt>
+                  <dd class="shrink-0 text-2xl font-extrabold text-gold-900">${{ t }}</dd>
+                </div>
+              }
+            </dl>
+          </div>
         </div>
         <div class="sm:col-span-3">
           <app-payment-capture #pc [optional]="false" [value]="value()"
@@ -27,6 +53,13 @@
             <p class="mt-3 text-right text-xs text-gray-400">Completa los datos del pago para agregarlo.</p>
           }
         </div>
+      </div>
+      <!-- Admin toggle: approve the payment on the spot (autoApprove). Off by default.
+           Same shared component + wording as the profile payment modals. -->
+      <div class="border-t border-gray-100 px-4 py-4 dark:border-gray-700 sm:px-6">
+        <app-toggle [checked]="autoApprove()" (checkedChange)="autoApprove.set($event)"
+          label="Aprobar de inmediato"
+          hint="El pago se aprueba al instante y las facturas del alta quedan pagadas, sin pasar por «Por aprobar»." />
       </div>
       <div class="flex justify-end gap-3 border-t border-gray-100 px-4 py-4 dark:border-gray-700 sm:px-6">
         <button type="button" (click)="cancel.emit()"

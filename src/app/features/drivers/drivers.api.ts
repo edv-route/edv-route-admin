@@ -63,9 +63,16 @@ export class DriversApi {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/drivers`;
 
-  list(opts: { status?: string; search?: string; page: number; limit: number }): Observable<DriverList> {
+  list(opts: {
+    status?: string;
+    source?: string;
+    search?: string;
+    page: number;
+    limit: number;
+  }): Observable<DriverList> {
     let params = new HttpParams().set('page', opts.page).set('limit', opts.limit);
     if (opts.status) params = params.set('status', opts.status);
+    if (opts.source) params = params.set('source', opts.source);
     if (opts.search) params = params.set('search', opts.search);
     return this.http.get<DriverList>(this.baseUrl, { params });
   }
@@ -177,10 +184,54 @@ export class DriversApi {
     );
   }
 
-  /** `startMode` picks when the tariff starts: `now` (current-week Monday, active
-   *  at once) or `next_monday` (starts next Monday; driver stays `scheduled`). */
-  approve(id: string, startMode: 'now' | 'next_monday'): Observable<unknown> {
-    return this.http.post(`${this.baseUrl}/${id}/approve`, { startMode });
+  /** Approve a pending affiliate (panel). Tariff start is DECOUPLED (see startTariff). */
+  approve(id: string): Observable<unknown> {
+    return this.http.post(`${this.baseUrl}/${id}/approve`, {});
+  }
+
+  /** Set when the tariff starts ("Establecer inicio"), decoupled from approval:
+   *  `now` (current-week Monday, active) or `next_monday` (scheduled until then). */
+  startTariff(id: string, startMode: 'now' | 'next_monday'): Observable<unknown> {
+    return this.http.post(`${this.baseUrl}/${id}/start-tariff`, { startMode });
+  }
+
+  /** Approve an app solicitud: applicant -> approved + base debt. */
+  approveApplication(id: string): Observable<DriverDetail> {
+    return this.http.post<DriverDetail>(`${this.baseUrl}/${id}/approve-application`, {});
+  }
+
+  /** Reject an app solicitud: applicant -> rejected. Kept on file; no self-service
+   *  re-registration — only reopenApplication brings it back. */
+  rejectApplication(id: string): Observable<unknown> {
+    return this.http.post(`${this.baseUrl}/${id}/reject-application`, {});
+  }
+
+  /** Reopen a rejected solicitud (rejected -> applicant) for another review. */
+  reopenApplication(id: string): Observable<unknown> {
+    return this.http.post(`${this.baseUrl}/${id}/reopen-application`, {});
+  }
+
+  /** Approve/reject a document (solicitudes-app). Reject requires a reason. */
+  reviewDocument(documentId: string, approve: boolean, reason?: string): Observable<unknown> {
+    const action = approve ? 'approve' : 'reject';
+    return this.http.post(
+      `${environment.apiUrl}/documents/${documentId}/${action}`,
+      approve ? {} : { reason },
+    );
+  }
+
+  /** Approve/reject a vehicle (solicitudes-app). Reject requires a reason. */
+  reviewVehicle(
+    driverId: string,
+    vehicleId: string,
+    approve: boolean,
+    reason?: string,
+  ): Observable<unknown> {
+    const action = approve ? 'approve' : 'reject';
+    return this.http.post(
+      `${this.baseUrl}/${driverId}/vehicles/${vehicleId}/${action}`,
+      approve ? {} : { reason },
+    );
   }
 
   /** A different planId turns the renewal into a plan change. */
@@ -232,29 +283,6 @@ export class DriversApi {
   /** Lifts the pause: paused -> approved + available, tariff resumes running. */
   resume(id: string): Observable<unknown> {
     return this.http.post(`${this.baseUrl}/${id}/resume`, {});
-  }
-
-  /**
-   * External payment (v8): money handed to the admin outside the system.
-   * Settles the outstanding charges (arrears + penalty) and issues their
-   * invoice; the debt engine then derives the driver out of overdue/penalized.
-   */
-  registerExternalPayment(
-    id: string,
-    note: string | null,
-    meta: PaymentMeta = {},
-  ): Observable<{
-    invoiceNumber: string;
-    primaryInvoiceId: string | null;
-    settledCharges: number;
-    totalUsd: string;
-  }> {
-    return this.http.post<{
-      invoiceNumber: string;
-      primaryInvoiceId: string | null;
-      settledCharges: number;
-      totalUsd: string;
-    }>(`${this.baseUrl}/${id}/external-payment`, { note, ...meta });
   }
 
   /** Manual reactivation (v8): back on the road now (requires debt settled). */

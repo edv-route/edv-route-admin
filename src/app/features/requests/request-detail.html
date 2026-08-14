@@ -1,0 +1,263 @@
+<!--
+  Solicitud detail (solicitudes-app). Review screen for an app applicant: personal
+  data + documents + vehicles, each approvable/rejectable (rejection with a reason
+  the applicant sees). No money sections — applicants have no debt/tariff yet. The
+  "Aprobar solicitud" button unlocks only when every document and vehicle is approved.
+-->
+@if (loading()) {
+  <p class="rounded-lg bg-white p-6 text-sm text-gray-500 shadow-sm dark:bg-gray-800 dark:text-gray-400">Cargando…</p>
+} @else if (driver(); as d) {
+
+  @if (notice(); as message) {
+    <p class="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-800 dark:bg-green-950/40 dark:text-green-300">
+      {{ message }}
+    </p>
+  }
+  @if (error(); as message) {
+    <p class="mb-4 rounded-lg bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 dark:bg-gray-700 dark:text-primary-300">
+      {{ message }}
+    </p>
+  }
+
+  @if (d.status !== 'applicant') {
+    <!-- Already processed (approved → affiliate, or rejected). -->
+    <div class="rounded-lg bg-white p-6 text-center shadow-sm dark:bg-gray-800">
+      <h1 class="text-lg font-bold text-gray-900 dark:text-white">Esta solicitud ya fue procesada</h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        {{ d.status === 'rejected' ? 'La solicitud fue rechazada.' : 'El solicitante ya es afiliado.' }}
+      </p>
+      <div class="mt-4 flex justify-center gap-3">
+        <a routerLink="/requests" class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+          Volver a Solicitudes
+        </a>
+        @if (d.status === 'rejected') {
+          <button type="button" (click)="confirm.set('reopen')" [disabled]="saving()"
+            class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+            Reabrir solicitud
+          </button>
+        } @else {
+          <a [routerLink]="['/drivers', d.userId]" class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800">
+            Ver afiliado
+          </a>
+        }
+      </div>
+    </div>
+  } @else {
+
+    <!-- Header + solicitud actions -->
+    <header class="mb-4 flex flex-wrap items-start justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700 dark:bg-gray-700 dark:text-gold-400">
+          {{ initials(d.fullName) }}
+        </span>
+        <div>
+          <a routerLink="/requests" class="text-xs font-medium text-gray-400 hover:underline">← Solicitudes</a>
+          <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ d.fullName }}</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Solicitud en revisión · {{ d.nationalId ?? 'sin cédula' }}</p>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" (click)="confirm.set('reject')" [disabled]="saving()"
+          class="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40">
+          Rechazar solicitud
+        </button>
+        <button type="button" (click)="confirm.set('approve')" [disabled]="saving() || !canApprove()"
+          [title]="canApprove() ? '' : 'Aprueba todos los documentos y vehículos primero'"
+          class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50">
+          Aprobar solicitud
+        </button>
+      </div>
+    </header>
+
+    @if (!canApprove()) {
+      <p class="mb-4 rounded-lg border border-gold-200 bg-gold-50 px-4 py-3 text-sm text-gold-800 dark:border-gold-400/40 dark:bg-gold-400/10 dark:text-gold-300">
+        Para aprobar la solicitud, primero aprueba <strong>todos los documentos</strong> y <strong>todos los vehículos</strong> (debe haber al menos uno).
+      </p>
+    }
+
+    <!-- Personal data -->
+    <section class="mb-4 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-6">
+      <h2 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Datos del solicitante</h2>
+      <dl class="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div><dt class="text-xs text-gray-400">Nombre completo</dt><dd class="text-sm text-gray-900 dark:text-white">{{ d.fullName }}</dd></div>
+        <div><dt class="text-xs text-gray-400">Cédula</dt><dd class="text-sm text-gray-900 dark:text-white">{{ d.nationalId ?? '—' }}</dd></div>
+        <div><dt class="text-xs text-gray-400">Nacimiento</dt><dd class="text-sm text-gray-900 dark:text-white">{{ d.birthDate ? (d.birthDate | date: 'dd/MM/yyyy') : '—' }}</dd></div>
+        <div><dt class="text-xs text-gray-400">Teléfono</dt><dd class="text-sm text-gray-900 dark:text-white">{{ d.phone ?? '—' }}</dd></div>
+        <div><dt class="text-xs text-gray-400">Email</dt><dd class="text-sm text-gray-900 dark:text-white">{{ d.email ?? '—' }}</dd></div>
+        <div class="sm:col-span-2 lg:col-span-3"><dt class="text-xs text-gray-400">Dirección</dt><dd class="text-sm text-gray-900 dark:text-white">{{ d.address ?? '—' }}</dd></div>
+      </dl>
+    </section>
+
+    <!-- Driver documents -->
+    <section class="mb-4 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-6">
+      <h2 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Documentos del solicitante</h2>
+      @if (driverDocuments().length === 0) {
+        <p class="text-sm text-gray-400">Aún no ha subido documentos.</p>
+      } @else {
+        <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+          @for (doc of driverDocuments(); track doc.id) {
+            <ng-container *ngTemplateOutlet="docRow; context: { $implicit: doc }" />
+          }
+        </ul>
+      }
+    </section>
+
+    <!-- Vehicles + their documents -->
+    <section class="mb-4 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 md:p-6">
+      <h2 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Vehículos</h2>
+      @if (d.vehicles.length === 0) {
+        <p class="text-sm text-gray-400">No ha registrado vehículos. La solicitud no puede aprobarse sin al menos uno.</p>
+      } @else {
+        <div class="space-y-4">
+          @for (v of d.vehicles; track v.id) {
+            <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                    {{ v.brand || '—' }} {{ v.model || '' }} @if (v.year) { · {{ v.year }} }
+                  </p>
+                  <p class="text-xs text-gray-400">
+                    Placa {{ v.plate || '—' }} @if (v.color) { · {{ v.color }} }
+                  </p>
+                  @switch (v.approvalStatus) {
+                    @case ('approved') { <span class="mt-1 inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-900 dark:text-green-300">Aprobado</span> }
+                    @case ('rejected') { <span class="mt-1 inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-900 dark:text-red-300">Rechazado</span> }
+                    @default { <span class="mt-1 inline-block rounded-full bg-gold-200 px-2 py-0.5 text-xs font-semibold text-gold-800">En revisión</span> }
+                  }
+                  @if (v.approvalStatus === 'rejected' && v.rejectionReason) {
+                    <p class="mt-1 text-xs text-red-600 dark:text-red-400">Motivo: {{ v.rejectionReason }}</p>
+                  }
+                </div>
+                <div class="flex shrink-0 gap-2">
+                  @if (v.approvalStatus !== 'approved') {
+                    <button type="button" (click)="approveVehicle(v)" [disabled]="saving()"
+                      class="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50">Aprobar</button>
+                  }
+                  @if (v.approvalStatus !== 'rejected') {
+                    <button type="button" (click)="openReject({ kind: 'vehicle', id: v.id, label: 'el vehículo ' + (v.plate || v.brand || '') })" [disabled]="saving()"
+                      class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40">Rechazar</button>
+                  }
+                </div>
+              </div>
+              <!-- Vehicle documents -->
+              @if (vehicleDocuments(v.id).length > 0) {
+                <ul class="mt-3 divide-y divide-gray-100 border-t border-gray-100 dark:divide-gray-700 dark:border-gray-700">
+                  @for (doc of vehicleDocuments(v.id); track doc.id) {
+                    <ng-container *ngTemplateOutlet="docRow; context: { $implicit: doc }" />
+                  }
+                </ul>
+              }
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  <!-- Reusable document row -->
+  <ng-template #docRow let-doc>
+    <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+      <div class="min-w-0">
+        <p class="text-sm font-medium text-gray-900 dark:text-white">{{ doc.requirementName }}</p>
+        @switch (doc.approvalStatus) {
+          @case ('approved') { <span class="inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-900 dark:text-green-300">Aprobado</span> }
+          @case ('rejected') { <span class="inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-900 dark:text-red-300">Rechazado</span> }
+          @default { <span class="inline-block rounded-full bg-gold-200 px-2 py-0.5 text-xs font-semibold text-gold-800">En revisión</span> }
+        }
+        @if (!doc.fileUrl) { <span class="ml-1 text-xs text-gray-400">· sin archivo</span> }
+        @if (doc.approvalStatus === 'rejected' && doc.rejectionReason) {
+          <p class="mt-0.5 text-xs text-red-600 dark:text-red-400">Motivo: {{ doc.rejectionReason }}</p>
+        }
+      </div>
+      <div class="flex shrink-0 gap-2">
+        @if (doc.fileUrl) {
+          <button type="button" (click)="openFile(doc)"
+            class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Ver</button>
+        }
+        @if (doc.approvalStatus !== 'approved') {
+          <button type="button" (click)="approveDocument(doc)" [disabled]="saving() || !doc.fileUrl"
+            [title]="doc.fileUrl ? '' : 'No hay archivo que aprobar'"
+            class="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50">Aprobar</button>
+        }
+        @if (doc.approvalStatus !== 'rejected') {
+          <button type="button" (click)="openReject({ kind: 'document', id: doc.id, label: doc.requirementName })" [disabled]="saving()"
+            class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40">Rechazar</button>
+        }
+      </div>
+    </li>
+  </ng-template>
+
+  <!-- Reject-with-reason modal (document or vehicle) -->
+  @if (rejectTarget(); as target) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4">
+      <div class="w-full max-w-md rounded-lg bg-white p-5 shadow-lg dark:bg-gray-800 sm:p-6">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white">Rechazar {{ target.label }}</h2>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Indica el motivo; el solicitante lo verá para corregir y volver a enviarlo.</p>
+        <textarea [(ngModel)]="rejectReason" rows="3" maxlength="500" placeholder="Motivo del rechazo…"
+          class="mt-3 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
+        <div class="mt-4 flex justify-center gap-3">
+          <button type="button" (click)="closeReject()" [disabled]="saving()"
+            class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Cancelar</button>
+          <button type="button" (click)="confirmReject()" [disabled]="saving() || !rejectReason.trim()" [appBusy]="saving()"
+            class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+            {{ saving() ? 'Procesando…' : 'Rechazar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Approve / reject the whole solicitud -->
+  @if (confirm(); as action) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4">
+      <div class="w-full max-w-sm rounded-lg bg-white p-5 text-center shadow-lg dark:bg-gray-800 sm:p-6">
+        @switch (action) {
+          @case ('approve') {
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">¿Aprobar la solicitud?</h2>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              El solicitante pasará a <strong>afiliado</strong> con su <strong>deuda de alta</strong> (membresía + 1 semana). Luego podrá pagar desde la app.
+            </p>
+          }
+          @case ('reopen') {
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">¿Reabrir la solicitud?</h2>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Volverá a <strong>revisión</strong> con sus documentos y vehículos tal como quedaron. Podrás aprobarla o rechazarla de nuevo.
+            </p>
+          }
+          @default {
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">¿Rechazar la solicitud?</h2>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Quedará <strong>archivada</strong>. El solicitante <strong>no</strong> podrá volver a registrarse solo; deberá contactar al administrador para reabrirla.
+            </p>
+          }
+        }
+        <div class="mt-5 flex justify-center gap-3">
+          <button type="button" (click)="confirm.set(null)" [disabled]="saving()"
+            class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Cancelar</button>
+          @switch (action) {
+            @case ('approve') {
+              <button type="button" (click)="approveApplication()" [disabled]="saving()" [appBusy]="saving()"
+                class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+                {{ saving() ? 'Procesando…' : 'Aprobar' }}
+              </button>
+            }
+            @case ('reopen') {
+              <button type="button" (click)="reopenApplication()" [disabled]="saving()" [appBusy]="saving()"
+                class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+                {{ saving() ? 'Procesando…' : 'Reabrir' }}
+              </button>
+            }
+            @default {
+              <button type="button" (click)="rejectApplication()" [disabled]="saving()" [appBusy]="saving()"
+                class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">
+                {{ saving() ? 'Procesando…' : 'Rechazar' }}
+              </button>
+            }
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <app-file-viewer [state]="viewer()" (close)="viewer.set(null)" />
+}
