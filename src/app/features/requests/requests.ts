@@ -7,6 +7,7 @@ import type { DriverListItem } from '../../core/models/driver.model';
 import { DriversApi } from '../drivers/drivers.api';
 import { SkeletonRows } from '../../shared/components/skeleton-rows';
 import { Pagination } from '../../shared/components/pagination';
+import { Avatar } from '../../shared/components/avatar';
 import { Select, type SelectOption } from '../../shared/components/select';
 
 const PAGE_SIZE = 10;
@@ -22,7 +23,7 @@ type RequestStatus = 'applicant' | 'rejected';
  */
 @Component({
   selector: 'app-requests',
-  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows, Pagination, Select],
+  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows, Pagination, Select, Avatar],
   templateUrl: './requests.html',
 })
 export class Requests {
@@ -99,9 +100,4 @@ export class Requests {
     this.load();
   }
 
-  /** Initials for the avatar chip in the name cell (Pro table pattern). */
-  initials(fullName: string): string {
-    const parts = fullName.trim().split(/\s+/);
-    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
-  }
 }

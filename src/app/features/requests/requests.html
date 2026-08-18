@@ -69,9 +69,12 @@
             <tr class="border-b border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
               <th scope="row" class="whitespace-nowrap px-4 py-3 font-medium text-gray-900 dark:text-white">
                 <div class="flex items-center">
-                  <span class="mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700 dark:bg-gray-700 dark:text-gold-400">
-                    {{ initials(item.fullName) }}
-                  </span>
+                  <app-avatar
+                    class="mr-3"
+                    [photoUrl]="item.photoUrl"
+                    [fullName]="item.fullName"
+                    size="sm"
+                  />
                   <a [routerLink]="['/requests', item.userId]" class="hover:underline">{{ item.fullName }}</a>
                 </div>
               </th>

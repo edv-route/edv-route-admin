@@ -37,6 +37,8 @@ export interface DriverListItem {
   debtUsd: string;
   /** A payment (v9 submission) is awaiting admin review. */
   hasPendingSubmission: boolean;
+  /** Profile photo as a SIGNED URL (expires); null = show initials instead. */
+  photoUrl: string | null;
 }
 
 export interface DriverList {

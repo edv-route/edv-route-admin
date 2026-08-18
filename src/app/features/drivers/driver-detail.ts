@@ -22,6 +22,7 @@ import { DatePicker } from '../../shared/components/date-picker';
 import { PasswordInput } from '../../shared/components/password-input';
 import { Select, type SelectOption } from '../../shared/components/select';
 import { Toggle } from '../../shared/components/toggle';
+import { Avatar } from '../../shared/components/avatar';
 import { INPUT_FILTERS } from '../../shared/directives/input-filters';
 import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
 import { DocumentsApi, validateFile } from '../documents/documents.api';
@@ -63,7 +64,7 @@ interface ConfirmDialog {
 
 @Component({
   selector: 'app-driver-detail',
-  imports: [FormsModule, DatePipe, RouterLink, Select, ...INPUT_FILTERS, PasswordInput, DatePicker, PaymentCapture, FileViewer, VehicleForm, Toggle, DriverStatusCard, DriverTariffCard, PaymentReviewModal, BusyDirective, FolioPipe],
+  imports: [FormsModule, DatePipe, RouterLink, Select, ...INPUT_FILTERS, PasswordInput, DatePicker, PaymentCapture, FileViewer, VehicleForm, Toggle, DriverStatusCard, DriverTariffCard, PaymentReviewModal, BusyDirective, FolioPipe, Avatar],
   templateUrl: './driver-detail.html',
 })
 export class DriverDetail {
@@ -993,12 +994,6 @@ export class DriverDetail {
         },
         error: (err: HttpErrorResponse) => this.fail(err),
       });
-  }
-
-  /** Initials for the header avatar chip (Pro profile pattern). */
-  initials(): string {
-    const parts = (this.driver()?.fullName ?? '').trim().split(/\s+/);
-    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
   }
 
   backToList(): void {

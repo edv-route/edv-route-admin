@@ -47,9 +47,7 @@
     <!-- Header + solicitud actions -->
     <header class="mb-4 flex flex-wrap items-start justify-between gap-3">
       <div class="flex items-center gap-3">
-        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700 dark:bg-gray-700 dark:text-gold-400">
-          {{ initials(d.fullName) }}
-        </span>
+        <app-avatar [photoUrl]="d.photoUrl" [fullName]="d.fullName" size="md" />
         <div>
           <a routerLink="/requests" class="text-xs font-medium text-gray-400 hover:underline">← Solicitudes</a>
           <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ d.fullName }}</h1>

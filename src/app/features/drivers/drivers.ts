@@ -11,6 +11,7 @@ import {
 import { DriversApi } from './drivers.api';
 import { SkeletonRows } from '../../shared/components/skeleton-rows';
 import { Pagination } from '../../shared/components/pagination';
+import { Avatar } from '../../shared/components/avatar';
 
 const PAGE_SIZE = 10;
 
@@ -39,7 +40,7 @@ interface StatusBadge {
 
 @Component({
   selector: 'app-drivers',
-  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows, Pagination],
+  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows, Pagination, Avatar],
   templateUrl: './drivers.html',
 })
 export class Drivers {
@@ -111,12 +112,6 @@ export class Drivers {
     if (page < 1 || page > this.totalPages) return;
     this.page.set(page);
     this.load();
-  }
-
-  /** Initials for the avatar chip in the name cell (Pro table pattern). */
-  initials(fullName: string): string {
-    const parts = fullName.trim().split(/\s+/);
-    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
   }
 
   /** Pill color classes per tone. */

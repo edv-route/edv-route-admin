@@ -9,6 +9,7 @@ import { DriversApi } from '../drivers/drivers.api';
 import { DocumentsApi } from '../documents/documents.api';
 import { RequirementsApi } from '../requirements/requirements.api';
 import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
+import { Avatar } from '../../shared/components/avatar';
 import { BusyDirective } from '../../shared/directives/busy.directive';
 
 /** Reject-with-reason target: a document or a vehicle of the solicitud. */
@@ -28,7 +29,7 @@ interface RejectTarget {
  */
 @Component({
   selector: 'app-request-detail',
-  imports: [DatePipe, NgTemplateOutlet, RouterLink, FormsModule, FileViewer, BusyDirective],
+  imports: [DatePipe, NgTemplateOutlet, RouterLink, FormsModule, FileViewer, BusyDirective, Avatar],
   templateUrl: './request-detail.html',
 })
 export class RequestDetail implements OnInit {
@@ -138,11 +139,6 @@ export class RequestDetail implements OnInit {
 
     return driverCovered && vehiclesCovered;
   });
-
-  initials(fullName: string): string {
-    const parts = fullName.trim().split(/\s+/);
-    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
-  }
 
   // ── File viewer ──
 

@@ -11,9 +11,7 @@
 } @else if (driver(); as d) {
   <header class="mb-6 mt-1 flex flex-wrap items-start justify-between gap-3">
     <div class="flex items-start gap-4">
-      <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary-100 text-lg font-bold text-primary-700 dark:bg-gray-700 dark:text-gold-400">
-        {{ initials() }}
-      </span>
+      <app-avatar [photoUrl]="d.photoUrl" [fullName]="d.fullName" size="lg" />
       <div>
       <div class="flex items-center gap-3">
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ d.fullName }}</h1>
