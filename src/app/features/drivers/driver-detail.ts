@@ -24,7 +24,8 @@ import { Select, type SelectOption } from '../../shared/components/select';
 import { Toggle } from '../../shared/components/toggle';
 import { Avatar } from '../../shared/components/avatar';
 import { INPUT_FILTERS } from '../../shared/directives/input-filters';
-import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
+import { FileViewer } from '../../shared/components/file-viewer';
+import { DocumentFileService } from '../documents/document-file.service';
 import { DocumentsApi, validateFile } from '../documents/documents.api';
 import { PaymentSubmissionsApi } from '../billing/payment-submissions.api';
 import { PaymentReviewModal } from '../billing/payment-review-modal';
@@ -75,6 +76,8 @@ export class DriverDetail {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  /** Viewing/downloading private files is shared with the solicitud detail. */
+  protected readonly files = inject(DocumentFileService);
 
   readonly id = input.required<string>();
   readonly statusLabels = DRIVER_STATUS_LABELS;
@@ -827,32 +830,11 @@ export class DriverDetail {
     });
   }
 
-  readonly downloadingDocId = signal<string | null>(null);
   readonly deletingDocId = signal<string | null>(null);
 
   /** Human name for a vehicle's type id (Pro vehicle card). */
   vehicleTypeName(id: number | null): string {
     return this.vehicleTypes().find((t) => t.id === id)?.name ?? 'Sin definir';
-  }
-
-  /** File shown in the modal viewer (null = closed). */
-  readonly viewer = signal<FileViewerState | null>(null);
-
-  /** Opens the private file in the modal viewer through a short-lived signed URL. */
-  openFile(doc: DriverDocument): void {
-    const title = doc.requirementName;
-    this.viewer.set({ title, url: null, loading: true, error: null });
-    this.documentsApi.fileUrl(doc.id).subscribe({
-      next: ({ url }) => this.viewer.set({ title, url, loading: false, error: null }),
-      error: (err: HttpErrorResponse) =>
-        this.viewer.set({
-          title,
-          url: null,
-          loading: false,
-          error:
-            (err.error as { message?: string } | null)?.message ?? 'Error de conexión con la API',
-        }),
-    });
   }
 
   /** Removes a document (driver or vehicle) and reloads the profile. */
@@ -867,35 +849,6 @@ export class DriverDetail {
       },
       error: (err: HttpErrorResponse) => {
         this.deletingDocId.set(null);
-        this.fail(err);
-      },
-    });
-  }
-
-  /** Downloads the private file: signed URL -> blob -> save with a readable name. */
-  downloadFile(doc: DriverDocument): void {
-    if (this.downloadingDocId()) return;
-    this.error.set(null);
-    this.downloadingDocId.set(doc.id);
-    this.documentsApi.fileUrl(doc.id).subscribe({
-      next: async ({ url }) => {
-        try {
-          const blob = await (await fetch(url)).blob();
-          const ext = doc.fileUrl?.split('.').pop()?.split('?')[0] ?? 'bin';
-          const objectUrl = URL.createObjectURL(blob);
-          const anchor = document.createElement('a');
-          anchor.href = objectUrl;
-          anchor.download = `${doc.requirementName}.${ext}`.replace(/\s+/g, '-');
-          anchor.click();
-          URL.revokeObjectURL(objectUrl);
-        } catch {
-          this.error.set('No se pudo descargar el archivo. Usa «Ver» y descárgalo desde ahí.');
-        } finally {
-          this.downloadingDocId.set(null);
-        }
-      },
-      error: (err: HttpErrorResponse) => {
-        this.downloadingDocId.set(null);
         this.fail(err);
       },
     });

@@ -8,7 +8,8 @@ import type { Requirement } from '../../core/models/requirement.model';
 import { DriversApi } from '../drivers/drivers.api';
 import { DocumentsApi } from '../documents/documents.api';
 import { RequirementsApi } from '../requirements/requirements.api';
-import { FileViewer, type FileViewerState } from '../../shared/components/file-viewer';
+import { FileViewer } from '../../shared/components/file-viewer';
+import { DocumentFileService } from '../documents/document-file.service';
 import { Avatar } from '../../shared/components/avatar';
 import { BusyDirective } from '../../shared/directives/busy.directive';
 
@@ -35,6 +36,8 @@ interface RejectTarget {
 export class RequestDetail implements OnInit {
   private readonly api = inject(DriversApi);
   private readonly documentsApi = inject(DocumentsApi);
+  /** Same viewer the affiliate detail uses: one implementation, not two. */
+  protected readonly files = inject(DocumentFileService);
   private readonly requirementsApi = inject(RequirementsApi);
 
   readonly id = input.required<string>();
@@ -48,8 +51,6 @@ export class RequestDetail implements OnInit {
   /** Banner shown after approving/rejecting the whole solicitud. */
   readonly notice = signal<string | null>(null);
 
-  /** Private file shown in the modal viewer (null = closed). */
-  readonly viewer = signal<FileViewerState | null>(null);
 
   /** Reject-with-reason modal (document or vehicle); null = closed. */
   readonly rejectTarget = signal<RejectTarget | null>(null);
@@ -139,19 +140,6 @@ export class RequestDetail implements OnInit {
 
     return driverCovered && vehiclesCovered;
   });
-
-  // ── File viewer ──
-
-  openFile(doc: DriverDocument): void {
-    if (!doc.fileUrl) return;
-    const title = doc.requirementName;
-    this.viewer.set({ title, url: null, loading: true, error: null });
-    this.documentsApi.fileUrl(doc.id).subscribe({
-      next: ({ url }) => this.viewer.set({ title, url, loading: false, error: null }),
-      error: (err: HttpErrorResponse) =>
-        this.viewer.set({ title, url: null, loading: false, error: this.msg(err) }),
-    });
-  }
 
   // ── Per-item review ──
 
