@@ -10,10 +10,15 @@
           class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-gray-700">
           Rechazar
         </button>
+        <!-- Blocked: grey button + the reason IN SIGHT (below). A coloured button
+             at 50% opacity still reads as an available action, and a `title`
+             tooltip needs a mouse and a second of patience to show up. -->
         <button type="button" (click)="approve.emit()"
           [disabled]="!canApprove()"
           [title]="approveDisabledReason()"
-          class="rounded-lg bg-primary-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50">
+          [class]="canApprove()
+            ? 'rounded-lg bg-primary-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-800'
+            : 'rounded-lg bg-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'">
           Aprobar
         </button>
       }
@@ -43,6 +48,15 @@
       }
     </div>
   </div>
+
+  @if (d.status === 'pending' && !canApprove()) {
+    <p class="mt-2 flex items-start gap-1.5 rounded-lg border border-gold-200 bg-gold-50 px-3 py-2 text-xs font-medium text-gold-800 dark:border-gold-400/40 dark:bg-gold-400/10 dark:text-gold-300">
+      <svg class="mt-px h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+      </svg>
+      {{ approveDisabledReason() }}
+    </p>
+  }
 
   <!-- Status + description -->
   <div class="mt-2 flex items-center gap-2">
