@@ -1,4 +1,6 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
+import { RejectPrompt } from '../documents/reject-prompt';
+import { ReviewPromptService } from '../documents/review-prompt.service';
 import { BusyDirective } from '../../shared/directives/busy.directive';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -29,12 +31,14 @@ import { DriversApi } from './drivers.api';
  */
 @Component({
   selector: 'app-driver-vehicle-detail',
-  imports: [FormsModule, RouterLink, Select, ...INPUT_FILTERS, FileViewer, BusyDirective],
+  imports: [FormsModule, RouterLink, Select, ...INPUT_FILTERS, FileViewer, BusyDirective, RejectPrompt],
   templateUrl: './driver-vehicle-detail.html',
 })
 export class DriverVehicleDetail {
   private readonly api = inject(DriversApi);
   private readonly documentsApi = inject(DocumentsApi);
+  /** Approve/reject a vehicle or its documents, shared with the affiliate detail. */
+  protected readonly review = inject(ReviewPromptService);
 
   /** Route params (withComponentInputBinding). */
   readonly id = input.required<string>(); // driverId
@@ -51,6 +55,7 @@ export class DriverVehicleDetail {
   readonly uploadingPhoto = signal(false);
   /** Signed URLs for the vehicle photos, keyed by image id. */
   readonly imageUrls = signal<Record<string, string>>({});
+
   readonly maxPhotos = 3;
   readonly viewer = signal<FileViewerState | null>(null);
   readonly addOpen = signal(false);
@@ -285,5 +290,19 @@ export class DriverVehicleDetail {
 
   private msg(err: HttpErrorResponse): string {
     return (err.error as { message?: string } | null)?.message ?? 'Error de conexión con la API';
+  }
+  // ── Review verdict (the work is in ReviewPromptService; these only wire it
+  // to THIS screen's reload and error line). ──
+
+  approveDocument(id: string): void {
+    this.review.approveDocument(id, () => this.load(), (err) => this.fail(err));
+  }
+
+  approveVehicle(): void {
+    this.review.approveVehicle(this.id(), this.vehicleId(), () => this.load(), (err) => this.fail(err));
+  }
+
+  onRejected(): void {
+    this.load();
   }
 }

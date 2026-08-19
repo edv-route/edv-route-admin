@@ -406,9 +406,23 @@
                     } @else {
                       <span class="rounded-full bg-gold-100 px-2 py-0.5 text-[10px] font-semibold text-gold-800">Sin archivo</span>
                     }
+                    @switch (doc.approvalStatus) {
+                      @case ('approved') { <span class="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800 dark:bg-green-900 dark:text-green-300">Aprobado</span> }
+                      @case ('pending') { <span class="rounded-full bg-gold-100 px-2 py-0.5 text-[10px] font-semibold text-gold-800">Pendiente</span> }
+                      @case ('rejected') { <span class="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-800 dark:bg-red-900 dark:text-red-300">Rechazado</span> }
+                    }
                   </div>
+                  @if (doc.approvalStatus === 'rejected' && doc.rejectionReason) {
+                    <p class="mt-1 text-[11px] text-red-700 dark:text-red-400">Motivo: {{ doc.rejectionReason }}</p>
+                  }
 
                   <div class="mt-2 flex flex-wrap items-center gap-3">
+                    @if (doc.approvalStatus === 'pending' && doc.fileUrl) {
+                      <button type="button" (click)="approveDocument(doc.id)" [disabled]="review.saving()"
+                        class="rounded-lg bg-green-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-60">Aprobar</button>
+                      <button type="button" (click)="review.askDocument(doc.id, doc.requirementName)" [disabled]="review.saving()"
+                        class="rounded-lg border border-red-300 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 dark:border-red-800 dark:text-red-400">Rechazar</button>
+                    }
                     @if (doc.fileUrl) {
                       <button type="button" (click)="files.open(doc)"
                         class="inline-flex items-center gap-1 text-xs font-semibold text-primary-700 hover:underline dark:text-primary-300">
@@ -1026,3 +1040,6 @@
 @if (reviewModalId(); as sid) {
   <app-payment-review-modal [submissionId]="sid" (close)="reviewModalId.set(null)" (resolved)="onReviewResolved()" />
 }
+
+
+<app-reject-prompt (rejected)="onRejected()" (failed)="error.set($event)" />

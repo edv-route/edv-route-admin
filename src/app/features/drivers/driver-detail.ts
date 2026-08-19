@@ -26,6 +26,8 @@ import { Avatar } from '../../shared/components/avatar';
 import { INPUT_FILTERS } from '../../shared/directives/input-filters';
 import { FileViewer } from '../../shared/components/file-viewer';
 import { DocumentFileService } from '../documents/document-file.service';
+import { RejectPrompt } from '../documents/reject-prompt';
+import { ReviewPromptService } from '../documents/review-prompt.service';
 import { DocumentsApi, validateFile } from '../documents/documents.api';
 import { PaymentSubmissionsApi } from '../billing/payment-submissions.api';
 import { PaymentReviewModal } from '../billing/payment-review-modal';
@@ -65,7 +67,7 @@ interface ConfirmDialog {
 
 @Component({
   selector: 'app-driver-detail',
-  imports: [FormsModule, DatePipe, RouterLink, Select, ...INPUT_FILTERS, PasswordInput, DatePicker, PaymentCapture, FileViewer, VehicleForm, Toggle, DriverStatusCard, DriverTariffCard, PaymentReviewModal, BusyDirective, FolioPipe, Avatar],
+  imports: [FormsModule, DatePipe, RouterLink, Select, ...INPUT_FILTERS, PasswordInput, DatePicker, PaymentCapture, FileViewer, VehicleForm, Toggle, DriverStatusCard, DriverTariffCard, PaymentReviewModal, BusyDirective, FolioPipe, Avatar, RejectPrompt],
   templateUrl: './driver-detail.html',
 })
 export class DriverDetail {
@@ -78,6 +80,8 @@ export class DriverDetail {
   private readonly route = inject(ActivatedRoute);
   /** Viewing/downloading private files is shared with the solicitud detail. */
   protected readonly files = inject(DocumentFileService);
+  /** Approve/reject a document, shared with the vehicle page and the solicitud. */
+  protected readonly review = inject(ReviewPromptService);
 
   readonly id = input.required<string>();
   readonly statusLabels = DRIVER_STATUS_LABELS;
@@ -114,6 +118,7 @@ export class DriverDetail {
   readonly renewPeriods = signal(1);
   readonly renewResult = signal<string | null>(null);
   readonly uploadingDocId = signal<string | null>(null);
+
   readonly plans = signal<SubscriptionPlan[]>([]);
   /** null = keep the current plan; a number = change to that plan. */
   readonly renewPlanId = signal<number | null>(null);
@@ -958,5 +963,16 @@ export class DriverDetail {
     this.error.set(
       (err.error as { message?: string } | null)?.message ?? 'Error de conexión con la API',
     );
+  }
+
+  // ── Review verdict (the work is in ReviewPromptService; these only wire it
+  // to THIS screen's reload and error line). ──
+
+  approveDocument(id: string): void {
+    this.review.approveDocument(id, () => this.load(), (err) => this.fail(err));
+  }
+
+  onRejected(): void {
+    this.load();
   }
 }
