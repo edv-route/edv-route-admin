@@ -32,8 +32,17 @@
       }
       <!-- A verdict is firm: only a pending vehicle can be approved or rejected. -->
       @if (v.approvalStatus === 'pending') {
-        <button type="button" (click)="approveVehicle()" [disabled]="review.saving()"
-          class="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-60">Aprobar</button>
+        <button type="button" (click)="approveVehicle()"
+          [disabled]="review.saving() || blockingDocuments().length > 0"
+          [title]="blockingDocuments().length > 0
+            ? 'Primero resuelve sus documentos: ' + blockingDocuments().length + ' sin aprobar'
+            : 'Aprobar este vehículo'"
+          class="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50">Aprobar</button>
+        @if (blockingDocuments().length > 0) {
+          <span class="text-xs text-gray-500 dark:text-gray-400">
+            Faltan {{ blockingDocuments().length }} documento(s) por aprobar
+          </span>
+        }
         <button type="button" (click)="review.askVehicle(id(), vehicleId(), 'este vehículo')" [disabled]="review.saving()"
           class="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 dark:border-red-800 dark:text-red-400">Rechazar</button>
       }

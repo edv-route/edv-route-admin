@@ -71,6 +71,16 @@ export class DriverVehicleDetail {
     () => this.driver()?.vehicles.find((v) => v.id === this.vehicleId()) ?? null,
   );
   /** Documents owned by THIS vehicle. */
+  /**
+   * Documents of this vehicle still without a verdict, or rejected. A vehicle is
+   * approved by approving its PAPERS: while one of these is open there is
+   * nothing verified to approve (decisión de Luis, 2026-08-18). The backend
+   * refuses it too, so this only spares the admin a pointless click.
+   */
+  readonly blockingDocuments = computed(() =>
+    this.documents().filter((d) => d.approvalStatus !== 'approved'),
+  );
+
   readonly documents = computed(() =>
     (this.driver()?.documents ?? []).filter((d) => d.vehicleId === this.vehicleId()),
   );
