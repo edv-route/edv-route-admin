@@ -32,6 +32,8 @@ export class DriverStatusCard {
 
   readonly approve = output<void>();
   readonly reject = output<void>();
+  /** Re-issue the alta debt he lost when his receipt was reverted (bounced payment). */
+  readonly emitAltaDebt = output<void>();
   /** Suspend (approved) or reactivate (suspended) — the parent decides by status. */
   readonly suspendToggle = output<void>();
   readonly pause = output<void>();

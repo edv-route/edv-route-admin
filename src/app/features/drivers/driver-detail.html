@@ -253,6 +253,7 @@
       [driver]="d"
       [saving]="saving()"
       (approve)="openApprove()"
+      (emitAltaDebt)="emitAltaDebt()"
       (reject)="confirmAction.set('reject')"
       (suspendToggle)="askConfirm(d.status === 'suspended'
         ? { title: '¿Reactivar a ' + d.fullName + '?', message: 'El afiliado vuelve a operar y a recibir viajes.', confirmLabel: 'Reactivar', danger: false, action: 'suspend' }

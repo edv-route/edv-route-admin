@@ -474,6 +474,23 @@ export class DriverDetail {
     this.confirmAction.set('approve');
   }
 
+  /**
+   * Re-issues the alta debt of an affiliate left owing nothing by a reverted
+   * receipt (the payment bounced, so he still owes). Emits the two debt invoices
+   * again; from there he can pay from the app like any other alta.
+   */
+  emitAltaDebt(): void {
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.api.regenerateAltaDebt(this.id()).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.load();
+      },
+      error: (err: HttpErrorResponse) => this.fail(err),
+    });
+  }
+
   /** Closes the approve/reject confirmation (blocked while a request is in flight). */
   closeApprove(): void {
     if (this.saving()) return;

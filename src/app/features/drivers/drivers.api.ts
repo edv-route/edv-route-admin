@@ -195,6 +195,11 @@ export class DriversApi {
     return this.http.post(`${this.baseUrl}/${id}/start-tariff`, { startMode });
   }
 
+  /** Re-issue the alta debt of an affiliate who lost it when a receipt was reverted. */
+  regenerateAltaDebt(id: string): Observable<DriverDetail> {
+    return this.http.post<DriverDetail>(`${this.baseUrl}/${id}/alta-debt`, {});
+  }
+
   /** Approve an app solicitud: applicant -> approved + base debt. */
   approveApplication(id: string): Observable<DriverDetail> {
     return this.http.post<DriverDetail>(`${this.baseUrl}/${id}/approve-application`, {});
