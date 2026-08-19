@@ -157,8 +157,8 @@
           <li class="flex items-center justify-between gap-2 py-1.5 text-sm">
             <span class="text-red-900 dark:text-red-200">Membresía · pago único</span>
             <span class="flex items-center gap-2 font-semibold text-red-900 dark:text-red-200">
-              ${{ owedMembershipDue() }}
               <span class="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">por pagar</span>
+              ${{ owedMembershipDue() }}
             </span>
           </li>
         }
@@ -171,11 +171,11 @@
               } @else { Tarifa semanal }
             </span>
             <span class="flex items-center gap-2 font-semibold text-red-900 dark:text-red-200">
-              ${{ c.amountUsd }}
               <span class="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
                 [class]="c.status === 'overdue' ? 'bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'">
                 {{ c.status === 'overdue' ? 'vencida' : 'aún no vence' }}
               </span>
+              ${{ c.amountUsd }}
             </span>
           </li>
         }
