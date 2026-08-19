@@ -146,7 +146,7 @@
       @if (!pendingSubmission() && d.debt.weeksOwed >= d.debt.capWeeks && d.upcoming) {
         <div class="mt-2 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-800 dark:bg-red-900/40 dark:text-red-200">
           <p class="font-semibold">
-            ⚠️ El lunes {{ d.upcoming.periodStart | date: 'dd/MM/yyyy' }} a las 00:00 pasa a penalizado si no paga
+            ⚠️ El lunes {{ d.upcoming.periodStart | date: 'dd/MM/yyyy' }} a las 00:00 hrs pasa a penalizado si no paga.
           </p>
           <p class="mt-0.5">
             Deja de operar y se le emite una multa. Registrar su pago detiene el
