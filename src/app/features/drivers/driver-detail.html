@@ -182,6 +182,17 @@
           </li>
         }
       </ul>
+      <!--
+        The next week is already issued but NOT owed yet (decisión 2026-08-19):
+        it is shown apart and NOT added to the total, so the admin sees it coming
+        without confusing it with what the driver is late on.
+      -->
+      @if (d.upcoming; as up) {
+        <p class="mt-3 border-t border-red-200/70 pt-2 text-xs text-red-800/80 dark:border-red-900/40 dark:text-red-300/80">
+          Aparte: la semana del {{ up.periodStart | date: 'dd/MM' }} al {{ up.periodEnd | date: 'dd/MM' }}
+          ya está emitida (<strong>${{ up.amountUsd }}</strong>), pero aún no vence, así que no cuenta en este total.
+        </p>
+      }
     </section>
   } @else if (!pendingSubmission() && d.status !== 'rejected' && d.upcoming; as up) {
     <!-- Próximo cobro: solvente pero el cobro del lunes ya está emitido (viernes 18:00).
