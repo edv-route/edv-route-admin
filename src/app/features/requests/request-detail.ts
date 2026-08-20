@@ -12,13 +12,8 @@ import { FileViewer } from '../../shared/components/file-viewer';
 import { DocumentFileService } from '../documents/document-file.service';
 import { Avatar } from '../../shared/components/avatar';
 import { BusyDirective } from '../../shared/directives/busy.directive';
-
-/** Reject-with-reason target: a document or a vehicle of the solicitud. */
-interface RejectTarget {
-  kind: 'document' | 'vehicle';
-  id: string;
-  label: string;
-}
+import { RejectPrompt } from '../documents/reject-prompt';
+import { ReviewPromptService, type ReviewTarget } from '../documents/review-prompt.service';
 
 /**
  * Solicitud detail (solicitudes-app): the admin reviews an app applicant —
@@ -30,7 +25,7 @@ interface RejectTarget {
  */
 @Component({
   selector: 'app-request-detail',
-  imports: [DatePipe, NgTemplateOutlet, RouterLink, FormsModule, FileViewer, BusyDirective, Avatar],
+  imports: [DatePipe, NgTemplateOutlet, RouterLink, FormsModule, FileViewer, BusyDirective, Avatar, RejectPrompt],
   templateUrl: './request-detail.html',
 })
 export class RequestDetail implements OnInit {
@@ -38,6 +33,8 @@ export class RequestDetail implements OnInit {
   private readonly documentsApi = inject(DocumentsApi);
   /** Same viewer the affiliate detail uses: one implementation, not two. */
   protected readonly files = inject(DocumentFileService);
+  /** Approve/reject shared with the affiliate profile and the vehicle page. */
+  protected readonly review = inject(ReviewPromptService);
   private readonly requirementsApi = inject(RequirementsApi);
 
   readonly id = input.required<string>();
@@ -51,10 +48,6 @@ export class RequestDetail implements OnInit {
   /** Banner shown after approving/rejecting the whole solicitud. */
   readonly notice = signal<string | null>(null);
 
-
-  /** Reject-with-reason modal (document or vehicle); null = closed. */
-  readonly rejectTarget = signal<RejectTarget | null>(null);
-  rejectReason = '';
 
   /** Confirmation of approving / rejecting / reopening the whole solicitud. */
   readonly confirm = signal<'approve' | 'reject' | 'reopen' | null>(null);
@@ -142,52 +135,72 @@ export class RequestDetail implements OnInit {
   });
 
   // ── Per-item review ──
+  //
+  // Delegated to ReviewPromptService, the same one the affiliate profile and the
+  // vehicle page use. This screen carried its OWN copy — verdict, modal, reason
+  // and all — which is exactly the third copy that service was created to remove.
+  //
+  // A verdict patches the row IN PLACE. Reloading sent the solicitud back to
+  // "Cargando…" and scrolled to the top, and reviewing an applicant means
+  // approving five or six items in a row.
 
   approveDocument(doc: DriverDocument): void {
-    if (this.saving()) return;
-    this.saving.set(true);
-    this.api.reviewDocument(doc.id, true).subscribe({
-      next: () => this.reloadAfterReview(),
-      error: (err: HttpErrorResponse) => this.fail(err),
-    });
+    this.review.approveDocument(
+      doc.id,
+      () => this.patchDocument(doc.id, 'approved', null),
+      (err) => this.fail(err),
+    );
   }
 
   approveVehicle(v: DriverVehicle): void {
-    if (this.saving()) return;
-    this.saving.set(true);
-    this.api.reviewVehicle(this.id(), v.id, true).subscribe({
-      next: () => this.reloadAfterReview(),
-      error: (err: HttpErrorResponse) => this.fail(err),
-    });
+    this.review.approveVehicle(
+      this.id(),
+      v.id,
+      () => this.patchVehicle(v.id, 'approved', null),
+      (err) => this.fail(err),
+    );
   }
 
-  /** Opens the reject-with-reason modal for a document or a vehicle. */
-  openReject(target: RejectTarget): void {
-    this.rejectReason = '';
-    this.rejectTarget.set(target);
+  onRejected(target: ReviewTarget, reason: string): void {
+    if (target.kind === 'document') {
+      this.patchDocument(target.id, 'rejected', reason);
+    } else {
+      this.patchVehicle(target.id, 'rejected', reason);
+    }
   }
 
-  closeReject(): void {
-    if (this.saving()) return;
-    this.rejectTarget.set(null);
+  private patchDocument(
+    id: string,
+    approvalStatus: 'approved' | 'rejected',
+    rejectionReason: string | null,
+  ): void {
+    this.driver.update((d) =>
+      d
+        ? {
+            ...d,
+            documents: d.documents.map((doc) =>
+              doc.id === id ? { ...doc, approvalStatus, rejectionReason } : doc,
+            ),
+          }
+        : d,
+    );
   }
 
-  confirmReject(): void {
-    const target = this.rejectTarget();
-    const reason = this.rejectReason.trim();
-    if (!target || !reason || this.saving()) return;
-    this.saving.set(true);
-    const req =
-      target.kind === 'document'
-        ? this.api.reviewDocument(target.id, false, reason)
-        : this.api.reviewVehicle(this.id(), target.id, false, reason);
-    req.subscribe({
-      next: () => {
-        this.rejectTarget.set(null);
-        this.reloadAfterReview();
-      },
-      error: (err: HttpErrorResponse) => this.fail(err),
-    });
+  private patchVehicle(
+    id: string,
+    approvalStatus: 'approved' | 'rejected',
+    rejectionReason: string | null,
+  ): void {
+    this.driver.update((d) =>
+      d
+        ? {
+            ...d,
+            vehicles: d.vehicles.map((v) =>
+              v.id === id ? { ...v, approvalStatus, rejectionReason } : v,
+            ),
+          }
+        : d,
+    );
   }
 
   // ── Whole solicitud ──
@@ -244,11 +257,6 @@ export class RequestDetail implements OnInit {
         this.fail(err);
       },
     });
-  }
-
-  private reloadAfterReview(): void {
-    this.saving.set(false);
-    this.load();
   }
 
   private fail(err: HttpErrorResponse): void {

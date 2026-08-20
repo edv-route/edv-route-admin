@@ -134,10 +134,20 @@
                   <!-- A verdict is final: approve/reject only while the vehicle is
                        under review. -->
                   @if (v.approvalStatus !== 'approved' && v.approvalStatus !== 'rejected') {
-                    <button type="button" (click)="approveVehicle(v)" [disabled]="saving()"
-                      class="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50">Aprobar</button>
-                    <button type="button" (click)="openReject({ kind: 'vehicle', id: v.id, label: 'el vehículo ' + (v.plate || v.brand || '') })" [disabled]="saving()"
-                      class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40">Rechazar</button>
+                    <button type="button" (click)="approveVehicle(v)"
+                      [disabled]="review.saving()" title="Aprobar" aria-label="Aprobar vehículo"
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-green-600 text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50">
+                      @if (review.isBusy(v.id)) {
+                        <svg class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"/></svg>
+                      } @else {
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      }
+                    </button>
+                    <button type="button" (click)="review.askVehicle(id(), v.id, 'el vehículo ' + (v.plate || v.brand || ''))"
+                      [disabled]="review.saving()" title="Rechazar" aria-label="Rechazar vehículo"
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-300 text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                    </button>
                   }
                 </div>
               </div>
@@ -173,43 +183,35 @@
       </div>
       <div class="flex shrink-0 gap-2">
         @if (doc.fileUrl) {
-          <button type="button" (click)="files.open(doc)"
-            class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Ver</button>
+          <button type="button" (click)="files.open(doc)" title="Ver" aria-label="Ver documento"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-primary-700 transition hover:bg-primary-50 dark:border-gray-600 dark:text-primary-300">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          </button>
         }
         <!-- A verdict is final: approve/reject only while under review. It reopens
              (back to 'pending') when the applicant re-uploads the file. -->
         @if (doc.approvalStatus !== 'approved' && doc.approvalStatus !== 'rejected') {
-          <button type="button" (click)="approveDocument(doc)" [disabled]="saving() || !doc.fileUrl"
-            [title]="doc.fileUrl ? '' : 'No hay archivo que aprobar'"
+          <button type="button" (click)="approveDocument(doc)"
+            [disabled]="review.saving() || !doc.fileUrl"
+            [title]="doc.fileUrl ? 'Aprobar' : 'No hay archivo que aprobar'" aria-label="Aprobar"
             [class]="doc.fileUrl
-              ? 'rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-60'
-              : 'rounded-lg bg-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'">Aprobar</button>
-          <button type="button" (click)="openReject({ kind: 'document', id: doc.id, label: doc.requirementName })" [disabled]="saving()"
-            class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40">Rechazar</button>
+              ? 'inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50'
+              : 'inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-700'">
+            @if (review.isBusy(doc.id)) {
+              <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"/></svg>
+            } @else {
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+            }
+          </button>
+          <button type="button" (click)="review.askDocument(doc.id, doc.requirementName)"
+            [disabled]="review.saving()" title="Rechazar" aria-label="Rechazar"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-300 text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-300">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+          </button>
         }
       </div>
     </li>
   </ng-template>
-
-  <!-- Reject-with-reason modal (document or vehicle) -->
-  @if (rejectTarget(); as target) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4">
-      <div class="w-full max-w-md rounded-lg bg-white p-5 shadow-lg dark:bg-gray-800 sm:p-6">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-white">Rechazar {{ target.label }}</h2>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Indica el motivo; el solicitante lo verá para corregir y volver a enviarlo.</p>
-        <textarea [(ngModel)]="rejectReason" rows="3" maxlength="500" placeholder="Motivo del rechazo…"
-          class="mt-3 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
-        <div class="mt-4 flex justify-center gap-3">
-          <button type="button" (click)="closeReject()" [disabled]="saving()"
-            class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">Cancelar</button>
-          <button type="button" (click)="confirmReject()" [disabled]="saving() || !rejectReason.trim()" [appBusy]="saving()"
-            class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
-            {{ saving() ? 'Procesando…' : 'Rechazar' }}
-          </button>
-        </div>
-      </div>
-    </div>
-  }
 
   <!-- Approve / reject the whole solicitud -->
   @if (confirm(); as action) {
@@ -265,3 +267,6 @@
 
   <app-file-viewer [state]="files.viewer()" (close)="files.closeViewer()" />
 }
+
+<!-- Rejection dialog, shared with the affiliate profile and the vehicle page. -->
+<app-reject-prompt (rejected)="onRejected($event.target, $event.reason)" (failed)="error.set($event)" />
