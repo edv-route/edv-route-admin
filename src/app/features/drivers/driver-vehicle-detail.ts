@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { MAX_VEHICLE_PHOTOS } from '../../core/models/vehicle-photos';
 import { RejectPrompt } from '../documents/reject-prompt';
-import { ReviewPromptService } from '../documents/review-prompt.service';
+import { ReviewPromptService, type ReviewTarget } from '../documents/review-prompt.service';
 import { BusyDirective } from '../../shared/directives/busy.directive';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -303,17 +303,70 @@ export class DriverVehicleDetail {
     return (err.error as { message?: string } | null)?.message ?? 'Error de conexión con la API';
   }
   // ── Review verdict (the work is in ReviewPromptService; these only wire it
-  // to THIS screen's reload and error line). ──
+  // to THIS screen's state and error line). ──
+  //
+  // A verdict patches the row IN PLACE instead of reloading the page. Reloading
+  // threw the whole screen back to "Cargando…", scrolled it to the top and made
+  // approving three documents feel like three page loads — and the server tells
+  // us exactly what changed, so there is nothing to go and re-read.
 
   approveDocument(id: string): void {
-    this.review.approveDocument(id, () => this.load(), (err) => this.fail(err));
+    this.review.approveDocument(
+      id,
+      () => this.patchDocument(id, 'approved', null),
+      (err) => this.fail(err),
+    );
   }
 
   approveVehicle(): void {
-    this.review.approveVehicle(this.id(), this.vehicleId(), () => this.load(), (err) => this.fail(err));
+    this.review.approveVehicle(
+      this.id(),
+      this.vehicleId(),
+      () => this.patchVehicle('approved', null),
+      (err) => this.fail(err),
+    );
   }
 
-  onRejected(): void {
-    this.load();
+  /** A rejection landed: the prompt knows what it judged, so patch just that. */
+  onRejected(target: ReviewTarget, reason: string): void {
+    if (target.kind === 'document') {
+      this.patchDocument(target.id, 'rejected', reason);
+    } else {
+      this.patchVehicle('rejected', reason);
+    }
+  }
+
+  private patchDocument(
+    id: string,
+    approvalStatus: 'approved' | 'rejected',
+    rejectionReason: string | null,
+  ): void {
+    this.driver.update((d) =>
+      d
+        ? {
+            ...d,
+            documents: d.documents.map((doc) =>
+              doc.id === id ? { ...doc, approvalStatus, rejectionReason } : doc,
+            ),
+          }
+        : d,
+    );
+  }
+
+  private patchVehicle(
+    approvalStatus: 'approved' | 'rejected',
+    rejectionReason: string | null,
+  ): void {
+    const vehicleId = this.vehicleId();
+    this.driver.update((d) =>
+      d
+        ? {
+            ...d,
+            vehicles: d.vehicles.map((v) =>
+              v.id === vehicleId ? { ...v, approvalStatus, rejectionReason } : v,
+            ),
+          }
+        : d,
+    );
   }
 }

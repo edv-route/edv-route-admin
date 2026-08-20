@@ -27,7 +27,7 @@ import { INPUT_FILTERS } from '../../shared/directives/input-filters';
 import { FileViewer } from '../../shared/components/file-viewer';
 import { DocumentFileService } from '../documents/document-file.service';
 import { RejectPrompt } from '../documents/reject-prompt';
-import { ReviewPromptService } from '../documents/review-prompt.service';
+import { ReviewPromptService, type ReviewTarget } from '../documents/review-prompt.service';
 import { DocumentsApi, validateFile } from '../documents/documents.api';
 import { PaymentSubmissionsApi } from '../billing/payment-submissions.api';
 import { PaymentReviewModal } from '../billing/payment-review-modal';
@@ -985,11 +985,51 @@ export class DriverDetail {
   // ── Review verdict (the work is in ReviewPromptService; these only wire it
   // to THIS screen's reload and error line). ──
 
+  // A verdict patches the row IN PLACE. Reloading sent the whole profile back to
+  // "Cargando…" and scrolled it to the top, so approving three documents felt
+  // like three page loads — and the server already told us what changed.
+
   approveDocument(id: string): void {
-    this.review.approveDocument(id, () => this.load(), (err) => this.fail(err));
+    this.review.approveDocument(
+      id,
+      () => this.patchDocument(id, 'approved', null),
+      (err) => this.fail(err),
+    );
   }
 
-  onRejected(): void {
-    this.load();
+  onRejected(target: ReviewTarget, reason: string): void {
+    if (target.kind === 'document') {
+      this.patchDocument(target.id, 'rejected', reason);
+    } else {
+      this.driver.update((d) =>
+        d
+          ? {
+              ...d,
+              vehicles: d.vehicles.map((v) =>
+                v.id === target.id
+                  ? { ...v, approvalStatus: 'rejected' as const, rejectionReason: reason }
+                  : v,
+              ),
+            }
+          : d,
+      );
+    }
+  }
+
+  private patchDocument(
+    id: string,
+    approvalStatus: 'approved' | 'rejected',
+    rejectionReason: string | null,
+  ): void {
+    this.driver.update((d) =>
+      d
+        ? {
+            ...d,
+            documents: d.documents.map((doc) =>
+              doc.id === id ? { ...doc, approvalStatus, rejectionReason } : doc,
+            ),
+          }
+        : d,
+    );
   }
 }

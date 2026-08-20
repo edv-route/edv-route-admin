@@ -34,6 +34,18 @@ export class ReviewPromptService {
   /** A verdict is in flight: freezes the buttons. */
   readonly saving = signal(false);
 
+  /**
+   * WHICH item is being judged right now (document or vehicle id), so the
+   * spinner sits on the button that was pressed instead of greying out the whole
+   * card. With a single global flag every row looked equally busy and none of
+   * them showed what was actually happening.
+   */
+  readonly busyId = signal<string | null>(null);
+
+  isBusy(id: string): boolean {
+    return this.busyId() === id;
+  }
+
   reason = '';
 
   askDocument(id: string, label: string): void {
@@ -52,7 +64,7 @@ export class ReviewPromptService {
   }
 
   approveDocument(id: string, done: () => void, fail: (err: HttpErrorResponse) => void): void {
-    this.run(this.api.reviewDocument(id, true), done, fail);
+    this.run(this.api.reviewDocument(id, true), id, done, fail);
   }
 
   approveVehicle(
@@ -61,7 +73,7 @@ export class ReviewPromptService {
     done: () => void,
     fail: (err: HttpErrorResponse) => void,
   ): void {
-    this.run(this.api.reviewVehicle(driverId, vehicleId, true), done, fail);
+    this.run(this.api.reviewVehicle(driverId, vehicleId, true), vehicleId, done, fail);
   }
 
   /** Sends the rejection with its reason. Does nothing without one. */
@@ -73,7 +85,7 @@ export class ReviewPromptService {
       target.kind === 'document'
         ? this.api.reviewDocument(target.id, false, reason)
         : this.api.reviewVehicle(target.driverId!, target.id, false, reason);
-    this.run(request, () => {
+    this.run(request, target.id, () => {
       this.target.set(null);
       done();
     }, fail);
@@ -81,18 +93,22 @@ export class ReviewPromptService {
 
   private run(
     request: ReturnType<DriversApi['reviewDocument']>,
+    targetId: string,
     done: () => void,
     fail: (err: HttpErrorResponse) => void,
   ): void {
     if (this.saving()) return;
     this.saving.set(true);
+    this.busyId.set(targetId);
     request.subscribe({
       next: () => {
         this.saving.set(false);
+        this.busyId.set(null);
         done();
       },
       error: (err: HttpErrorResponse) => {
         this.saving.set(false);
+        this.busyId.set(null);
         fail(err);
       },
     });

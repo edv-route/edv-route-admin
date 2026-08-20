@@ -1,6 +1,6 @@
 import { Component, inject, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ReviewPromptService } from './review-prompt.service';
+import { ReviewPromptService, type ReviewTarget } from './review-prompt.service';
 
 /**
  * The "why are you rejecting this" dialog, shared by every screen that gives a
@@ -55,15 +55,21 @@ import { ReviewPromptService } from './review-prompt.service';
 export class RejectPrompt {
   protected readonly review = inject(ReviewPromptService);
 
-  /** Emitted once the rejection lands, so the host reloads its data. */
-  readonly rejected = output<void>();
+  /**
+   * Emitted once the rejection lands, carrying WHAT was rejected and why, so the
+   * host can patch that row in place instead of reloading its whole screen.
+   */
+  readonly rejected = output<{ target: ReviewTarget; reason: string }>();
 
   /** Emitted with the backend's message when it fails. */
   readonly failed = output<string>();
 
   protected confirm(): void {
+    // Captured BEFORE sending: the service clears the target on success.
+    const target = this.review.target()!;
+    const reason = this.review.reason.trim();
     this.review.confirmReject(
-      () => this.rejected.emit(),
+      () => this.rejected.emit({ target, reason }),
       (err) =>
         this.failed.emit(
           (err.error as { message?: string } | null)?.message ?? 'Error de conexión con la API',
