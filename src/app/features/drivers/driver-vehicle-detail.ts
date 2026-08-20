@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
+import { MAX_VEHICLE_PHOTOS } from '../../core/models/vehicle-photos';
 import { RejectPrompt } from '../documents/reject-prompt';
 import { ReviewPromptService } from '../documents/review-prompt.service';
 import { BusyDirective } from '../../shared/directives/busy.directive';
@@ -56,7 +57,7 @@ export class DriverVehicleDetail {
   /** Signed URLs for the vehicle photos, keyed by image id. */
   readonly imageUrls = signal<Record<string, string>>({});
 
-  readonly maxPhotos = 3;
+  readonly maxPhotos = MAX_VEHICLE_PHOTOS;
   readonly viewer = signal<FileViewerState | null>(null);
   readonly addOpen = signal(false);
   docRequirementId: number | null = null;
@@ -143,7 +144,7 @@ export class DriverVehicleDetail {
     input.value = '';
     const v = this.vehicle();
     if (!v || this.uploadingPhoto()) return;
-    const slots = this.maxPhotos - v.images.length;
+    const slots = Math.max(0, this.maxPhotos - v.images.length);
     const toUpload = files.slice(0, slots).filter((f) => {
       if (!['image/jpeg', 'image/png'].includes(f.type)) {
         this.error.set('Las fotos deben ser JPG o PNG.');

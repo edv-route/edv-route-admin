@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, type OnInit, output, signal } from '@angular/core';
+import { MAX_VEHICLE_PHOTOS } from '../../core/models/vehicle-photos';
 import { FormsModule } from '@angular/forms';
 import type { VehicleType } from '../../core/models/vehicle-type.model';
 import { VehicleTypesApi } from '../vehicle-types/vehicle-types.api';
@@ -7,7 +8,7 @@ import { INPUT_FILTERS } from '../../shared/directives/input-filters';
 import { vehicleYearOptions } from './vehicle-year';
 import type { DocDraft } from './document-draft-modal';
 
-const MAX_PHOTOS = 3;
+const MAX_PHOTOS = MAX_VEHICLE_PHOTOS;
 const IMAGE_TYPES = ['image/jpeg', 'image/png'];
 
 /** A vehicle photo queued in the wizard; the File is uploaded after the alta. */
@@ -115,7 +116,7 @@ export class VehicleDraftModal implements OnInit {
     this.error.set(null);
     for (const file of files) {
       if (this.photos().length >= MAX_PHOTOS) {
-        this.error.set(`Máximo ${MAX_PHOTOS} fotos por vehículo`);
+        this.error.set('Solo se admite una foto por vehículo');
         break;
       }
       if (!IMAGE_TYPES.includes(file.type)) {

@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { MAX_VEHICLE_PHOTOS } from '../../core/models/vehicle-photos';
 import { BusyDirective } from '../../shared/directives/busy.directive';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -11,7 +12,7 @@ import { INPUT_FILTERS } from '../../shared/directives/input-filters';
 import { vehicleYearOptions } from './vehicle-year';
 import { DriversApi } from './drivers.api';
 
-const MAX_PHOTOS = 3;
+const MAX_PHOTOS = MAX_VEHICLE_PHOTOS;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const IMAGE_TYPES = ['image/jpeg', 'image/png'];
 
@@ -75,7 +76,7 @@ export class VehicleForm {
     this.error.set(null);
     for (const file of files) {
       if (this.photos().length >= MAX_PHOTOS) {
-        this.error.set(`Máximo ${MAX_PHOTOS} fotos por vehículo`);
+        this.error.set('Solo se admite una foto por vehículo');
         break;
       }
       const invalid = this.validateImage(file);

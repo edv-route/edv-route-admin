@@ -84,7 +84,7 @@
       <div class="mt-5 border-t border-gray-100 pt-4 dark:border-gray-700">
         <div class="mb-2 flex items-center justify-between">
           <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Fotos</p>
-          <span class="text-xs text-gray-400">{{ v.images.length }}/{{ maxPhotos }}</span>
+          <span class="text-xs text-gray-400">{{ v.images.length > maxPhotos ? v.images.length : v.images.length + '/' + maxPhotos }}</span>
         </div>
         @if (v.images.length > 0) {
           <div class="mb-3 grid grid-cols-2 gap-3">
@@ -106,9 +106,9 @@
         @if (v.images.length < maxPhotos) {
           <label class="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-5 text-center hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700/40 dark:hover:bg-gray-700">
             <svg class="mb-1.5 h-7 w-7 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" /></svg>
-            <p class="text-sm text-gray-500 dark:text-gray-400"><span class="font-semibold text-primary-700 dark:text-primary-300">{{ uploadingPhoto() ? 'Subiendo…' : 'Clic para subir fotos' }}</span></p>
+            <p class="text-sm text-gray-500 dark:text-gray-400"><span class="font-semibold text-primary-700 dark:text-primary-300">{{ uploadingPhoto() ? 'Subiendo…' : 'Clic para subir la foto' }}</span></p>
             <p class="mt-0.5 text-xs text-gray-400">JPG o PNG · máx 10 MB</p>
-            <input type="file" class="hidden" accept="image/jpeg,image/png" multiple (change)="onPhotoSelected($event)" />
+            <input type="file" class="hidden" accept="image/jpeg,image/png" (change)="onPhotoSelected($event)" />
           </label>
         }
       </div>
