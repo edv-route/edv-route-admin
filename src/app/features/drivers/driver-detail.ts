@@ -178,10 +178,10 @@ export class DriverDetail {
 
   /** v9: a payment awaiting admin review — hides the pay button, shows "en revisión". */
   readonly pendingSubmission = computed(() => this.driver()?.pendingSubmission ?? null);
-  /** v9: the last submission was rejected and none newer — drives the rejection message. */
-  readonly rejectedSubmission = computed(() =>
-    this.pendingSubmission() ? null : (this.driver()?.rejectedSubmission ?? null),
-  );
+  // `rejectedSubmission` was read here to paint a permanent banner; the banner is
+  // gone (2026-08-21) and so is the computed. The API still sends the field —
+  // the APP needs it, since it is the only channel by which the driver learns his
+  // payment was turned down and why.
 
   /** Invoice ids reserved by ALL pending payments (union, from the backend):
    *  multiple pending payments may each cover different invoices (2026-08-12). */
@@ -224,8 +224,12 @@ export class DriverDetail {
   /** The review modal approved the payment: close it and refresh the profile,
    *  auto-offering "Establecer inicio" when the tariff start becomes due (same
    *  path as approving from the detail page's ?start=1 navigation). */
+  /**
+   * The verdict landed. Refresh, but do NOT close: the modal is showing its own
+   * confirmation and the admin closes it himself. Closing here would snatch the
+   * notice away the instant it appeared.
+   */
   onReviewResolved(): void {
-    this.reviewModalId.set(null);
     this.reloadThenMaybeStartTariff();
   }
   /** Human label for a submission purpose ("Pago de deuda", "Alta…"). */

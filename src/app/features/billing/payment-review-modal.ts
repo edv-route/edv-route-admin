@@ -50,6 +50,16 @@ export class PaymentReviewModal implements OnInit {
   /** Reason typed for a rejection (required by the backend). */
   rejectReason = '';
 
+  /**
+   * The verdict LANDED, and this modal now confirms it instead of closing.
+   *
+   * The affiliate's profile used to carry a permanent «Pago rechazado» banner
+   * that stayed there for good, repeating two lines the admin already knew and
+   * taking room from what he actually reads (2026-08-21). The verdict is a
+   * moment, not a state of the profile: it is said once, where it happened.
+   */
+  readonly done = signal<'approve' | 'reject' | null>(null);
+
   readonly purposeLabel = computed(() => {
     const d = this.detail();
     return d ? (SUBMISSION_PURPOSE_LABELS[d.purpose] ?? 'Pago') : '';
@@ -98,7 +108,7 @@ export class PaymentReviewModal implements OnInit {
     this.saving.set(true);
     this.actionError.set(null);
     this.api.approve(d.id).subscribe({
-      next: () => this.resolved.emit(),
+      next: () => this.finish('approve'),
       error: (err: HttpErrorResponse) => this.failAction(err, 'No se pudo aprobar el pago.'),
     });
   }
@@ -116,9 +126,20 @@ export class PaymentReviewModal implements OnInit {
     this.saving.set(true);
     this.actionError.set(null);
     this.api.reject(d.id, reason).subscribe({
-      next: () => this.resolved.emit(),
+      next: () => this.finish('reject'),
       error: (err: HttpErrorResponse) => this.failAction(err, 'No se pudo rechazar el pago.'),
     });
+  }
+
+  /**
+   * Shows the outcome INSIDE the modal and tells the parent to refresh straight
+   * away, so the figures behind are already fresh when the admin closes it.
+   */
+  private finish(verdict: 'approve' | 'reject'): void {
+    this.saving.set(false);
+    this.action.set(null);
+    this.done.set(verdict);
+    this.resolved.emit();
   }
 
   /** Surfaces an action error and releases the in-flight guard, leaving the confirm

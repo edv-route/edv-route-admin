@@ -114,15 +114,13 @@
       }
     </section>
   }
-  @if (rejectedSubmission(); as rej) {
-    <section class="mb-4 rounded-lg border border-red-300 bg-red-100 p-4 dark:border-red-900 dark:bg-red-950/40 md:p-5">
-      <h2 class="font-bold text-red-900 dark:text-red-200">Pago rechazado</h2>
-      <p class="mt-0.5 text-sm text-red-800 dark:text-red-300">
-        Su pago fue rechazado, genere uno nuevo o póngase en contacto con el administrador.
-        @if (rej.rejectionReason) { <span class="mt-1 block text-xs">Motivo: {{ rej.rejectionReason }}</span> }
-      </p>
-    </section>
-  }
+<!--
+    The permanent «Pago rechazado» banner lived here and was removed (2026-08-21,
+    decisión de Luis): a verdict is a MOMENT, not a state of the profile. It said
+    two lines the admin already knew, forever, above everything he actually reads.
+    It is now confirmed once inside the review modal, where he pressed the button,
+    and the rejection keeps its full trace in Historial de pagos.
+  -->
   @if (hasRemainingDebt() && d.status !== 'rejected') {
     <section class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30 md:p-5">
       <h2 class="font-bold text-red-900 dark:text-red-200">Deuda pendiente</h2>
