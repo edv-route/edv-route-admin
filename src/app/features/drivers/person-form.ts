@@ -149,9 +149,10 @@ export function composePerson(f: PersonFormFields, opts: ComposeOptions = {}): C
     }
   }
 
-  // Email is mandatory when creating (requireCredentials); editing an existing
-  // affiliate keeps it optional so legacy records without email can still be saved.
-  if (opts.requireCredentials && !f.email.trim()) {
+  // Email is mandatory ALWAYS - creating and editing alike. It is the channel a
+  // forgotten password is recovered through, so an affiliate without one has no way
+  // back into the app; editing used to allow blanking it, which quietly undid that.
+  if (!f.email.trim()) {
     return { ok: false, error: 'El correo electrónico es obligatorio.' };
   }
   if (f.email.trim() && !EMAIL_VALID.test(f.email.trim())) {
@@ -224,7 +225,7 @@ export function composePerson(f: PersonFormFields, opts: ComposeOptions = {}): C
       secondLastName: f.secondLastName.trim() || null,
       birthDate: f.birthDate || null,
       address: f.address.trim() || null,
-      email: f.email.trim() || null,
+      email: f.email.trim(),
       phone,
       nationalId,
       password,
