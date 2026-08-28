@@ -381,23 +381,22 @@ export class MapView {
     const el = document.createElement("div");
     el.textContent = String(group.members.length);
     el.title = group.members.map((m) => m.initials).join(", ");
-    el.style.cssText = [
-      "width:38px",
-      "height:38px",
-      "border-radius:9999px",
-      "background:" + BRAND_RED,
-      "border:3px solid #ffffff",
-      "box-shadow:0 1px 6px rgba(0,0,0,.35)",
-      "display:flex",
-      "align-items:center",
-      "justify-content:center",
-      "font-size:13px",
-      "font-weight:700",
-      "font-family:Montserrat,sans-serif",
-      "color:#ffffff",
-      "cursor:pointer",
-      "user-select:none",
-    ].join(";");
+    // Same rule as styleElement: never cssText on a placed element.
+    el.style.width = "38px";
+    el.style.height = "38px";
+    el.style.borderRadius = "9999px";
+    el.style.background = BRAND_RED;
+    el.style.border = "3px solid #ffffff";
+    el.style.boxShadow = "0 1px 6px rgba(0,0,0,.35)";
+    el.style.display = "flex";
+    el.style.alignItems = "center";
+    el.style.justifyContent = "center";
+    el.style.fontSize = "13px";
+    el.style.fontWeight = "700";
+    el.style.fontFamily = "Montserrat, sans-serif";
+    el.style.color = "#ffffff";
+    el.style.cursor = "pointer";
+    el.style.userSelect = "none";
     el.addEventListener("click", (event) => {
       event.stopPropagation();
       // Zoom in on the pile: at some zoom level they stop overlapping and
@@ -460,26 +459,35 @@ export class MapView {
     }
   }
 
+  /**
+   * Paints a pin for its state.
+   *
+   * ⚠️ Properties are set ONE BY ONE on purpose. Assigning `style.cssText`
+   * wipes every inline style on the element — including the `transform`
+   * MapLibre uses to place it — so restyling an already-placed pin sent it to
+   * the top-left corner of the map until the next repaint. That is exactly
+   * what happened when a card was opened and closed.
+   */
   private styleElement(el: HTMLElement, marker: MapMarker, selected: boolean): void {
     const size = selected ? 34 : 26;
     el.textContent = marker.initials;
-    el.style.cssText = [
-      `width:${size}px`,
-      `height:${size}px`,
-      'border-radius:9999px',
-      `background:${selected ? BRAND_RED : TONE_COLORS[marker.tone]}`,
-      'border:3px solid #ffffff',
-      `box-shadow:0 1px 4px rgba(0,0,0,.35)${selected ? ',0 0 0 8px rgba(146,6,6,.18)' : ''}`,
-      'display:flex',
-      'align-items:center',
-      'justify-content:center',
-      `font-size:${selected ? 11 : 10}px`,
-      'font-weight:700',
-      'font-family:Montserrat,sans-serif',
-      'color:#ffffff',
-      'cursor:pointer',
-      'user-select:none',
-    ].join(';');
+    el.style.width = `${size}px`;
+    el.style.height = `${size}px`;
+    el.style.borderRadius = "9999px";
+    el.style.background = selected ? BRAND_RED : TONE_COLORS[marker.tone];
+    el.style.border = "3px solid #ffffff";
+    el.style.boxShadow = selected
+      ? "0 1px 4px rgba(0,0,0,.35), 0 0 0 8px rgba(146,6,6,.18)"
+      : "0 1px 4px rgba(0,0,0,.35)";
+    el.style.display = "flex";
+    el.style.alignItems = "center";
+    el.style.justifyContent = "center";
+    el.style.fontSize = selected ? "11px" : "10px";
+    el.style.fontWeight = "700";
+    el.style.fontFamily = "Montserrat, sans-serif";
+    el.style.color = "#ffffff";
+    el.style.cursor = "pointer";
+    el.style.userSelect = "none";
   }
 
   /** Trail lines and the accuracy circle, as GeoJSON sources. */
