@@ -120,6 +120,7 @@
         [accuracy]="selectedAccuracy()"
         [dark]="dark()"
         (markerSelect)="select($event)"
+        (backgroundClick)="clearSelection()"
         (renderProblem)="mapProblem.set($event)"
       />
 

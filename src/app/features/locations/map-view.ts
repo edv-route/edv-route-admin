@@ -132,6 +132,11 @@ export class MapView {
   readonly markerSelect = output<string>();
   /** Fires when the map ended up painting nothing, with the measurements. */
   readonly renderProblem = output<string>();
+  /**
+   * Fired when the map itself is clicked — never a pin, because pins stop
+   * the event. It is what lets clicking empty space dismiss a card.
+   */
+  readonly backgroundClick = output<void>();
 
   private map: MapLibreMap | null = null;
   private readonly pins = new Map<string, MapLibreMarker>();
@@ -275,6 +280,7 @@ export class MapView {
     // sources and layers need putting back.
     // Grouping is computed in screen space, so it has to be redone whenever
     // the camera moves. Cheap: it is one projection per affiliate.
+    map.on('click', () => this.backgroundClick.emit());
     map.on('moveend', () => this.syncMarkers());
     map.on('zoomend', () => this.syncMarkers());
 

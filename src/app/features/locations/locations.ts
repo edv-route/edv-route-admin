@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, inject, signal, viewChild } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -204,6 +204,18 @@ export class Locations {
   onSearch(): void {
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.searchTerm.set(this.search);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.clearSelection();
+  }
+
+  /** Dismisses the open card: clicking empty map, or Escape. */
+  clearSelection(): void {
+    if (this.selectedId() === null) return;
+    this.selectedId.set(null);
+    this.address.set(null);
   }
 
   select(userId: string): void {
