@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -30,6 +30,7 @@ const DELAYED_THRESHOLD_SECONDS = 120;
 export class DriverTrail {
   private readonly api = inject(LocationsApi);
   private readonly driversApi = inject(DriversApi);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly mapView = viewChild(MapView);
 
   /** Bound from the route (`withComponentInputBinding`). */
@@ -41,6 +42,13 @@ export class DriverTrail {
   readonly error = signal<string | null>(null);
   /** Set when the map itself could not paint. Never leave a blank rectangle mute. */
   readonly mapProblem = signal<string | null>(null);
+
+  /**
+   * Marks which request is the current one. Stepping through days quickly
+   * fires several at once and they do NOT come back in order: without this, a
+   * slow answer for Tuesday can land after Wednesday and paint the wrong day.
+   */
+  private pendingKey = '';
 
   /** The day being looked at, in the browser's own timezone. */
   readonly day = signal<Date>(startOfToday());
@@ -116,9 +124,13 @@ export class DriverTrail {
       attributes: true,
       attributeFilter: ['class'],
     });
+    // Without this it keeps observing <html> long after leaving the screen.
+    this.destroyRef.onDestroy(() => themeWatcher.disconnect());
   }
 
   private load(driverId: string, day: Date): void {
+    const key = dayKey(driverId, day);
+    this.pendingKey = key;
     this.loading.set(true);
     this.error.set(null);
     const from = new Date(day);
@@ -127,13 +139,12 @@ export class DriverTrail {
 
     this.api.trail(driverId, from, to).subscribe({
       next: (result) => {
+        if (this.pendingKey !== key) return; // ya se mira otro dia
         this.result.set(result);
         this.loading.set(false);
-        // The camera follows the day being looked at, unlike the live map where
-        // re-framing would fight whoever is reading it.
-        queueMicrotask(() => this.mapView()?.fitToContent());
       },
       error: (err: HttpErrorResponse) => {
+        if (this.pendingKey !== key) return;
         this.loading.set(false);
         this.result.set(null);
         this.error.set(
@@ -182,6 +193,11 @@ export class DriverTrail {
     suspended: 'bg-gray-200 text-gray-700',
     paused: 'bg-gray-100 text-gray-600',
   };
+}
+
+/** Identifies a request by driver and local calendar day. */
+function dayKey(driverId: string, day: Date): string {
+  return driverId + ':' + day.getFullYear() + '-' + (day.getMonth() + 1) + '-' + day.getDate();
 }
 
 /** Midnight today, in the browser's timezone — which is the user's day. */

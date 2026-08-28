@@ -116,6 +116,12 @@ export class MapView {
    */
   private fitted = false;
   private styleReady = false;
+  /**
+   * Theme the CURRENT style was built with. A theme flip that arrives while a
+   * style is still loading cannot be applied yet, and without remembering it
+   * the map would stay on the wrong style until the user toggled twice.
+   */
+  private appliedDark = false;
 
   constructor() {
     effect(() => {
@@ -129,9 +135,9 @@ export class MapView {
     effect(() => {
       const dark = this.dark();
       const map = this.map;
-      if (!map || !this.styleReady) return;
-      this.styleReady = false;
-      map.setStyle(dark ? STYLE_DARK : STYLE_LIGHT);
+      // Not ready yet: style.load reconciles it, so the flip is never lost.
+      if (!map || !this.styleReady || dark === this.appliedDark) return;
+      this.applyStyle(map, dark);
     });
 
     effect(() => {
@@ -145,9 +151,13 @@ export class MapView {
     });
 
     effect(() => {
-      this.trail();
+      const trail = this.trail();
       this.accuracy();
-      if (this.map && this.styleReady) this.paintShapes();
+      if (!this.map || !this.styleReady) return;
+      this.paintShapes();
+      // A trail is a whole day being swapped in: the camera SHOULD follow it,
+      // unlike the live map where re-framing would fight the operator.
+      if (trail) this.fitToContent();
     });
 
     this.destroyRef.onDestroy(() => {
@@ -210,7 +220,15 @@ export class MapView {
     this.destroyRef.onDestroy(() => pending.disconnect());
   }
 
+  /** Single path for swapping the basemap style, so the flag cannot drift. */
+  private applyStyle(map: MapLibreMap, dark: boolean): void {
+    this.appliedDark = dark;
+    this.styleReady = false;
+    map.setStyle(dark ? STYLE_DARK : STYLE_LIGHT);
+  }
+
   private create(container: HTMLDivElement, dark: boolean): void {
+    this.appliedDark = dark;
     const map = new MapLibreMap({
       container,
       style: dark ? STYLE_DARK : STYLE_LIGHT,
@@ -228,6 +246,11 @@ export class MapView {
     // sources and layers need putting back.
     map.on('style.load', () => {
       this.styleReady = true;
+      // The theme may have flipped while this style was in flight.
+      if (this.dark() !== this.appliedDark) {
+        this.applyStyle(map, this.dark());
+        return;
+      }
       // Belt and braces: the box may have grown between construction and the
       // style landing, and a stale measurement paints nothing.
       map.resize();
