@@ -13,6 +13,7 @@ import {
   Map as MapLibreMap,
   Marker as MapLibreMarker,
   NavigationControl,
+  setWorkerUrl,
 } from 'maplibre-gl';
 import type { GeoJSONSource } from 'maplibre-gl';
 import type { Feature, FeatureCollection } from 'geojson';
@@ -29,6 +30,20 @@ import type { Feature, FeatureCollection } from 'geojson';
  * commercial use, and its TileJSON carries the CARTO + OpenStreetMap credit the
  * licence requires, which MapLibre renders on its own.
  */
+
+/**
+ * Where the tile-processing worker lives.
+ *
+ * MapLibre derives this from its own module URL, which after bundling
+ * points at an Angular chunk — so it asks for a file the build never emitted.
+ * The request then 404s (dev) or is answered with index.html by the SPA
+ * fallback (production), and MapLibre goes quiet: it loads the style, the tile
+ * index and the sprites on the main thread and never requests a single tile,
+ * painting an empty canvas WITHOUT raising an error. Pointing it at a copy we
+ * do emit (see angular.json assets) is what makes the map draw at all.
+ */
+const WORKER_URL = 'assets/maplibre-gl-worker.mjs';
+setWorkerUrl(new URL(WORKER_URL, document.baseURI).href);
 
 const STYLE_LIGHT = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 const STYLE_DARK = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
