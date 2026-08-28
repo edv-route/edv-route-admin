@@ -90,6 +90,8 @@ export class MapView {
   readonly dark = input(false);
 
   readonly markerSelect = output<string>();
+  /** Fires when the map ended up painting nothing, with the measurements. */
+  readonly renderProblem = output<string>();
 
   private map: MapLibreMap | null = null;
   private readonly pins = new Map<string, MapLibreMarker>();
@@ -104,7 +106,7 @@ export class MapView {
     effect(() => {
       const el = this.hostEl()?.nativeElement;
       if (!el || this.map) return;
-      this.create(el, this.dark());
+      this.createWhenSized(el);
     });
 
     // Theme swap. setStyle drops every source and layer, so everything gets
@@ -160,6 +162,29 @@ export class MapView {
     map.fitBounds(bounds, { padding: 64, maxZoom: 15, duration: 400 });
   }
 
+  /**
+   * MapLibre measures its container ONCE, in the constructor. Built against a
+   * container that still measures zero, it keeps a zero-sized canvas: the DOM
+   * chrome (controls, attribution) lays out correctly against the real box, so
+   * the map looks alive while painting nothing and projecting every marker to
+   * the origin. Waiting for a real size removes that whole class of failure
+   * instead of trying to repair it afterwards.
+   */
+  private createWhenSized(container: HTMLDivElement): void {
+    if (container.clientWidth > 0 && container.clientHeight > 0) {
+      this.create(container, this.dark());
+      return;
+    }
+    const pending = new ResizeObserver(() => {
+      if (container.clientWidth > 0 && container.clientHeight > 0) {
+        pending.disconnect();
+        this.create(container, this.dark());
+      }
+    });
+    pending.observe(container);
+    this.destroyRef.onDestroy(() => pending.disconnect());
+  }
+
   private create(container: HTMLDivElement, dark: boolean): void {
     const map = new MapLibreMap({
       container,
@@ -178,12 +203,16 @@ export class MapView {
     // sources and layers need putting back.
     map.on('style.load', () => {
       this.styleReady = true;
+      // Belt and braces: the box may have grown between construction and the
+      // style landing, and a stale measurement paints nothing.
+      map.resize();
       this.syncMarkers();
       this.paintShapes();
       if (!this.fitted) {
         this.fitted = true;
         this.fitToContent();
       }
+      this.reportIfBlank(map, container);
     });
 
     // A map created while its container is still settling keeps a zero-sized
@@ -200,6 +229,22 @@ export class MapView {
     });
 
     this.map = map;
+  }
+
+  /**
+   * A map that renders nothing has to SAY so. A blank rectangle is
+   * indistinguishable from "there is nothing to show here", and that ambiguity
+   * is exactly what makes this kind of failure expensive to chase.
+   */
+  private reportIfBlank(map: MapLibreMap, container: HTMLDivElement): void {
+    requestAnimationFrame(() => {
+      const canvas = map.getCanvas();
+      if (canvas.width > 0 && canvas.height > 0) return;
+      this.renderProblem.emit(
+        `El mapa no pudo dibujarse (lienzo ${canvas.width}x${canvas.height}, ` +
+          `caja ${container.clientWidth}x${container.clientHeight}).`,
+      );
+    });
   }
 
   /**

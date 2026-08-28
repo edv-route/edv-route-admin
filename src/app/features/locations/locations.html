@@ -120,7 +120,15 @@
         [accuracy]="selectedAccuracy()"
         [dark]="dark()"
         (markerSelect)="select($event)"
+        (renderProblem)="mapProblem.set($event)"
       />
+
+      @if (mapProblem(); as problema) {
+        <div class="absolute inset-x-4 top-4 rounded-lg border border-gold-300 bg-gold-50 px-4 py-3">
+          <p class="text-sm font-semibold text-gold-900">El mapa no se pudo dibujar</p>
+          <p class="mt-1 text-xs text-gold-800">{{ problema }}</p>
+        </div>
+      }
 
       <!-- Selected affiliate -->
       @if (selected(); as item) {

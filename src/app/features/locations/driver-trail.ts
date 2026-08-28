@@ -39,6 +39,8 @@ export class DriverTrail {
   readonly result = signal<TrailResult | null>(null);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
+  /** Set when the map itself could not paint. Never leave a blank rectangle mute. */
+  readonly mapProblem = signal<string | null>(null);
 
   /** The day being looked at, in the browser's own timezone. */
   readonly day = signal<Date>(startOfToday());

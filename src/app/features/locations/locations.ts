@@ -45,6 +45,8 @@ export class Locations {
   readonly error = signal<string | null>(null);
   /** Kept apart from `error`: a failed refresh must not blank a working map. */
   readonly staleSince = signal<Date | null>(null);
+  /** Set when the map itself could not paint. Never leave a blank rectangle mute. */
+  readonly mapProblem = signal<string | null>(null);
   readonly lastUpdate = signal<Date | null>(null);
 
   readonly presenceFilter = signal<PresenceFilter>('');
