@@ -243,6 +243,8 @@ export class MapView {
       console.error('[map] ', event.error?.message ?? event);
     });
 
+    // SONDA TEMPORAL de diagnostico: se retira en cuanto el mapa pinte.
+    (window as unknown as { __edvMap?: unknown }).__edvMap = map;
     this.map = map;
   }
 
