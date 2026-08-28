@@ -3,7 +3,7 @@
   Flowbite Pro date-range toolbar reduced to a single day (the retention window
   is short and the question is always "where was he on this day").
 -->
-<div class="flex h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800">
+<div class="flex h-[calc(100dvh-6rem)] flex-col overflow-hidden rounded-lg lg:h-[calc(100dvh-7rem)] bg-white shadow-sm dark:bg-gray-800">
   <!-- Header -->
   <div class="px-4 pt-4 md:px-6 md:pt-5">
     <a routerLink="/locations" class="mb-2 flex w-fit items-center gap-1.5 text-sm font-medium text-primary-700 hover:underline dark:text-primary-300">
@@ -124,8 +124,8 @@
   </div>
 
   <!-- Map + timeline -->
-  <div class="flex min-h-0 flex-1 border-t border-gray-200 dark:border-gray-700">
-    <div class="relative min-w-0 flex-1">
+  <div class="flex min-h-0 flex-1 flex-col border-t border-gray-200 lg:flex-row dark:border-gray-700">
+    <div class="relative min-h-[50%] min-w-0 flex-1 lg:min-h-0">
       <app-map-view
         [markers]="markers()"
         [trail]="trail()"
@@ -153,7 +153,7 @@
       }
 
       @if (points().length > 0) {
-        <div class="absolute bottom-8 left-4 flex items-center gap-4 rounded-lg border border-gray-200 bg-white/95 px-4 py-2.5 shadow-sm dark:border-gray-600 dark:bg-gray-800/95">
+        <div class="absolute bottom-8 left-4 hidden items-center gap-4 rounded-lg sm:flex border border-gray-200 bg-white/95 px-4 py-2.5 shadow-sm dark:border-gray-600 dark:bg-gray-800/95">
           <span class="flex items-center gap-2">
             <span class="h-[3px] w-5 rounded bg-primary-700"></span>
             <span class="text-xs text-gray-600 dark:text-gray-300">Reportado al momento</span>
@@ -167,7 +167,7 @@
     </div>
 
     <!-- Timeline -->
-    <div class="flex w-80 shrink-0 flex-col border-l border-gray-200 dark:border-gray-700">
+    <div class="flex w-full shrink-0 flex-col border-t border-gray-200 lg:w-80 lg:border-l lg:border-t-0 dark:border-gray-700">
       <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
         <span class="text-sm font-semibold text-gray-900 dark:text-white">Puntos del día</span>
         @if (truncated()) {
