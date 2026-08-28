@@ -82,6 +82,14 @@ const TONE_COLORS: Record<MarkerTone, string> = {
 const BRAND_RED = '#920606';
 const BRAND_GOLD = '#ebca54';
 
+/**
+ * Pins closer than this on SCREEN get folded into one group bubble. It is a
+ * pixel distance, not a metric one, on purpose: the problem being solved is
+ * legibility (two affiliates at the same terminal hide each other), and that
+ * depends on zoom, not on how far apart they really are.
+ */
+const CLUSTER_RADIUS_PX = 34;
+
 const TRAIL_SOURCE = 'edv-trail';
 const ACCURACY_SOURCE = 'edv-accuracy';
 
@@ -110,6 +118,8 @@ export class MapView {
 
   private map: MapLibreMap | null = null;
   private readonly pins = new Map<string, MapLibreMarker>();
+  /** Group bubbles, rebuilt on every zoom/pan because they are screen-based. */
+  private readonly groups: MapLibreMarker[] = [];
   /**
    * The camera is fitted ONCE. Re-fitting on every refresh would yank the view
    * out from under whoever is reading it.
@@ -161,6 +171,8 @@ export class MapView {
     });
 
     this.destroyRef.onDestroy(() => {
+      for (const bubble of this.groups) bubble.remove();
+      this.groups.length = 0;
       for (const pin of this.pins.values()) pin.remove();
       this.pins.clear();
       this.map?.remove();
@@ -244,6 +256,11 @@ export class MapView {
 
     // Fires on first load AND after every setStyle, which is exactly when the
     // sources and layers need putting back.
+    // Grouping is computed in screen space, so it has to be redone whenever
+    // the camera moves. Cheap: it is one projection per affiliate.
+    map.on('moveend', () => this.syncMarkers());
+    map.on('zoomend', () => this.syncMarkers());
+
     map.on('style.load', () => {
       this.styleReady = true;
       // The theme may have flipped while this style was in flight.
@@ -297,13 +314,100 @@ export class MapView {
    * Wiping and rebuilding every marker on each refresh is what makes a panel
    * feel slow — far more than the number of markers ever does.
    */
+  /**
+   * Folds pins that would overlap on screen into one bubble with a count.
+   * Single-pin groups stay as normal pins, so with a spread-out fleet nothing
+   * changes; the bubbles only appear where affiliates actually pile up.
+   */
+  private clusterOf(marks: MapMarker[]): { members: MapMarker[]; lat: number; lon: number }[] {
+    const map = this.map;
+    if (!map) return marks.map((m) => ({ members: [m], lat: m.lat, lon: m.lon }));
+
+    const points = marks.map((m) => ({ m, p: map.project([m.lon, m.lat]) }));
+    const taken = new Set<number>();
+    const out: { members: MapMarker[]; lat: number; lon: number }[] = [];
+
+    for (let i = 0; i < points.length; i++) {
+      if (taken.has(i)) continue;
+      taken.add(i);
+      const group = [points[i]!];
+      for (let j = i + 1; j < points.length; j++) {
+        if (taken.has(j)) continue;
+        const dx = points[i]!.p.x - points[j]!.p.x;
+        const dy = points[i]!.p.y - points[j]!.p.y;
+        if (Math.hypot(dx, dy) <= CLUSTER_RADIUS_PX) {
+          taken.add(j);
+          group.push(points[j]!);
+        }
+      }
+      const members = group.map((g) => g.m);
+      out.push({
+        members,
+        lat: members.reduce((a, m) => a + m.lat, 0) / members.length,
+        lon: members.reduce((a, m) => a + m.lon, 0) / members.length,
+      });
+    }
+    return out;
+  }
+
+  /** Bubble showing how many affiliates are stacked here. Click zooms in. */
+  private buildGroup(group: { members: MapMarker[]; lat: number; lon: number }): void {
+    const map = this.map;
+    if (!map) return;
+    const el = document.createElement("div");
+    el.textContent = String(group.members.length);
+    el.title = group.members.map((m) => m.initials).join(", ");
+    el.style.cssText = [
+      "width:38px",
+      "height:38px",
+      "border-radius:9999px",
+      "background:" + BRAND_RED,
+      "border:3px solid #ffffff",
+      "box-shadow:0 1px 6px rgba(0,0,0,.35)",
+      "display:flex",
+      "align-items:center",
+      "justify-content:center",
+      "font-size:13px",
+      "font-weight:700",
+      "font-family:Montserrat,sans-serif",
+      "color:#ffffff",
+      "cursor:pointer",
+      "user-select:none",
+    ].join(";");
+    el.addEventListener("click", (event) => {
+      event.stopPropagation();
+      // Zoom in on the pile: at some zoom level they stop overlapping and
+      // become individually clickable, which is the whole point.
+      map.easeTo({ center: [group.lon, group.lat], zoom: Math.min(map.getZoom() + 2, 18) });
+    });
+    const bubble = new MapLibreMarker({ element: el }).setLngLat([group.lon, group.lat]);
+    bubble.addTo(map);
+    this.groups.push(bubble);
+  }
+
   private syncMarkers(): void {
     const map = this.map;
     if (!map) return;
 
-    const wanted = this.markers();
     const selected = this.selectedId();
     const seen = new Set<string>();
+
+    // Bubbles are screen-based: rebuilt from scratch, never reused.
+    for (const bubble of this.groups) bubble.remove();
+    this.groups.length = 0;
+
+    const clusters = this.clusterOf(this.markers());
+    const wanted: MapMarker[] = [];
+    for (const group of clusters) {
+      // A selected affiliate is never hidden inside a bubble: the panel is
+      // showing his card, and a card with no pin makes no sense.
+      const holdsSelected = selected !== null && group.members.some((m) => m.id === selected);
+      if (group.members.length === 1 || holdsSelected) {
+        wanted.push(...group.members);
+      } else {
+        this.buildGroup(group);
+      }
+    }
 
     for (const marker of wanted) {
       seen.add(marker.id);
