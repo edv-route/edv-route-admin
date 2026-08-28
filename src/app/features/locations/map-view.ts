@@ -45,7 +45,13 @@ import type { Feature, FeatureCollection } from 'geojson';
 const WORKER_URL = 'assets/maplibre-gl-worker.mjs';
 setWorkerUrl(new URL(WORKER_URL, document.baseURI).href);
 
-const STYLE_LIGHT = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+/**
+ * Voyager rather than Positron: same restrained CARTO family, but its streets
+ * are drawn with an outline instead of plain white on near-white. Positron is
+ * built to disappear under data — which is right for a heat map and wrong here,
+ * where the operator needs to recognise the street somebody is standing on.
+ */
+const STYLE_LIGHT = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 const STYLE_DARK = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 
 /** Caracas. Only ever seen when there is nothing to fit the camera to. */
