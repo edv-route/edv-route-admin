@@ -8,6 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 type NavIcon =
   | 'dashboard'
   | 'users'
+  | 'map-pin'
   | 'badge'
   | 'cash'
   | 'document'
@@ -74,6 +75,7 @@ export class MainLayout {
         { label: 'Dashboard', route: '/dashboard', icon: 'dashboard' },
         { label: 'Solicitudes', route: '/requests', icon: 'clipboard' },
         { label: 'Afiliados', route: '/drivers', icon: 'users' },
+        { label: 'Ubicación', route: '/locations', icon: 'map-pin' },
         { label: 'Membresía', route: '/membership', icon: 'badge' },
         { label: 'Tarifas', route: '/subscription-plans', icon: 'cash' },
         { label: 'Facturación', route: '/billing', icon: 'receipt' },

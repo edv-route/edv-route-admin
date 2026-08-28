@@ -20,6 +20,7 @@
     "@tailwindcss/postcss": "^4.3.2",
     "apexcharts": "^6.5.0",
     "flowbite": "^4.0.2",
+    "maplibre-gl": "^6.6.0",
     "postcss": "^8.5.16",
     "rxjs": "~7.8.0",
     "tailwindcss": "^4.3.2",

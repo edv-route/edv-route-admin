@@ -1,4 +1,8 @@
 @import "tailwindcss";
+/* MapLibre chrome (zoom controls, attribution). Must load before the theme
+   layer so brand rules can still override it. The CARTO + OpenStreetMap
+   credit it renders is required by the basemap licence: do not hide it. */
+@import "maplibre-gl/dist/maplibre-gl.css";
 @plugin "flowbite/plugin";
 @source "../node_modules/flowbite";
 /* Datepicker popup builds its DOM at runtime: Tailwind must scan its bundle */

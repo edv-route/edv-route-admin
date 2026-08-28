@@ -16,6 +16,10 @@ Consume el backend `edv-route-backend` (Fastify) por HTTP — **nunca toca la BD
 - **Tailwind 4 + Flowbite**. La UI se copia de la versión **Flowbite Pro** (licencia comprada) en
   `C:\Project\edv\flowbite-admin-dashboard-v2.2.0`, no de la gratis.
 - Tipografía **Montserrat**; paleta de marca (primary `#920606`, gold `#EBCA54`).
+- **MapLibre GL JS** (mapa de la sección Ubicación) con el mapa base **vectorial de CARTO**: es el
+  único gratuito que documenta el uso comercial. ⚠️ Flowbite Pro **no trae mapa geográfico** (el suyo
+  es un coropleta de países). Se monta a mano, como ApexCharts, y **solo lo descarga quien entra en
+  Ubicación** (la ruta es diferida: ~975 kB en su propio trozo).
 
 ## Arquitectura (reglas — ver también `C:\Project\edv\CLAUDE.md`)
 
@@ -48,6 +52,7 @@ Consume el backend `edv-route-backend` (Fastify) por HTTP — **nunca toca la BD
 | `/payment-methods` | `payment-methods` | Catálogo de métodos de pago |
 | `/requirements` | `requirements` | Requisitos de documentos (por origen) |
 | `/documents` | `documents` | Documentos |
+| `/locations` · `/locations/:id` | `locations` | **Ubicación**: mapa en vivo de quien está trabajando · recorrido de un afiliado por día |
 | `/vehicle-types` | `vehicle-types` | Tipos de vehículo |
 | `/trainings` | `trainings` | Capacitaciones |
 | `/admins` · `/settings` | `admins`/`settings` | Admins · Ajustes |

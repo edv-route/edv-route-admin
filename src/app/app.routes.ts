@@ -33,6 +33,15 @@ export const routes: Routes = [
           import('./features/drivers/driver-payments').then((m) => m.DriverPayments),
       },
       {
+        path: 'locations',
+        loadComponent: () => import('./features/locations/locations').then((m) => m.Locations),
+      },
+      {
+        path: 'locations/:id',
+        loadComponent: () =>
+          import('./features/locations/driver-trail').then((m) => m.DriverTrail),
+      },
+      {
         path: 'drivers/:id/vehicles/:vehicleId',
         loadComponent: () =>
           import('./features/drivers/driver-vehicle-detail').then((m) => m.DriverVehicleDetail),
