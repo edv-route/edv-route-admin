@@ -135,9 +135,13 @@ export class MapView {
     });
 
     effect(() => {
-      this.markers();
+      const marks = this.markers();
       this.selectedId();
-      if (this.map && this.styleReady) this.syncMarkers();
+      if (!this.map || !this.styleReady) return;
+      this.syncMarkers();
+      // The affiliates arrive over HTTP, after the style has settled: this is
+      // where the one-time initial framing actually becomes possible.
+      if (!this.fitted && marks.length > 0) this.fitted = this.fitToContent();
     });
 
     effect(() => {
@@ -154,20 +158,25 @@ export class MapView {
     });
   }
 
-  /** Frames every marker (or the whole trail). First paint, and the button. */
-  fitToContent(): void {
+  /**
+   * Frames every marker (or the whole trail). Returns whether it actually had
+   * anything to frame — the caller uses that to decide if the one-time initial
+   * fit is done, because marking it done with an empty map means the affiliates
+   * arrive later and the camera never goes to them.
+   */
+  fitToContent(): boolean {
     const map = this.map;
-    if (!map) return;
+    if (!map) return false;
 
     const coords: [number, number][] = this.markers().map((m) => [m.lon, m.lat]);
     const trail = this.trail();
     if (trail) coords.push(...trail.path);
     const first = coords[0];
-    if (!first) return;
+    if (!first) return false;
 
     if (coords.length === 1) {
       map.easeTo({ center: first, zoom: 15 });
-      return;
+      return true;
     }
 
     const bounds = coords.reduce(
@@ -175,6 +184,7 @@ export class MapView {
       new LngLatBounds(first, first),
     );
     map.fitBounds(bounds, { padding: 64, maxZoom: 15, duration: 400 });
+    return true;
   }
 
   /**
@@ -223,10 +233,7 @@ export class MapView {
       map.resize();
       this.syncMarkers();
       this.paintShapes();
-      if (!this.fitted) {
-        this.fitted = true;
-        this.fitToContent();
-      }
+      if (!this.fitted) this.fitted = this.fitToContent();
       this.reportIfBlank(map, container);
     });
 
@@ -243,8 +250,6 @@ export class MapView {
       console.error('[map] ', event.error?.message ?? event);
     });
 
-    // SONDA TEMPORAL de diagnostico: se retira en cuanto el mapa pinte.
-    (window as unknown as { __edvMap?: unknown }).__edvMap = map;
     this.map = map;
   }
 
