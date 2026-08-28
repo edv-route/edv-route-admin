@@ -28,4 +28,16 @@ export class LocationsApi {
     const params = new HttpParams().set('from', from.toISOString()).set('to', to.toISOString());
     return this.http.get<TrailResult>(`${this.baseUrl}/drivers/${driverId}/history`, { params });
   }
+
+  /**
+   * Street name for a coordinate.
+   *
+   * On demand ONLY: the geocoder behind this allows one request per second, so
+   * it is asked when an admin opens somebody's card — never while drawing the
+   * map, which would need seven per second and get us blocked.
+   */
+  address(lat: number, lon: number): Observable<{ label: string | null }> {
+    const params = new HttpParams().set('lat', lat).set('lon', lon);
+    return this.http.get<{ label: string | null }>(`${this.baseUrl}/address`, { params });
+  }
 }

@@ -47,6 +47,10 @@ export class Locations {
   readonly staleSince = signal<Date | null>(null);
   /** Set when the map itself could not paint. Never leave a blank rectangle mute. */
   readonly mapProblem = signal<string | null>(null);
+
+  /** Street name of the selected affiliate, resolved on demand. */
+  readonly address = signal<string | null>(null);
+  readonly addressLoading = signal(false);
   readonly lastUpdate = signal<Date | null>(null);
 
   readonly presenceFilter = signal<PresenceFilter>('');
@@ -204,6 +208,28 @@ export class Locations {
 
   select(userId: string): void {
     this.selectedId.update((current) => (current === userId ? null : userId));
+    this.resolveAddress();
+  }
+
+  /**
+   * Resolves the street for whoever is selected. Asked here and not while
+   * drawing the map because the geocoder allows one request per second.
+   */
+  private resolveAddress(): void {
+    const item = this.selected();
+    this.address.set(null);
+    if (!item) return;
+    this.addressLoading.set(true);
+    const asked = item.userId;
+    this.api.address(item.lat, item.lon).subscribe({
+      next: ({ label }) => {
+        if (this.selectedId() !== asked) return; // ya se mira a otro
+        this.address.set(label);
+        this.addressLoading.set(false);
+      },
+      // A card without a street is fine; a card that breaks is not.
+      error: () => this.addressLoading.set(false),
+    });
   }
 
   fitMap(): void {

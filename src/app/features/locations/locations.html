@@ -144,6 +144,18 @@
             </span>
           </div>
           <dl class="flex flex-col gap-2 px-4 pb-4 text-xs">
+            <div class="flex items-start justify-between gap-3">
+              <dt class="shrink-0 text-gray-500 dark:text-gray-400">Dónde</dt>
+              <dd class="text-right font-semibold text-gray-900 dark:text-white">
+                @if (addressLoading()) {
+                  <span class="font-normal text-gray-400">buscando…</span>
+                } @else if (address(); as calle) {
+                  {{ calle }}
+                } @else {
+                  <span class="font-normal text-gray-400">Sin calle conocida</span>
+                }
+              </dd>
+            </div>
             <div class="flex items-center justify-between">
               <dt class="text-gray-500 dark:text-gray-400">Última posición</dt>
               <dd class="font-semibold text-gray-900 dark:text-white">
