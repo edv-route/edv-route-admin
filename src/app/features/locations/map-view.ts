@@ -54,6 +54,17 @@ setWorkerUrl(new URL(WORKER_URL, document.baseURI).href);
 const STYLE_LIGHT = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 const STYLE_DARK = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 
+/**
+ * How much the light basemap outlines get deepened, 1 being untouched.
+ *
+ * Voyager outlines its streets in very pale tones (#e6dfcb and friends) that
+ * read fine on a phone in sunlight and wash out on an office monitor. Each
+ * colour is darkened by the SAME proportion rather than replaced by one grey,
+ * so the hierarchy survives: motorways stay amber, minor roads stay neutral,
+ * everything just gains definition. The dark basemap needs none of this.
+ */
+const LIGHT_OUTLINE_DEEPEN = 0.86;
+
 /** Caracas. Only ever seen when there is nothing to fit the camera to. */
 const FALLBACK_CENTER: [number, number] = [-66.9036, 10.4806];
 const FALLBACK_ZOOM = 11;
@@ -277,6 +288,7 @@ export class MapView {
       // Belt and braces: the box may have grown between construction and the
       // style landing, and a stale measurement paints nothing.
       map.resize();
+      if (!this.appliedDark) deepenOutlines(map);
       this.syncMarkers();
       this.paintShapes();
       if (!this.fitted) this.fitted = this.fitToContent();
@@ -582,4 +594,40 @@ export class MapView {
       ],
     };
   }
+}
+
+/**
+ * Darkens the street outlines of the light basemap in place.
+ *
+ * Only plain colour values are touched: some layers carry zoom expressions,
+ * and rewriting one of those with a flat colour would throw away the very
+ * detail this is meant to sharpen.
+ */
+function deepenOutlines(map: MapLibreMap): void {
+  for (const layer of map.getStyle().layers) {
+    if (layer.type !== 'line' || !layer.id.includes('case')) continue;
+    let current: unknown;
+    try { current = map.getPaintProperty(layer.id, 'line-color'); } catch { continue; }
+    if (typeof current !== 'string' || !current.startsWith('#')) continue;
+    try {
+      map.setPaintProperty(layer.id, 'line-color', darken(current, LIGHT_OUTLINE_DEEPEN));
+    } catch {
+      // A layer that refuses the change is not worth failing the map over.
+    }
+  }
+}
+
+/** Multiplies each channel of a #rrggbb colour, keeping its hue. */
+function darken(hex: string, factor: number): string {
+  const full =
+    hex.length === 4
+      ? '#' + hex[1]! + hex[1]! + hex[2]! + hex[2]! + hex[3]! + hex[3]!
+      : hex;
+  if (full.length !== 7) return hex;
+  const channel = (at: number): string => {
+    const value = Number.parseInt(full.slice(at, at + 2), 16);
+    if (Number.isNaN(value)) return full.slice(at, at + 2);
+    return Math.max(0, Math.min(255, Math.round(value * factor))).toString(16).padStart(2, '0');
+  };
+  return '#' + channel(1) + channel(3) + channel(5);
 }
