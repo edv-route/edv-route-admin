@@ -75,6 +75,7 @@ export class MainLayout {
         { label: 'Dashboard', route: '/dashboard', icon: 'dashboard' },
         { label: 'Solicitudes', route: '/requests', icon: 'clipboard' },
         { label: 'Afiliados', route: '/drivers', icon: 'users' },
+        { label: 'Clientes', route: '/clients', icon: 'user-circle' },
         { label: 'Ubicación', route: '/locations', icon: 'map-pin' },
         { label: 'Membresía', route: '/membership', icon: 'badge' },
         { label: 'Tarifas', route: '/subscription-plans', icon: 'cash' },
