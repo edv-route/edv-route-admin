@@ -10,8 +10,8 @@
   <div class="px-4 pt-4 md:px-6 md:pt-6">
     <h1 class="text-xl font-bold text-gray-900 dark:text-white">Clientes</h1>
     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-      Pasajeros registrados desde la app. Se registran solos, sin aprobación; la ficha de
-      detalle llega después.
+      Pasajeros registrados desde la app. Se registran solos, sin aprobación; toca un nombre
+      para abrir su ficha.
     </p>
   </div>
 
@@ -48,7 +48,7 @@
         name="search"
         [(ngModel)]="search"
         (ngModelChange)="onSearchChange()"
-        placeholder="Nombre, correo o teléfono…"
+        placeholder="Nombre, cédula, correo o teléfono…"
         class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 pl-9 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400"
       />
     </form>
@@ -60,6 +60,7 @@
       <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-400">
         <tr>
           <th scope="col" class="px-4 py-3 font-semibold">Cliente</th>
+          <th scope="col" class="px-4 py-3 font-semibold">Cédula</th>
           <th scope="col" class="px-4 py-3 font-semibold">Contacto</th>
           <th scope="col" class="px-4 py-3 font-semibold">Estado</th>
           <th scope="col" class="px-4 py-3 font-semibold">Registro</th>
@@ -67,7 +68,7 @@
       </thead>
       <tbody>
         @if (loading()) {
-          <app-skeleton-rows [cols]="4" />
+          <app-skeleton-rows [cols]="5" />
         } @else {
           @for (item of items(); track item.userId) {
             <tr class="border-b border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
@@ -79,15 +80,18 @@
                     [fullName]="item.fullName"
                     size="sm"
                   />
-                  {{ item.fullName }}
-                  @if (item.nationalId) {
+                  <a [routerLink]="['/clients', item.userId]" class="hover:underline">
+                    {{ item.fullName }}
+                  </a>
+                  @if (item.isAffiliate) {
                     <!-- The same human also drives for the gremio: worth seeing at a glance. -->
                     <span class="ml-2 rounded-full bg-gold-100 px-2 py-0.5 text-[10px] font-semibold text-gold-800">
-                      También afiliado · {{ item.nationalId }}
+                      También afiliado
                     </span>
                   }
                 </div>
               </th>
+              <td class="whitespace-nowrap px-4 py-3">{{ item.nationalId ?? '—' }}</td>
               <td class="px-4 py-3">
                 <p>{{ item.email ?? '—' }}</p>
                 <p class="text-xs text-gray-400">{{ item.phone ?? '' }}</p>
@@ -104,7 +108,7 @@
               <td class="whitespace-nowrap px-4 py-3">{{ item.createdAt | date: 'dd/MM/yyyy' }}</td>
             </tr>
           } @empty {
-            <tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">Sin resultados.</td></tr>
+            <tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">Sin resultados.</td></tr>
           }
         }
       </tbody>

@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import type { ClientList } from '../../core/models/client.model';
+import type { ClientDetail, ClientList } from '../../core/models/client.model';
 
 @Injectable({ providedIn: 'root' })
 export class ClientsApi {
@@ -19,5 +19,9 @@ export class ClientsApi {
     if (opts.status) params = params.set('status', opts.status);
     if (opts.search) params = params.set('search', opts.search);
     return this.http.get<ClientList>(this.baseUrl, { params });
+  }
+
+  detail(id: string): Observable<ClientDetail> {
+    return this.http.get<ClientDetail>(`${this.baseUrl}/${id}`);
   }
 }

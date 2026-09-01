@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import type { ClientListItem, ClientStatus } from '../../core/models/client.model';
 import { ClientsApi } from './clients.api';
 import { SkeletonRows } from '../../shared/components/skeleton-rows';
@@ -18,7 +19,7 @@ const PAGE_SIZE = 10;
  */
 @Component({
   selector: 'app-clients',
-  imports: [FormsModule, DatePipe, SkeletonRows, Pagination, Avatar],
+  imports: [FormsModule, DatePipe, RouterLink, SkeletonRows, Pagination, Avatar],
   templateUrl: './clients.html',
 })
 export class Clients {
