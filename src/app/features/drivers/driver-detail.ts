@@ -1,11 +1,10 @@
-import { Component, computed, inject, input, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { BusyDirective } from '../../shared/directives/busy.directive';
 import { HttpClient, type HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
-import { FormsModule, type NgForm } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { of, type Observable } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import type { Observable } from 'rxjs';
 import type {
   DriverDetail as DriverDetailModel,
   DriverDocument,
@@ -18,12 +17,9 @@ import { BILLING_PERIOD_LABELS } from '../../core/models/membership.model';
 import { environment } from '../../../environments/environment';
 import { RequirementsApi } from '../requirements/requirements.api';
 import { VehicleTypesApi } from '../vehicle-types/vehicle-types.api';
-import { DatePicker } from '../../shared/components/date-picker';
-import { PasswordInput } from '../../shared/components/password-input';
 import { Select, type SelectOption } from '../../shared/components/select';
 import { Toggle } from '../../shared/components/toggle';
 import { Avatar } from '../../shared/components/avatar';
-import { INPUT_FILTERS } from '../../shared/directives/input-filters';
 import { FileViewer } from '../../shared/components/file-viewer';
 import { DocumentFileService } from '../documents/document-file.service';
 import { RejectPrompt } from '../documents/reject-prompt';
@@ -40,16 +36,10 @@ import { PaymentCapture, type PaymentCaptureValue, emptyPaymentCapture } from '.
 import { VehicleForm } from './vehicle-form';
 import { DriverStatusCard } from './driver-status-card';
 import { DriverTariffCard } from './driver-tariff-card';
-import {
-  NATIONAL_ID_OPTIONS,
-  PHONE_COUNTRY_OPTIONS,
-  PHONE_OPERATOR_OPTIONS,
-  composePerson,
-  emptyPersonForm,
-  maxBirthDate,
-  parseNationalId,
-  parsePhone,
-} from './person-form';
+import { DriverEditModal } from './driver-edit-modal';
+import { DriverAddDocumentModal } from './driver-add-document-modal';
+import { IdentityReview } from '../identity/identity-review';
+import type { IdentityView } from '../../core/models/identity.model';
 
 /** One-click important actions gated behind a confirmation modal. */
 type ImportantAction = 'suspend' | 'pause' | 'resume' | 'reactivate';
@@ -67,7 +57,7 @@ interface ConfirmDialog {
 
 @Component({
   selector: 'app-driver-detail',
-  imports: [FormsModule, DatePipe, RouterLink, Select, ...INPUT_FILTERS, PasswordInput, DatePicker, PaymentCapture, FileViewer, VehicleForm, Toggle, DriverStatusCard, DriverTariffCard, PaymentReviewModal, BusyDirective, FolioPipe, Avatar, RejectPrompt],
+  imports: [FormsModule, DatePipe, RouterLink, Select, PaymentCapture, FileViewer, VehicleForm, Toggle, DriverStatusCard, DriverTariffCard, PaymentReviewModal, BusyDirective, FolioPipe, Avatar, RejectPrompt, DriverEditModal, DriverAddDocumentModal, IdentityReview],
   templateUrl: './driver-detail.html',
 })
 export class DriverDetail {
@@ -146,16 +136,6 @@ export class DriverDetail {
   // decision 2026-07-21). Both reuse the existing driver sub-endpoints.
   readonly addVehicleOpen = signal(false);
   readonly addDocOpen = signal(false);
-  docRequirementId: number | null = null;
-  docFile: File | null = null;
-  docFileName: string | null = null;
-
-  person = emptyPersonForm();
-  readonly maxBirthDate = maxBirthDate();
-  readonly nationalIdOptions = NATIONAL_ID_OPTIONS;
-  readonly phoneCountryOptions = PHONE_COUNTRY_OPTIONS;
-  readonly phoneOperatorOptions = PHONE_OPERATOR_OPTIONS;
-  private readonly editForm = viewChild<NgForm>('editForm');
 
   /** Active driver-requirements with no registered document = visibly incomplete. */
   readonly missingRequirements = computed(() => {
@@ -301,12 +281,6 @@ export class DriverDetail {
   readonly activePlans = computed(() => this.plans().filter((p) => p.active));
 
   /** app-select options (branded dropdown; native <select> is not used). */
-  readonly docRequirementOptions = computed<SelectOption[]>(() =>
-    this.missingRequirements().map((r) => ({
-      value: r.id,
-      label: r.isRequired ? `${r.name} *` : r.name,
-    })),
-  );
   readonly vehicleTypeOptions = computed<SelectOption[]>(() =>
     this.vehicleTypes().map((t) => ({ value: t.id, label: t.name })),
   );
@@ -406,54 +380,15 @@ export class DriverDetail {
     });
   }
 
+  /** "Editar datos" lives in its own component (driver-edit-modal). */
   openEdit(): void {
-    const d = this.driver();
-    if (!d) return;
-    const nationalId = parseNationalId(d.nationalId);
-    const phone = parsePhone(d.phone);
-    this.person = {
-      ...emptyPersonForm(),
-      firstName: d.firstName,
-      middleName: d.middleName ?? '',
-      lastName: d.lastName,
-      secondLastName: d.secondLastName ?? '',
-      birthDate: d.birthDate?.slice(0, 10) ?? '',
-      address: d.address ?? '',
-      email: d.email ?? '',
-      nationalIdType: nationalId.type,
-      nationalIdNumber: nationalId.number,
-      phoneOperator: phone.operator,
-      phoneNumber: phone.number,
-      // Password fields stay empty: blank = keep the current app password
-    };
     this.error.set(null);
     this.editOpen.set(true);
   }
 
-  saveEdit(): void {
-    if (this.saving()) return;
-
-    const form = this.editForm();
-    if (form?.invalid) {
-      form.control.markAllAsTouched();
-      this.error.set('Revisa los campos marcados en rojo.');
-      return;
-    }
-
-    const result = composePerson(this.person);
-    if (!result.ok) {
-      this.error.set(result.error);
-      return;
-    }
-    this.saving.set(true);
-    this.api.update(this.id(), result.input).subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.editOpen.set(false);
-        this.load();
-      },
-      error: (err: HttpErrorResponse) => this.fail(err),
-    });
+  onEdited(): void {
+    this.editOpen.set(false);
+    this.load();
   }
 
   /** Confirms a rejection. Approval goes through confirmApprove() (needs a start mode). */
@@ -475,8 +410,21 @@ export class DriverDetail {
 
   /** Opens the simple approve confirmation (start mode is DECOUPLED → startTariff). */
   openApprove(): void {
+    // Identity rule (2026-11-12): the API refuses it too; saying so here spares
+    // the confirmation dialog for an approval that cannot happen.
+    if (this.identityBlocksApproval()) {
+      this.error.set('Las fotos de identidad no están aprobadas: revísalas antes de aprobar la solicitud.');
+      return;
+    }
     this.confirmAction.set('approve');
   }
+
+  /** What the identity card loaded (it owns the photos; we only read the verdict). */
+  readonly identity = signal<IdentityView | null>(null);
+  readonly identityBlocksApproval = computed(() => {
+    const v = this.identity();
+    return !!v && v.required && v.status !== 'approved';
+  });
 
   /**
    * Re-issues the alta debt of an affiliate left owing nothing by a reverted
@@ -920,59 +868,15 @@ export class DriverDetail {
     this.load();
   }
 
+  /** "Agregar documento" lives in its own component (driver-add-document-modal). */
   openAddDocument(): void {
-    this.docRequirementId = null;
-    this.docFile = null;
-    this.docFileName = null;
     this.error.set(null);
     this.addDocOpen.set(true);
   }
 
-  onDocFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0] ?? null;
-    input.value = '';
-    if (file) {
-      const problem = validateFile(file);
-      if (problem) {
-        this.error.set(problem);
-        return;
-      }
-    }
-    this.error.set(null);
-    this.docFile = file;
-    this.docFileName = file?.name ?? null;
-  }
-
-  clearDocFile(): void {
-    this.docFile = null;
-    this.docFileName = null;
-  }
-
-  /** Registers the document metadata, then attaches its file (optional). */
-  addDocument(): void {
-    if (!this.docRequirementId || this.saving()) return;
-    this.saving.set(true);
-    this.error.set(null);
-    const file = this.docFile;
-    this.api
-      .addDocument(this.id(), {
-        requirementId: this.docRequirementId,
-        expiresAt: null,
-      })
-      .pipe(
-        switchMap((doc) =>
-          file ? this.documentsApi.uploadFile(doc.id, file).pipe(map(() => doc)) : of(doc),
-        ),
-      )
-      .subscribe({
-        next: () => {
-          this.saving.set(false);
-          this.addDocOpen.set(false);
-          this.load();
-        },
-        error: (err: HttpErrorResponse) => this.fail(err),
-      });
+  onDocumentAdded(): void {
+    this.addDocOpen.set(false);
+    this.load();
   }
 
   backToList(): void {

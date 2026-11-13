@@ -45,6 +45,13 @@
     </button>
   </div>
 
+  <!-- Fotos de verificación (2026-11-12): las de la PERSONA — si también es
+       afiliado, son las mismas de su ficha. Sin aprobación: "pedir otra foto". -->
+  <div class="mt-5">
+    <app-identity-review [userId]="c.userId" mode="client"
+      [declared]="{ fullName: c.fullName, nationalId: c.nationalId, birthDate: c.birthDate }" />
+  </div>
+
   <!-- Pestañas -->
   <div class="mt-5 flex gap-1 border-b border-gray-200 dark:border-gray-700">
     <button

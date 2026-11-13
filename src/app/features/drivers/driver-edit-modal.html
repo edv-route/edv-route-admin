@@ -1,0 +1,87 @@
+<!-- "Editar datos" of an affiliate (extracted from the profile, 2026-11-13). -->
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4">
+  <div class="w-full max-w-md rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800 sm:p-6">
+    <h2 class="text-lg font-bold text-gray-900 dark:text-white">Editar datos</h2>
+    <form #editForm="ngForm" class="mt-5 space-y-4" (ngSubmit)="save()">
+      <div class="grid grid-cols-2 gap-3">
+        <input name="firstName" type="text" required minlength="2" maxlength="80" appLetters [(ngModel)]="person.firstName" placeholder="Primer nombre *"
+          class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        <input name="lastName" type="text" required minlength="2" maxlength="80" appLetters [(ngModel)]="person.lastName" placeholder="Primer apellido *"
+          class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <input name="middleName" type="text" maxlength="80" appLetters [(ngModel)]="person.middleName" placeholder="Segundo nombre"
+          class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        <input name="secondLastName" type="text" maxlength="80" appLetters [(ngModel)]="person.secondLastName" placeholder="Segundo apellido"
+          class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <app-date-picker name="birthDate" [max]="maxBirthDate" [(ngModel)]="person.birthDate" placeholder="Fecha de nacimiento" />
+        <div class="flex gap-2">
+          <app-select
+            class="w-24 shrink-0"
+            name="nationalIdType"
+            [(ngModel)]="person.nationalIdType"
+            [options]="nationalIdOptions"
+            [compact]="true"
+            ariaLabel="Tipo de documento de identidad"
+          />
+          <input name="nationalIdNumber" type="text" inputmode="numeric" maxlength="9" appDigits
+            [(ngModel)]="person.nationalIdNumber" placeholder="Documento"
+            class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+        </div>
+      </div>
+      <input name="email" type="email" email required #editEmailCtrl="ngModel" [(ngModel)]="person.email" placeholder="Email *"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+      @if (editEmailCtrl.invalid && editEmailCtrl.touched) {
+        <p class="-mt-2 text-xs font-medium text-primary-700">{{ editEmailCtrl.errors?.['required'] ? 'El correo electrónico es obligatorio.' : 'Correo electrónico no válido.' }}</p>
+      }
+      <div class="flex gap-2">
+        <app-select
+          class="w-20 shrink-0"
+          name="phoneCountry"
+          ngModel="+58"
+          [options]="phoneCountryOptions"
+          [compact]="true"
+          [disabled]="true"
+          ariaLabel="Código de país (solo Venezuela por ahora)"
+        />
+        <app-select
+          class="w-20 shrink-0"
+          name="phoneOperator"
+          [(ngModel)]="person.phoneOperator"
+          [options]="phoneOperatorOptions"
+          [compact]="true"
+          placeholder="Operadora"
+          ariaLabel="Operadora del teléfono"
+        />
+        <input name="phoneNumber" type="tel" inputmode="numeric" maxlength="7" appDigits
+          [(ngModel)]="person.phoneNumber" placeholder="1234567"
+          class="block h-[42px] w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+      </div>
+      <textarea name="address" rows="2" maxlength="500" [(ngModel)]="person.address" placeholder="Dirección de domicilio"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-primary-700 focus:ring-primary-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
+      <div class="space-y-3">
+        <app-password-input name="password" [(ngModel)]="person.password" placeholder="Nueva contraseña de app" />
+        <app-password-input name="passwordRepeat" [(ngModel)]="person.passwordRepeat" placeholder="Repetir contraseña" />
+      </div>
+      <p class="text-xs text-gray-400">
+        Contraseña: solo si quieres crearla o cambiarla (mínimo 6, admite solo números);
+        vacía = se conserva la actual. El usuario de la app es el número de cédula.
+      </p>
+      @if (error(); as message) {
+        <p class="text-sm font-medium text-primary-700 dark:text-primary-300">{{ message }}</p>
+      }
+      <div class="flex justify-end gap-3">
+        <button type="button" (click)="cancel.emit()"
+          class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+          Cancelar
+        </button>
+        <button type="submit" [disabled]="saving()" [appBusy]="saving()"
+          class="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
+          {{ saving() ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

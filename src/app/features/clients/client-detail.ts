@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import type { ClientDetail as ClientDetailModel } from '../../core/models/client.model';
 import { ClientsApi } from './clients.api';
 import { Avatar } from '../../shared/components/avatar';
+import { IdentityReview } from '../identity/identity-review';
 
 /**
  * One sample trip for the «Viajes» tab (approved proposal, 2026-09-01). The
@@ -131,7 +132,7 @@ const SAMPLE_TRIPS: SampleTrip[] = [
  */
 @Component({
   selector: 'app-client-detail',
-  imports: [DatePipe, RouterLink, Avatar],
+  imports: [DatePipe, RouterLink, Avatar, IdentityReview],
   templateUrl: './client-detail.html',
 })
 export class ClientDetailPage {
